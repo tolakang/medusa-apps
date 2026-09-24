@@ -1,0 +1,11 @@
+node_modules
+.medusa
+.env
+.env.*
+!.env.example
+.git
+coverage
+uploads
+static
+*.log
+docker-compose*.yml

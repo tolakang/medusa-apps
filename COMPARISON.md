@@ -1,16 +1,16 @@
 # Side-by-Side Comparison — Commerce Scenarios on Medusa
 
 > Planning document. Medusa baseline: **v2.21.1** (checked 2026-09-24).
-> Each scenario below maps to one standalone app folder in this repo.
+> Each scenario maps to one category folder = one business project, holding its backend, storefront and (where needed) portal or app, each with its own Dockerfile and env.
 
-| # | Scenario | Folder |
-|---|---|---|
-| 1 | Marketplace (vendors sell their own products) | `marketplace/` |
-| 2A | Wholesale (sellers buy from you in bulk) | `wholesale/` |
-| 2B | Reseller network (sellers sell your products, you ship) | `reseller/` |
-| 3 | Booking services (appointments, classes, tickets, rentals) | `booking-services/` |
-| 4 | Ecommerce (direct to consumer) | `ecommerce/` |
-| 5 | POS (physical shop checkout) | `pos/` |
+| # | Scenario | Folder | Deployables |
+|---|---|---|---|
+| 1 | Marketplace (vendors sell their own products) | `marketplace/` | backend, storefront, vendor-portal |
+| 2A | Wholesale (sellers buy from you in bulk) | `wholesale/` | backend, storefront (B2B) |
+| 2B | Reseller network (sellers sell your products, you ship) | `reseller/` | backend, storefront (multi-tenant), seller-portal |
+| 3 | Booking services (appointments, classes, tickets, rentals) | `booking-services/` | backend, storefront |
+| 4 | Ecommerce (direct to consumer) | `ecommerce/` | backend, storefront |
+| 5 | POS (physical shop checkout) | `pos/` | backend, storefront, pos-app |
 
 ---
 
@@ -59,10 +59,10 @@
 
 ## 4. Combining scenarios
 
-Every folder is a **full Medusa backend**: core commerce (catalog, cart, checkout, orders, payments, inventory, admin) **plus** the scenario's custom modules. So:
+Every folder's `backend/` is a **full Medusa backend**: core commerce (catalog, cart, checkout, orders, payments, inventory, admin) **plus** the scenario's custom modules. So:
 
 - **One business = one app = one database.** When a business needs two scenarios, add the second scenario's module to the same app. Do **not** deploy two apps and try to sync them — they would have separate customers, inventory and orders.
-- Example: a retail brand with shops deploys `pos/` (it already contains everything in `ecommerce/`) and points its web storefront at the same backend.
+- Example: a retail brand with shops deploys the `pos/` project: `pos/backend` already contains everything in `ecommerce/backend`, and `pos/storefront` + `pos/pos-app` both talk to it.
 
 | Business | Combination (inside one app) |
 |---|---|
