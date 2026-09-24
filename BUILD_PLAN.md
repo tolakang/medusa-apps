@@ -1,10 +1,10 @@
 # Build Plan — Medusa Apps (Pre-Build)
 
-> **Status: planning only. No application code has been written yet.**
+> **Status: planning only. No application code has been written yet.** Deployment templates are committed: every deployable folder already has its `Dockerfile` and `.env.example`, and every category has a Dokploy guide in `<category>/README.md`.
 > Baseline checked 2026-09-24: **Medusa 2.21.1**, **pnpm 12.6.0**, **Node 22 LTS**.
 > Re-check these versions on the day Phase 0 starts.
 >
-> **Revision 2 (2026-09-24):** every category folder is now a complete business project with one sub-folder per deployable (`backend/`, `storefront/`, and a portal or app where needed). Each deployable has its own `Dockerfile` and `.env.example` (committed as ready templates). Changed sections: 1, 2, 4, 5, 6, 7, 9, 10.
+> **Revision 2 (2026-09-24):** every category folder is now a complete business project with one sub-folder per deployable (`backend/`, `storefront/`, and a portal or app where needed). Each deployable has its own `Dockerfile` and `.env.example` (committed as ready templates). Changed sections: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10.
 
 Contents
 
@@ -26,13 +26,13 @@ Contents
 | # | Requirement | How this plan meets it |
 |---|---|---|
 | R1 | Use official Medusa source, never modify upstream, latest Medusa and pnpm | Medusa is consumed **only as published npm packages** (`@medusajs/*`). No fork, no git submodule, no `pnpm patch`, no edits inside `node_modules`. Customization only through official extension points (§3). |
-| R2 | Always compatible with Medusa updates; deploy an update any time | Exact version pins, lockfile per app, a scripted update per app, a CI gate (build + typecheck + migrate + health check) before any deploy, and Dokploy rollback (§3, §8). |
+| R2 | Always compatible with Medusa updates; deploy an update any time | Exact version pins, lockfile per deployable, a scripted update per category, a CI gate (build + typecheck + migrate + health check) before any deploy, and Dokploy rollback (§3, §8). |
 | R3 | Dokploy-ready, **not a monorepo**, one folder per scenario; each folder holds the backend **and** storefront (and portal/app) with their own `Dockerfile` and env; every deployment works independently | Six category folders; inside each, one sub-folder per deployable with its own `Dockerfile`, `.env.example` and (in the build phase) its own `package.json` + lockfile. No root `package.json`, no workspace, no shared code. Each sub-folder is its own Docker context and Dokploy Build Path (§2, §5). |
 | R4 | Each scenario has its own dependencies | Each deployable sub-folder has its own `package.json`, `pnpm-lock.yaml` and `node_modules`; nothing is shared between sub-folders or categories. |
 | R5 | Side-by-side comparison in project root | `COMPARISON.md` |
 | R6 | Pre-build plan with recommended build order in project root | This file, §7 |
 
-**Honest limit on R2.** Storefronts and portals start from the official Next.js starter, which is a *template you copy*, not a package; its upstream changes are merged by hand (§8.1). Their `@medusajs/*` packages are pinned like the backend's. No repository can guarantee that *every* future Medusa release is non-breaking; Medusa occasionally ships breaking changes in minor versions (listed in its release notes), and database migrations are forward-only. What this plan guarantees is that **an update can never reach production without passing the CI gate**, that each app is updated independently, and that the previous working image can be redeployed. See §8.
+**Honest limit on R2.** Storefronts and portals start from the official Next.js starter, which is a *template you copy*, not a package; its upstream changes are merged by hand (§8.1). Their `@medusajs/*` packages are pinned like the backend's. No repository can guarantee that *every* future Medusa release is non-breaking; Medusa occasionally ships breaking changes in minor versions (listed in its release notes), and database migrations are forward-only. What this plan guarantees is that **an update can never reach production without passing the CI gate**, that each category (and each deployable in it) is updated and deployed independently, and that the previous working image can be redeployed. See §8.
 
 ---
 
@@ -114,7 +114,7 @@ Names are lowercase kebab-case because they become Dokploy build paths, image na
 
 ### 3.3 Tests that protect updates
 
-Every app keeps a small test suite that exercises its custom code against real Medusa (integration tests via `@medusajs/test-utils`). An update is accepted only if these pass (see §8).
+Every backend keeps a small test suite that exercises its custom code against real Medusa (integration tests via `@medusajs/test-utils`); every client must at least build against the updated backend. An update is accepted only if these pass (see §8).
 
 ---
 
@@ -175,7 +175,7 @@ allowBuilds:                 # pnpm blocks install scripts unless allowed
 
 | Env | Effect |
 |---|---|
-| `DATABASE_URL` | Postgres connection (one database per app) |
+| `DATABASE_URL` | Postgres connection (one database per business project) |
 | `REDIS_URL` set | Enables official Redis modules: `cache-redis`, `event-bus-redis`, `workflow-engine-redis` (`{ redis: { redisUrl } }`), `locking` + `locking-redis`. Unset = in-memory (dev only). |
 | `MEDUSA_WORKER_MODE` | `shared` (default), `server` (HTTP only) or `worker` (jobs/subscribers only) |
 | `DISABLE_MEDUSA_ADMIN` | Disable the dashboard; forced off on workers |
@@ -204,7 +204,7 @@ Committed per category (`<category>/backend/.env.example`), including CORS entri
 ```
 NODE_ENV=production
 PORT=9000
-DATABASE_URL=postgres://user:pass@host:5432/<app>
+DATABASE_URL=postgres://user:pass@host:5432/<category>
 REDIS_URL=redis://host:6379
 JWT_SECRET=
 COOKIE_SECRET=
@@ -387,7 +387,7 @@ Per deployable, the script will:
 1. Read the target version (`npm view @medusajs/medusa version` when not given).
 2. Set **every** `@medusajs/*` dependency (backend **and** that category's clients) to that exact version; optionally bump `packageManager` to the latest pnpm.
 3. `pnpm install` → new `pnpm-lock.yaml`.
-4. Run `scripts/verify.sh <app>`:
+4. Run `scripts/verify.sh <category>`:
    - `pnpm build` then `pnpm typecheck`
    - integration tests
    - fresh Postgres: `medusa db:migrate`, start, `GET /health` = 200, `GET /app` = 200
@@ -402,7 +402,7 @@ Release:
 3. Deploy to staging via Dokploy, smoke test, then production.
 4. Rollback = redeploy the previous commit / image **and restore the backup if the new version ran migrations**.
 
-Automation (Phase 0): Dependabot (or Renovate) configured **per folder**, grouping all `@medusajs/*` packages into one PR per app; CI runs the verify gate on each PR; merging deploys only that folder (Dokploy watch paths).
+Automation (Phase 0): Dependabot (or Renovate) configured **per deployable folder**, grouping all `@medusajs/*` packages of one category (backend + clients) into one PR; CI runs the verify gate for that category; merging redeploys only the changed deployables (Dokploy watch paths).
 
 ---
 
@@ -429,7 +429,7 @@ A throwaway prototype was built on Medusa 2.21.1 + pnpm 12.6.0 to test this plan
 | S3 provider options | `file_url`, `access_key_id`, `secret_access_key`, `region`, `bucket`, `endpoint`, `additional_client_config` (e.g. `forcePathStyle` for MinIO). |
 | Storefront starter | Official `nextjs-starter-medusa` uses yarn, `latest` for `@medusajs/*`, no `output: "standalone"`, requires `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` at build (build aborts without it), and its `generateStaticParams` call the backend during `next build` (the categories page is not guarded). Hence the changes in §4.2. |
 | Storefront env | Server-side backend URL is `MEDUSA_BACKEND_URL` (the old `NEXT_PUBLIC_MEDUSA_BACKEND_URL` name is no longer used by the starter). |
-| Runtime check | Production build (server + Redis) started cleanly; `/health` and `/app` returned 200 for all six app shapes; booking hold / double-booking / hold-expiry and reseller commission idempotency behaved as designed. |
+| Runtime check | Production build (server + Redis) started cleanly; `/health` and `/app` returned 200 for all six backend shapes (storefront/portal images are first built in Phase 0); booking hold / double-booking / hold-expiry and reseller commission idempotency behaved as designed. |
 
 ---
 
@@ -437,7 +437,7 @@ A throwaway prototype was built on Medusa 2.21.1 + pnpm 12.6.0 to test this plan
 
 | # | Decision / risk | Needed by |
 |---|---|---|
-| D1 | Payment providers per app (card, QR, cash on delivery, net terms) and whether any supports split payments for vendors / sellers | Phase 1 |
+| D1 | Payment providers per business project (card, QR, cash on delivery, net terms) and whether any supports split payments for vendors / sellers | Phase 1 |
 | D2 | Notification channels (email, SMS, messaging apps) | Phase 1 |
 | D3 | File storage provider (S3, R2, MinIO on your own server) | Phase 0 |
 | D4 | Storefront design: keep the official starter's look or restyle per category | Phase 1 |
