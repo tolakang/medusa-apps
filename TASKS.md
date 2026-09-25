@@ -9,7 +9,7 @@
 
 | Phase | Category | Size | Status |
 |---|---|---|---|
-| 0 | Foundation (in `ecommerce/`) | M | In progress: local work and all Phase 0 decisions done; waiting on Dokploy staging (P0-18/19) and the first CI run (P0-17) |
+| 0 | Foundation (in `ecommerce/`) | M | In progress: local work and all Phase 0 decisions done; CI green; waiting on Dokploy staging (P0-18/19) |
 | 1 | Ecommerce | S | Not started |
 | 2 | POS | M | Not started |
 | 3 | Booking services | M–L | Not started |
@@ -51,7 +51,7 @@
 - [x] P0-14 `scripts/guard.sh` = DEV_FLOW Gate 5, including "BUILD_PLAN.md unchanged". — done: ba32c02 (checksum `.build-plan.sha256`; negative test caught a planted `as any`)
 - [x] P0-15 `scripts/update-medusa.sh <category|category/app|all> [version]` per plan §8. — done: ba32c02; rehearsal on 2.21.1 → no diff, verify PASS
 - [x] P0-16 Integration-test skeleton: one `integration-tests/http` test and one module test, running with a Postgres service. — done: f717457, `integration-tests/http/health.spec.ts` 2/2 on real Postgres; module suite wired (`--passWithNoTests`), and the first module test lands with the first custom module (Phase 2)
-- [~] P0-17 CI matrix: one job per deployable running verify + guard. Dependabot/Renovate per folder, grouping `@medusajs/*` per category. — in progress: e3d988a `ci.yml` written (not yet run on GitHub). Dependabot replaced by `medusa-update-check.yml` (F-008 approved)
+- [x] P0-17 CI matrix: one job per deployable running verify + guard. Dependabot/Renovate per folder, grouping `@medusajs/*` per category. — done: e3d988a; first run on PR #1 (run 36136903265, head 1bfe394) green: guard PASS, verify backend (tests 2/2, image smoke `/health` 200) PASS, verify storefront PASS. Dependabot replaced by `medusa-update-check.yml` (F-008 approved)
 
 **Deploy · plan §5**
 - [ ] P0-18 Dokploy staging project: Postgres, Redis, backend server, worker, storefront. Build paths, watch paths, health check `/health`, first-deploy order.
