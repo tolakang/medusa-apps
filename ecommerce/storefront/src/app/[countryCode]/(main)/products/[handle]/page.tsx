@@ -5,6 +5,13 @@ import { getRegion, listRegions } from "@lib/data/regions"
 import ProductTemplate from "@modules/products/templates"
 import { HttpTypes } from "@medusajs/types"
 
+// Render on every request (starter change 7, TASKS.md F-015). The data layer
+// reads cookies() inside try/catch (src/lib/data/cookies.ts), which swallows
+// the DynamicServerError Next.js uses to switch a static/ISR render to dynamic,
+// so runtime renders failed with digest DYNAMIC_SERVER_USAGE (HTTP 500).
+// Upstream report and this workaround: medusajs/nextjs-starter-medusa#439.
+export const dynamic = "force-dynamic"
+
 type Props = {
   params: Promise<{ countryCode: string; handle: string }>
   searchParams: Promise<{ v_id?: string }>

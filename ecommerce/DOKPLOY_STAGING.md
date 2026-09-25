@@ -124,6 +124,18 @@ openssl rand -base64 32   # COOKIE_SECRET
    **Update Config:** same as the backend (`start-first`, `rollback`).
 6. **Deploy.** Open `https://<shop host>/`: it redirects to `/dk` and shows the store.
 
+   **Checks that catch the staging mistakes seen so far:**
+   - The key must see products (Medusa's own default key sees **0**, finding F-017):
+     ```bash
+     curl -s -H "x-publishable-api-key: <pk_…>" https://<api host>/store/products?fields=handle | head -c 200
+     ```
+     `"count":0` means the wrong key: use the one linked to the seed's **Default Sales Channel**.
+   - The URL actually baked in (a typo in a build-time argument only shows up as a 500 on every page, F-016). In the storefront terminal:
+     ```bash
+     grep -oE 'https?://[A-Za-z0-9._:-]+' /app/.next/server/src/middleware.js | sort -u
+     ```
+     It must print `https://<api host>`.
+
 ---
 
 ## 5. P0-18 check: send me these, and I verify from here
