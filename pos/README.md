@@ -53,7 +53,8 @@ After the first deploy, every service can be redeployed, rebuilt or rolled back 
 - All clients reach the backend only over HTTP. No shared code, no shared files, no shared build.
 - Backend CORS must list each client domain:
   - `STORE_CORS` = storefront domain
-  - `ADMIN_CORS` = admin domain + POS app domain (the POS app uses the admin API)
+  - `ADMIN_CORS` = admin domain only
+  - `POS_CORS` = POS app domain (the app uses `/pos/*` routes as a `cashier`, not the admin API)
   - `AUTH_CORS` = every domain where someone logs in
 - The storefront reaches the backend through the public `NEXT_PUBLIC_MEDUSA_BACKEND_URL` (build-time). Runtime `MEDUSA_BACKEND_URL` can be the backend's **internal** Dokploy hostname once starter change 6 in BUILD_PLAN.md §4.2 is applied (faster, private; copy the exact name Dokploy shows for the service, it may carry a suffix). Build-time URLs must be **public**, because the build runs on the build server.
 - `NEXT_PUBLIC_*` values are baked in at build time. Changing one = rebuild that client.

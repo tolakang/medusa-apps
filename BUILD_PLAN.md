@@ -4,6 +4,8 @@
 > Baseline checked 2026-09-25: **Medusa 2.21.1**, **pnpm 12.6.0**, **Node 22 LTS**.
 > Re-check these versions on the day Phase 0 starts.
 >
+> **Revision 4 (2026-09-25):** full technical review against the Medusa 2.21.1 docs, the CLI source and the official `dtc-starter` / `b2b-starter` repos. Changes: `db:migrate` runs non-interactively (`--execute-safe-links --execute-safe-search`); built-in **Search Module** (default since 2.21.1) replaces the "Later: Meilisearch/Algolia" item; POS cashiers get their own actor type because v2 has no admin roles yet; wholesale starts from `b2b-starter` (backend **and** storefront, quotes in MVP); reseller storefront sends the publishable key per request; booking guards line-item updates; official `db:rollback` added to the release process. Changed sections: 4.1, 4.2, 6.1–6.6, 7, 8, 10.
+>
 > **Revision 3 (2026-09-25):** audited against the official Medusa v2 docs (docs.medusajs.com) and starters. Changes: starters moved to `medusajs/dtc-starter` (the standalone backend and Next.js starters are deprecated); Caching Module replaces the deprecated `cache-redis`; `projectConfig.redisUrl` added; storefront backend URL is `NEXT_PUBLIC_MEDUSA_BACKEND_URL`; `@medusajs/ui` has its own version line; marketplace order split, POS order creation and booking validation aligned with the official recipes / workflow reference. Changed sections: 3.2, 4.1, 4.2, 6.2, 6.3, 6.4, 6.5, 6.6, 8, 9, 10.
 >
 > **Revision 2 (2026-09-24):** every category folder is now a complete business project with one sub-folder per deployable (`backend/`, `storefront/`, and a portal or app where needed). Each deployable has its own `Dockerfile` and `.env.example` (committed as ready templates). Changed sections: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10.
@@ -150,7 +152,9 @@ Two standards: **4.1 backend** (identical in every `*/backend`) and **4.2 web cl
     ├── jobs/
     ├── api/
     ├── admin/
-    └── scripts/              # seed scripts
+    ├── search/               # Search Module index definitions (starter ships product.ts)
+    ├── migration-scripts/    # data migration scripts (run by db:migrate)
+    └── scripts/              # seed scripts (`medusa exec`)
 ```
 
 Source of truth for the boilerplate: **`apps/backend`** of the official **`medusajs/dtc-starter`** repository (the older `medusa-starter-default` is deprecated). The DTC starter is a pnpm + Turborepo monorepo; only `apps/backend` is copied, and the workspace-level settings are moved into this app's own `pnpm-workspace.yaml`. Record the starter commit in the backend README. Add a `predeploy` script (`medusa db:migrate`) and a `typecheck` script; the starter ships neither.
@@ -195,7 +199,7 @@ Variable names match the official deployment guide (`MEDUSA_WORKER_MODE`, `DISAB
 3. Copy source; `pnpm build` (`medusa build` → `.medusa/server`, including the compiled admin).
 4. In `.medusa/server`: copy in `pnpm-lock.yaml` + `pnpm-workspace.yaml` (the build does **not** copy the lockfile), then `pnpm install --prod --frozen-lockfile`.
 5. **Runtime stage** — same base image, copy only `.medusa/server`, run as the `node` user, expose `9000`.
-6. Entrypoint: `start` → run `medusa db:migrate` (only when `MEDUSA_WORKER_MODE` ≠ `worker` and `RUN_MIGRATIONS` ≠ `false`) → `medusa start`. Any other command is passed through (e.g. `medusa user -e … -p …` to create an admin).
+6. Entrypoint: `start` → run `medusa db:migrate --execute-safe-links --execute-safe-search` (only when `MEDUSA_WORKER_MODE` ≠ `worker` and `RUN_MIGRATIONS` ≠ `false`) → `medusa start`. Without the two flags `db:migrate` **prompts** when a link or search index was removed or changed (verified in the 2.21.1 CLI source), and a container has no terminal to answer. Safe mode never drops link tables or indexes; dropping them is a manual release step (§8). `db:migrate` takes no lock, so run **one** server replica while migrating. Any other command is passed through (e.g. `medusa user -e … -p …` to create an admin).
 7. Optional build arg `MEDUSA_BACKEND_URL` (baked into the admin bundle).
 
 No `HEALTHCHECK` instruction (Podman ignores it in OCI format); health checks are configured in Dokploy against `GET /health`.
@@ -261,7 +265,7 @@ Scenario-specific variables are listed in each scenario plan in §6.
 
 | Client | Build-time args | Runtime vars |
 |---|---|---|
-| storefront | `NEXT_PUBLIC_MEDUSA_BACKEND_URL` (public), `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY`, `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_DEFAULT_REGION`, `NEXT_PUBLIC_STRIPE_KEY`, `S3_IMAGE_HOSTNAME`, `S3_IMAGE_PATHNAME` (+ scenario args) | `MEDUSA_BACKEND_URL`, `REVALIDATE_SECRET` (+ scenario vars) |
+| storefront | `NEXT_PUBLIC_MEDUSA_BACKEND_URL` (public), `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY`, `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_DEFAULT_REGION`, `NEXT_PUBLIC_STRIPE_KEY`, `S3_IMAGE_HOSTNAME`, `S3_IMAGE_PATHNAME` (+ scenario args) | `MEDUSA_BACKEND_URL` (after change 6), `REVALIDATE_SECRET` (only if you add a revalidation route; the starter has none) (+ scenario vars) |
 | vendor-portal / seller-portal / pos-app | `NEXT_PUBLIC_MEDUSA_BACKEND_URL`, `NEXT_PUBLIC_BASE_URL` | `MEDUSA_BACKEND_URL`, `COOKIE_SECRET` |
 
 ### 4.3 Local testing
@@ -295,8 +299,9 @@ Each scenario lists: custom modules (tables are prefixed to avoid collisions), l
 ### 6.1 Ecommerce — `ecommerce/`
 
 - **Custom modules:** none. This is the reference app: pure Medusa core plus infrastructure config.
-- **MVP:** regions, currencies, tax, shipping options; payment provider; notification provider (email); S3 files; seed script; `ecommerce/storefront` (from the official Next.js starter, §4.2).
-- **Later:** search (Meilisearch / Algolia plugin), abandoned cart and restock alerts (Commerce Automation recipe), reviews.
+- **MVP:** regions, currencies, tax, shipping options; payment provider (Stripe: `@medusajs/medusa/payment-stripe` with `apiKey` + `webhookSecret`, Stripe webhook → `https://<api>/hooks/payment/stripe_stripe`); notification provider (email; `notification-local` in dev); S3 files; seed script; `ecommerce/storefront` (from `dtc-starter`, §4.2).
+- **Search (MVP, built in):** since 2.21.1 the **Search Module** is registered by default with the PostgreSQL provider. The starter already ships `src/search/product.ts` and the storefront's `@medusajs/instantsearch-adapter`, so product search needs no extra service. Move to another provider only if Postgres search is outgrown.
+- **Later:** abandoned cart and restock alerts (Commerce Automation recipe), reviews.
 - **Acceptance:** browse → cart → checkout → order visible in admin; update script and CI gate proven on this app first.
 
 ### 6.2 POS — `pos/`
@@ -304,10 +309,11 @@ Each scenario lists: custom modules (tables are prefixed to avoid collisions), l
 - **Custom module `pos`:** `pos_register` (name, code, is_active), `pos_shift` (status open/closed, opened_by, closed_by, opened_at, closed_at, currency_code, opening_cash, counted_cash, expected_cash, notes).
 - **Links:** register ↔ stock location (many → one), register ↔ sales channel (many → one), shift → orders (one → many).
 - **Workflows:** `open-shift` (one open shift per register), `close-shift` (compute expected cash from cash payments, store variance), `pos-checkout` — follows the official POS recipe: creates the sale as a **draft order** in the POS sales channel (core draft-order workflows; the `@medusajs/draft-order` plugin ships with the starter), applies promotions, records payment, converts it to an order and links the order to the shift.
-- **API routes:** `/admin/pos/registers`, `/admin/pos/shifts/open|close`, barcode lookup on the variant's `barcode` / `ean` / `upc` / `sku` fields (recipe: custom route).
+- **Cashier auth:** Medusa 2.21.1 has **no admin roles** (RBAC is not in the official docs; the upstream PR is still open), so any admin user can do everything. Cashiers are therefore a custom actor type **`cashier`** (same pattern as vendors, §6.6: `/auth/cashier/emailpass`, `authenticate("cashier", ["session", "bearer"])`), and the POS app only calls `/pos/*` routes, which run core workflows on the server. Revisit when RBAC ships.
+- **API routes:** `/pos/registers`, `/pos/shifts/open|close`, `/pos/checkout`, `/pos/customers` (cashier), `/admin/pos/*` (reports, register setup), barcode lookup on the variant's `barcode` / `ean` / `upc` / `sku` fields (recipe: custom route).
 - **Admin:** shift report page (per register / per cashier / per day).
 - **Client apps:** `pos/storefront` (online shop on the same stock) and `pos/pos-app` (Next.js PWA for tablets): login, barcode scan, cart, customer lookup, payment (cash / card / QR), receipt.
-- **Env:** none extra at MVP. `ADMIN_CORS` includes the POS app domain (the POS app uses the admin API with a cashier user).
+- **Env:** `POS_CORS` (POS app origin, applied by a CORS middleware on `/pos/*`, which the built-in CORS settings don't cover). `AUTH_CORS` also includes the POS app. `ADMIN_CORS` stays admin-only.
 - **Card payments:** the recipe suggests a terminal provider (e.g. Stripe Terminal) as a payment provider; decided under D1.
 - **Later:** offline queue in the POS app, click-and-collect, in-store returns of online orders.
 - **Acceptance:** a sale at a register reduces stock at that shop's location only; a shift closes with a correct cash variance.
@@ -318,6 +324,8 @@ Each scenario lists: custom modules (tables are prefixed to avoid collisions), l
 - **Links:** resource ↔ product variant (many ↔ many: which services a resource offers), booking → order (many → one).
 - **Service methods:** `isSlotAvailable` (overlap + capacity; pending holds count only until they expire), `createHold`.
 - **Hooks / workflows:** `addToCartWorkflow` `validate` hook → slot must be available; `add-booking-to-cart` workflow creates the hold and the line item together (compensation removes the hold); `completeCartWorkflow` `validate` hook re-checks the hold — read-only (the reference forbids mutating the cart in this hook) and a hold owned by the same cart counts as valid, so a retried completion stays idempotent; subscriber `order.placed` → confirm bookings and link to order; `cancel-booking` workflow applies the cancellation policy and triggers the refund.
+- **Line-item changes:** `updateLineItemInCartWorkflow` `validate` hook blocks quantity changes on booking items above the slot's capacity (or blocks them outright). Removing the item leaves the hold to expire.
+- **Hold vs. payment:** extend the hold when the payment session is created, so a slow card payment doesn't expire mid-checkout. If the hold still expires, the `completeCartWorkflow` validation fails and the docs guarantee the authorized payment is reverted automatically.
 - **Jobs:** release expired holds (every minute); reminders 24 h before.
 - **API routes:** `GET /store/booking/availability`, `GET /store/booking/slots` (free slots for service + date), `POST /store/booking/cancel`.
 - **Admin:** day/week calendar per resource; walk-in booking.
@@ -329,15 +337,15 @@ Each scenario lists: custom modules (tables are prefixed to avoid collisions), l
 
 ### 6.4 Wholesale — `wholesale/`
 
-- **Start from the official B2B starter** (`medusajs/b2b-starter`, maintained): reuse its company / employee / quote / approval module designs rather than inventing new ones; copy code into `wholesale/backend` like any starter (§8.1).
-- **Custom module `company`:** `company` (name, contacts, tax_id, status, payment_terms prepaid/net_15/net_30/net_60, credit_limit, currency_code), `employee` (spending_limit, is_admin). **Later:** `quote`.
+- **Start from the official B2B starter** (`medusajs/b2b-starter`, on Medusa 2.21.1): copy its `apps/backend` into `wholesale/backend` (modules `company`, `quote`, `approval`) and its `apps/storefront` into `wholesale/storefront`, applying the same starter changes as §4.2. Extend its modules; don't rebuild them.
+- **Modules (from the starter, extended):** `company` + `employee` (add payment_terms prepaid/net_15/net_30/net_60, credit_limit, tax_id, status), `quote` and `approval` in the **MVP** (they come with the starter).
 - **Links:** employee ↔ customer (one ↔ one), company ↔ customer group (the price tier).
 - **Catalog scope (recipe):** a B2B **sales channel** + its own publishable key, so the B2B storefront only sees B2B products.
 - **Pricing:** core **price lists** with a customer-group rule (`customer.groups.id`) per tier; quantity tiers via each price's `min_quantity` / `max_quantity`.
 - **Hooks / workflows:** `addToCartWorkflow` `validate` → minimum order quantity and approved company; `completeCartWorkflow` `validate` → employee spending limit and company credit limit; `request-quote` / `accept-quote` (via draft orders); approval flow for orders above a limit.
-- **Payments:** manual "invoice / net terms" payment provider; invoice PDF.
+- **Payments:** net-terms orders use the built-in **system payment provider** (`pp_system_default`; payment captured manually in the admin when the invoice is paid). Invoice PDF follows the official invoice tutorial pattern.
 - **API routes:** `/store/companies/me`, `/store/companies/me/employees`, `/store/quotes`.
-- **Client app:** `wholesale/storefront` — B2B buyer shop behind login (`NEXT_PUBLIC_REQUIRE_LOGIN`): bulk add by SKU / CSV, reorder, invoices, quotes, company users.
+- **Client app:** `wholesale/storefront` (from the `b2b-starter` storefront) — B2B buyer shop behind login (`NEXT_PUBLIC_REQUIRE_LOGIN`): bulk add by SKU / CSV, reorder, invoices, quotes, company users.
 - **Env:** `WHOLESALE_REQUIRE_APPROVAL` (new companies need admin approval).
 - **Optional:** ERP integration exactly as in the official ERP recipe.
 - **Acceptance:** a Gold company sees Gold prices; an employee over their limit cannot complete checkout.
@@ -349,7 +357,7 @@ Each scenario lists: custom modules (tables are prefixed to avoid collisions), l
 - **Workflows:** `record-seller-commission` (order → sales channel → seller → commission; idempotent; ignores channels without an active seller), triggered by subscriber `order.placed`; `cancel-commission` on order cancel / refund; monthly payout batch.
 - **Seller auth:** custom actor type `seller` (auth identity via `setAuthAppMetadataStep`; `/auth/seller/emailpass`), seller-scoped routes under `/sellers/*` protected with `authenticate("seller", ["session", "bearer"])`. `/sellers/*` is not covered by `storeCors`/`adminCors`, so a CORS middleware reading `SELLER_CORS` is added for it; portal domains also go in `AUTH_CORS`.
 - **API routes:** `/sellers/me`, `/sellers/me/products` (choose which of your products appear in their channel), `/sellers/me/commissions`.
-- **Client apps:** `reseller/storefront` — one multi-tenant deployment serving every seller domain; it resolves the seller by domain (`SELLER_RESOLVE_MODE`) and uses that seller's publishable key. `reseller/seller-portal` — product selection, sales, commissions.
+- **Client apps:** `reseller/storefront` — one multi-tenant deployment serving every seller domain; it resolves the seller by domain (`SELLER_RESOLVE_MODE`) and uses that seller's publishable key. The build-time `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` is only your own channel's key (and satisfies the starter's build check). The seller's key is set **per request** as the `x-publishable-api-key` header inside the starter's existing `sdk.client.fetch` wrapper (`src/lib/config.ts`, which already injects the locale header). Domain → key is resolved server-side and cached. Seller domains must pass CORS: use a regex in `STORE_CORS`/`AUTH_CORS` (supported by Medusa, e.g. `/\.yourplatform\.com$/`) for subdomains, or keep all backend calls server-side for custom domains. `reseller/seller-portal` — product selection, sales, commissions.
 - **Env:** `RESELLER_DEFAULT_COMMISSION_RATE`, `RESELLER_PAYOUT_DAY`.
 - **Acceptance:** an order in a seller's channel creates exactly one commission, even if the event is delivered twice; orders from your own channel create none.
 
@@ -362,6 +370,7 @@ Each scenario lists: custom modules (tables are prefixed to avoid collisions), l
 - **Admin:** vendor approval queue, product moderation, payout report.
 - **Client apps:** `marketplace/storefront` (shows vendor name/shop pages) and `marketplace/vendor-portal` (products, orders, fulfillments, payouts).
 - **Env:** `MARKETPLACE_DEFAULT_COMMISSION_RATE`, `MARKETPLACE_REQUIRE_PRODUCT_APPROVAL`, `MARKETPLACE_PAYOUT_DAY`.
+- **Parent vs. child orders:** payment lives on the parent order; vendors fulfil child orders only. The admin lists both, so the admin order list gets a filter/widget, and reports count child orders only.
 - **Payouts:** start with manual payouts from a report; automate only if the payment provider supports split payments.
 - **Acceptance:** a cart with items from two vendors produces two child orders that each vendor sees and fulfills separately; payouts equal order totals minus commission.
 
@@ -376,7 +385,7 @@ Each scenario lists: custom modules (tables are prefixed to avoid collisions), l
 | **2. POS** | `pos/backend`, `pos/storefront`, `pos/pos-app` | M | 1 | Reuses all of Ecommerce; adds registers, shifts and the first non-storefront client. |
 | **3. Booking services** | `booking-services/backend` + `storefront` | M–L | 1 | First scenario that hooks into core cart flows; hold/expiry logic must be solid. |
 | **4. Wholesale** | `wholesale/backend` + `storefront` | M | 1 | Mostly core price lists + a small module + checkout validation hooks. |
-| **5. Reseller** | `reseller/backend`, `storefront` (multi-tenant), `seller-portal` | M–L | 1, 4 | Second actor type and money owed to partners; builds on company/actor patterns from 4. |
+| **5. Reseller** | `reseller/backend`, `storefront` (multi-tenant), `seller-portal` | M–L | 1 | First partner portal and money owed to partners; reuses the custom actor-type pattern from the POS `cashier` if Phase 2 ran first. |
 | **6. Marketplace** | `marketplace/backend`, `storefront`, `vendor-portal` | L | 1, 5 | Hardest: vendor actor, order splitting, payouts, moderation. Built last so actor-type, portal and commission patterns are proven in 5. |
 
 Rules for the order:
@@ -407,9 +416,10 @@ Per deployable, the script will:
 Release:
 
 1. Read the Medusa release notes for every version skipped (breaking changes are called out there) and run any codemod they list (e.g. `replace-zod-imports` for v2.13).
-2. **Back up the app's database** (migrations cannot be rolled back automatically).
-3. Deploy to staging via Dokploy, smoke test, then production.
-4. Rollback = redeploy the previous commit / image **and restore the backup if the new version ran migrations**.
+2. **Back up the app's database.** The docs' official revert is `medusa db:rollback <module…>` for each module that migrated, then reinstall the old versions; the backup is the fallback when a rollback isn't clean.
+3. If the release removes or changes links or search indexes, run `medusa db:sync-links --execute-all` / `medusa db:migrate:search --execute-all-search` by hand from the Dokploy terminal after reviewing the plan they print (the entrypoint only applies safe changes).
+4. Deploy to staging via Dokploy with **one** server replica, smoke test, then production.
+5. Rollback = redeploy the previous commit / image **plus** `db:rollback` of the migrated modules, or restore the backup.
 
 Automation (Phase 0): Dependabot (or Renovate) configured **per deployable folder**, grouping all `@medusajs/*` packages of one category (backend + clients) into one PR; CI runs the verify gate for that category; merging redeploys only the changed deployables (Dokploy watch paths).
 
@@ -457,4 +467,6 @@ A throwaway prototype was built on Medusa 2.21.1 + pnpm 12.6.0 to test this plan
 | R-c | Duplicated boilerplate drifts between folders → Phase 0 `verify.sh` also diffs the standard files across folders | ongoing |
 | R-d | Client built against an old publishable key or backend URL → keys and URLs are build args; changing them means rebuilding that client (documented in each `.env.example`) | ongoing |
 | R-f | Official starters/recipes change (e.g. the v2.14 move to `dtc-starter`) → re-check docs.medusajs.com and the starter repos at the start of every phase, not only Medusa package versions | every phase |
+| R-g | No admin roles in 2.21.1 → every admin user has full access; cashiers, vendors and sellers never get admin users (custom actor types instead) | Phase 2 |
+| R-h | Two server replicas migrating at once (no migration lock) → scale to 1 during deploys | every deploy |
 | R-e | Worker and server accidentally both run migrations → worker env always has `RUN_MIGRATIONS=false` (in every backend `.env.example`) | every deploy |
