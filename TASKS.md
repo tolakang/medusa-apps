@@ -9,7 +9,7 @@
 
 | Phase | Category | Size | Status |
 |---|---|---|---|
-| 0 | Foundation (in `ecommerce/`) | M | In progress: local work done; waiting on D3/D6, Dokploy staging and the first CI run |
+| 0 | Foundation (in `ecommerce/`) | M | In progress: local work and all Phase 0 decisions done; waiting on Dokploy staging (P0-18/19) and the first CI run (P0-17) |
 | 1 | Ecommerce | S | Not started |
 | 2 | POS | M | Not started |
 | 3 | Booking services | M–L | Not started |
@@ -30,7 +30,7 @@
 
 **Decisions needed first**
 - [x] P0-01 Re-check Medusa, pnpm and Node versions on the start day (MEDUSA_SKILL §1). If they changed, refresh the skill (§14) and log it. Don't edit the plan. — done: unchanged (Medusa 2.21.1, pnpm 12.6.0, Node `^20.19 \|\| >=22.12`); dtc-starter `e3a237c9b877` pins 2.21.1
-- [ ] P0-02 Decide **D3** file storage (S3 / R2 / MinIO) and **D6** staging setup. Record them in the Decisions log below.
+- [x] P0-02 Decide **D3** file storage (S3 / R2 / MinIO) and **D6** staging setup. Record them in the Decisions log below. — done: D3 = AWS S3, D6 = separate `<category>-staging` Dokploy project; both in the Decisions log, env examples and `ecommerce/README.md`
 
 **Backend standard (`ecommerce/backend`) · plan §4.1**
 - [x] P0-03 Copy `apps/backend` from `medusajs/dtc-starter` at the version-matching commit. Record the commit in `ecommerce/backend/README.md`. Rename the package. — done: f717457, starter `e3a237c9b877` (demo seed moved out of migration-scripts, F-002)
@@ -197,10 +197,10 @@
 |---|---|---|---|---|---|
 | D1 | Payment providers per project; split payments? | Phase 1 | | | |
 | D2 | Notification channels | Phase 1 | | | |
-| D3 | File storage provider | Phase 0 | | | |
+| D3 | File storage provider | Phase 0 | **AWS S3** | 2026-09-25 | `medusa-config.ts` already enables `file` + `@medusajs/file-s3` when `S3_BUCKET` is set (plan §4.1 env table). AWS needs no `S3_ENDPOINT` and `S3_FORCE_PATH_STYLE=false`; those stay for R2/MinIO. Documented in all 6 `backend/.env.example` and the storefront's `S3_IMAGE_HOSTNAME`. Wiring and proof are P1-05. |
 | D4 | Storefront design (starter look vs restyle) | Phase 1 | | | |
 | D5 | POS app: PWA vs native | Phase 2 | | | |
-| D6 | Staging environment in Dokploy | Phase 0 | | | |
+| D6 | Staging environment in Dokploy | Phase 0 | **Separate Dokploy project `<category>-staging`** | 2026-09-25 | Plan §10 D6 ("separate project, separate databases") and §7 phase exit. Own Postgres, Redis and bucket/prefix; same folder, Build Paths, watch paths and `.env.example` keys, different values and staging domains. Written up in `ecommerce/README.md` → *Staging project*. Building it is P0-18. |
 
 ## Plan deviations & findings log
 

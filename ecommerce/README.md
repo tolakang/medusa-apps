@@ -43,6 +43,29 @@ Every application uses **Build Type: Dockerfile**, **Dockerfile path: `Dockerfil
 
 After the first deploy, every service can be redeployed, rebuilt or rolled back **independently**.
 
+## Staging project: `ecommerce-staging` (decision D6)
+
+Staging is a **second Dokploy project** built from this same folder — never a
+second environment inside the production project:
+
+| Production | Staging |
+|---|---|
+| project `ecommerce` | project `ecommerce-staging` |
+| `ecommerce-postgres`, `ecommerce-redis` | its **own** Postgres and Redis (never the production ones) |
+| `api.example.com`, `shop.example.com` | `api.staging.example.com`, `shop.staging.example.com` |
+| production S3 bucket | its own bucket, or a `staging/` prefix (`S3_FILE_URL`, `S3_IMAGE_HOSTNAME` point at it) |
+| real Stripe keys, real email sender | test-mode keys, `notification-local` where possible |
+
+Same Build Paths, same watch paths, same `Dockerfile`s, same `.env.example`
+keys — only the values differ. Deploy order is the one above, including the
+manual admin user and publishable key (the key differs per project, so the
+storefront's build-time arguments differ too).
+
+Use it for the phase exit checklist: deploy the whole category to staging,
+redeploy each app alone, roll one back, then promote the same commit to
+production with the §5 runbook (backup first, one server replica while
+migrating).
+
 ## How the pieces connect
 
 - All clients reach the backend only over HTTP. No shared code, no shared files, no shared build.
