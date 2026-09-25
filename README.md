@@ -22,7 +22,11 @@ The `Dockerfile`s and `.env.example`s are committed **ready templates**; app cod
 ## Documents
 
 - [`COMPARISON.md`](./COMPARISON.md) — side-by-side comparison of all scenarios and when each fits.
-- [`BUILD_PLAN.md`](./BUILD_PLAN.md) — requirements, repo rules, app standard, Dokploy plan, per-scenario plans, **recommended build order**, update process.
+- [`BUILD_PLAN.md`](./BUILD_PLAN.md) — requirements, repo rules, app standard, Dokploy plan, per-scenario plans, **recommended build order**, update process. **Frozen.**
+- [`TASKS.md`](./TASKS.md) — development phases with a checklist per task (the living tracker).
+- [`MEDUSA_SKILL.md`](./MEDUSA_SKILL.md) — verified Medusa 2.21.1 reference with sources; the only Medusa knowledge builders may use without a fresh lookup.
+- [`DEV_FLOW.md`](./DEV_FLOW.md) — build → verify → test → evidence-based fix cycle → commit → push.
+- [`CLAUDE.md`](./CLAUDE.md) — builder entry point: reading order and non-negotiable rules.
 
 ## Principles
 
