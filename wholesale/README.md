@@ -28,7 +28,7 @@ wholesale/
 | `wholesale-worker` | Application (Dockerfile) | `/wholesale/backend` | none | same env + worker overrides |
 | `wholesale-storefront` | Application (Dockerfile) | `/wholesale/storefront` | 8000 → `shop.example.com` | `storefront/.env.example` (build args + runtime) |
 
-Every application uses **Build Type: Dockerfile**, **Dockerfile path: `Dockerfile`**, and a **watch path** equal to its own Build Path (`/wholesale/<app>/**`), so a change to one app never redeploys another.
+Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Docker File** `wholesale/<app>/Dockerfile` and **Docker Context Path** `wholesale/<app>` (both relative to the repo root; verified on Dokploy staging 2026-09-25, finding F-011), and a **watch path** `wholesale/<app>/**`, so a change to one app never redeploys another. The "Build Path" column above is the app folder, not the Dokploy Build Path field.
 
 ## Deploy order (first time)
 

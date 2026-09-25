@@ -28,7 +28,7 @@ ecommerce/
 | `ecommerce-worker` | Application (Dockerfile) | `/ecommerce/backend` | none | same env + worker overrides |
 | `ecommerce-storefront` | Application (Dockerfile) | `/ecommerce/storefront` | 8000 → `shop.example.com` | `storefront/.env.example` (build args + runtime) |
 
-Every application uses **Build Type: Dockerfile**, **Dockerfile path: `Dockerfile`**, and a **watch path** equal to its own Build Path (`/ecommerce/<app>/**`), so a change to one app never redeploys another.
+Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Docker File** `ecommerce/<app>/Dockerfile` and **Docker Context Path** `ecommerce/<app>` (both relative to the repo root; verified on Dokploy staging 2026-09-25, finding F-011), and a **watch path** `ecommerce/<app>/**`, so a change to one app never redeploys another. The "Build Path" column above is the app folder, not the Dokploy Build Path field.
 
 ## Deploy order (first time)
 

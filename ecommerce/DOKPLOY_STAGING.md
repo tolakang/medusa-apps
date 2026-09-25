@@ -21,15 +21,14 @@ openssl rand -base64 32   # COOKIE_SECRET
 ## 2. Backend server: `ecommerce-backend`
 
 1. **Create Service → Application**, name `ecommerce-backend`.
-2. **General → Provider: GitHub**. Repository `medusa-apps`, Branch `main`, **Build Path `/ecommerce/backend`**.
-3. **Build Type: Dockerfile**. `Dockerfile Path` = `Dockerfile`, `Docker Context Path` = `.`, `Docker Build Stage` empty.
-   > If the build fails at `COPY package.json … not found`, the paths are being read from the repo root. Set `Dockerfile Path` = `ecommerce/backend/Dockerfile` and `Docker Context Path` = `ecommerce/backend`, then tell me which one worked so I can record it.
-4. **Watch Paths:** `ecommerce/backend/**` (GitHub provider; a change elsewhere never rebuilds this app).
+2. **General → Provider: GitHub**. Repository `medusa-apps`, Branch `main`, **Build Path `/`**, Trigger Type `On Push`.
+3. **Build Type: Dockerfile**. **Docker File** = `ecommerce/backend/Dockerfile`, **Docker Context Path** = `ecommerce/backend`, Docker Build Stage empty. (Verified on staging 2026-09-25: both paths are relative to the repo root.)
+4. **Watch Paths:** `ecommerce/backend/**`. Use the glob: a bare `ecommerce/backend/` may not match changed files.
 5. **Environment → Environment Variables** (runtime). Paste this, replacing the `<…>` values:
    ```
    NODE_ENV=production
    PORT=9000
-   DATABASE_URL=<Postgres Internal Connection URL>
+   DATABASE_URL=<Postgres Internal Connection URL>   # must start with postgres:// or postgresql://
    DATABASE_SSL=false
    REDIS_URL=<Redis Internal Connection URL>
    MEDUSA_FF_CACHING=true
@@ -44,6 +43,8 @@ openssl rand -base64 32   # COOKIE_SECRET
    RUN_MIGRATIONS=true
    ```
    (Generated domains are HTTP. Then use `http://` in the three CORS values.) Leave **Build Time Arguments** empty.
+
+   > **Check before saving:** `DATABASE_URL` comes from **`ecommerce-postgres`**, and `REDIS_URL` from **`ecommerce-redis`**. A Redis URL in `DATABASE_URL` makes migrations hang for 60 s with `Knex: Timeout acquiring a connection`, and the domain shows Bad Gateway (seen on staging, finding F-012).
 6. **Domains → Add Domain**: host `<api host>`, path `/`, **container port `9000`**, HTTPS on (Let's Encrypt) if you use your own DNS.
 7. **Advanced → Cluster Settings → Swarm Settings.** The image has no `curl`, so the health check uses Node's `fetch`:
    - **Health Check**
@@ -62,7 +63,7 @@ openssl rand -base64 32   # COOKIE_SECRET
      ```
    - Keep **Replicas = 1** (one migrating server per deploy, plan §8).
 8. **Deploy.** Wait for the deployment to finish, then open `https://<api host>/health` → it must say `OK` (HTTP 200).
-9. **First admin user.** Open the backend's terminal in Dokploy and run:
+9. **First admin user.** Open the backend's terminal in Dokploy and run (the terminal opens in `/`. Images built before the entrypoint `cd /app` fix need `cd /app &&` in front):
    ```bash
    docker-entrypoint.sh medusa user -e <your-email> -p <password>
    ```
@@ -74,7 +75,7 @@ openssl rand -base64 32   # COOKIE_SECRET
 
 ## 3. Worker: `ecommerce-worker`
 
-1. **Create Service → Application**, name `ecommerce-worker`. Use the **same** provider, branch, Build Path, Build Type, Dockerfile fields and Watch Paths as the backend.
+1. **Create Service → Application**, name `ecommerce-worker`. Use the **same** provider, branch, Build Path (`/`), Build Type, Docker File (`ecommerce/backend/Dockerfile`), Context (`ecommerce/backend`) and Watch Paths as the backend.
 2. **Environment:** the same variables as the backend, with these three changed:
    ```
    MEDUSA_WORKER_MODE=worker
@@ -90,7 +91,7 @@ openssl rand -base64 32   # COOKIE_SECRET
 
 ## 4. Storefront: `ecommerce-storefront`
 
-1. **Create Service → Application**, name `ecommerce-storefront`. Provider GitHub, `main`, **Build Path `/ecommerce/storefront`**, Build Type **Dockerfile** (same Dockerfile fields as the backend, or the same fallback). **Watch Paths:** `ecommerce/storefront/**`.
+1. **Create Service → Application**, name `ecommerce-storefront`. Provider GitHub, `main`, **Build Path `/`**, Build Type **Dockerfile**: **Docker File** = `ecommerce/storefront/Dockerfile`, **Docker Context Path** = `ecommerce/storefront`. **Watch Paths:** `ecommerce/storefront/**`.
 2. **Environment → Build Time Arguments** (baked into the bundle; changing one = redeploy):
    ```
    NEXT_PUBLIC_MEDUSA_BACKEND_URL=https://<api host>

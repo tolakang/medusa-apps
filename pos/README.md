@@ -32,7 +32,7 @@ pos/
 | `pos-storefront` | Application (Dockerfile) | `/pos/storefront` | 8000 → `shop.example.com` | `storefront/.env.example` (build args + runtime) |
 | `pos-pos-app` | Application (Dockerfile) | `/pos/pos-app` | 3000 → `pos.example.com` | `pos-app/.env.example` (build args + runtime) |
 
-Every application uses **Build Type: Dockerfile**, **Dockerfile path: `Dockerfile`**, and a **watch path** equal to its own Build Path (`/pos/<app>/**`), so a change to one app never redeploys another.
+Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Docker File** `pos/<app>/Dockerfile` and **Docker Context Path** `pos/<app>` (both relative to the repo root; verified on Dokploy staging 2026-09-25, finding F-011), and a **watch path** `pos/<app>/**`, so a change to one app never redeploys another. The "Build Path" column above is the app folder, not the Dokploy Build Path field.
 
 ## Deploy order (first time)
 

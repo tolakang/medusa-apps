@@ -5,6 +5,10 @@
 #                      docker-entrypoint.sh medusa user -e admin@example.com -p secret
 set -e
 MEDUSA="/app/node_modules/.bin/medusa"
+# The Medusa CLI must run from the project root (/app = .medusa/server). A
+# Dokploy terminal opens in "/", where `medusa user` fails with "must be run
+# inside a Medusa project".
+cd /app
 
 if [ "${1:-start}" = "start" ]; then
   if [ "${RUN_MIGRATIONS:-true}" = "true" ] && [ "${MEDUSA_WORKER_MODE:-shared}" != "worker" ]; then

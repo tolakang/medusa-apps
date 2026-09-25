@@ -32,7 +32,7 @@ marketplace/
 | `marketplace-storefront` | Application (Dockerfile) | `/marketplace/storefront` | 8000 → `shop.example.com` | `storefront/.env.example` (build args + runtime) |
 | `marketplace-vendor-portal` | Application (Dockerfile) | `/marketplace/vendor-portal` | 3000 → `vendors.example.com` | `vendor-portal/.env.example` (build args + runtime) |
 
-Every application uses **Build Type: Dockerfile**, **Dockerfile path: `Dockerfile`**, and a **watch path** equal to its own Build Path (`/marketplace/<app>/**`), so a change to one app never redeploys another.
+Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Docker File** `marketplace/<app>/Dockerfile` and **Docker Context Path** `marketplace/<app>` (both relative to the repo root; verified on Dokploy staging 2026-09-25, finding F-011), and a **watch path** `marketplace/<app>/**`, so a change to one app never redeploys another. The "Build Path" column above is the app folder, not the Dokploy Build Path field.
 
 ## Deploy order (first time)
 

@@ -28,7 +28,7 @@ booking-services/
 | `booking-services-worker` | Application (Dockerfile) | `/booking-services/backend` | none | same env + worker overrides |
 | `booking-services-storefront` | Application (Dockerfile) | `/booking-services/storefront` | 8000 → `shop.example.com` | `storefront/.env.example` (build args + runtime) |
 
-Every application uses **Build Type: Dockerfile**, **Dockerfile path: `Dockerfile`**, and a **watch path** equal to its own Build Path (`/booking-services/<app>/**`), so a change to one app never redeploys another.
+Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Docker File** `booking-services/<app>/Dockerfile` and **Docker Context Path** `booking-services/<app>` (both relative to the repo root; verified on Dokploy staging 2026-09-25, finding F-011), and a **watch path** `booking-services/<app>/**`, so a change to one app never redeploys another. The "Build Path" column above is the app folder, not the Dokploy Build Path field.
 
 ## Deploy order (first time)
 
