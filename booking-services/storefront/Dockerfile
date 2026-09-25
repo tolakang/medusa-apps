@@ -20,9 +20,9 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # ---- build-time arguments (set in Dokploy "Build-time Arguments") ----
-# Backend URL reachable DURING the build (public URL, e.g. https://api.example.com)
-ARG MEDUSA_BACKEND_URL=""
-ENV MEDUSA_BACKEND_URL=${MEDUSA_BACKEND_URL}
+# PUBLIC backend URL, e.g. https://api.example.com (used by the browser and the build; baked in)
+ARG NEXT_PUBLIC_MEDUSA_BACKEND_URL=""
+ENV NEXT_PUBLIC_MEDUSA_BACKEND_URL=${NEXT_PUBLIC_MEDUSA_BACKEND_URL}
 # Publishable API key (Admin > Settings > Publishable API Keys)
 ARG NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=""
 ENV NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=${NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY}

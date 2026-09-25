@@ -31,4 +31,4 @@ The `Dockerfile`s and `.env.example`s are committed **ready templates**; app cod
 3. **Not a monorepo.** Every deployable (backend, storefront, portal, app) is independent: own `package.json`, lockfile, `Dockerfile`, `.env.example`. Nothing is shared; clients reach their backend only over HTTP.
 4. **One business = one app.** Combine scenarios by adding modules to one app, never by syncing two apps.
 
-Baseline (checked 2026-09-24): Medusa 2.21.1, pnpm 12.6.0, Node 22 LTS.
+Baseline (checked 2026-09-25 against docs.medusajs.com): Medusa 2.21.1, pnpm 12.6.0, Node 22 LTS. Starters: `medusajs/dtc-starter`.

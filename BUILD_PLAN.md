@@ -1,8 +1,10 @@
 # Build Plan — Medusa Apps (Pre-Build)
 
 > **Status: planning only. No application code has been written yet.** Deployment templates are committed: every deployable folder already has its `Dockerfile` and `.env.example`, and every category has a Dokploy guide in `<category>/README.md`.
-> Baseline checked 2026-09-24: **Medusa 2.21.1**, **pnpm 12.6.0**, **Node 22 LTS**.
+> Baseline checked 2026-09-25: **Medusa 2.21.1**, **pnpm 12.6.0**, **Node 22 LTS**.
 > Re-check these versions on the day Phase 0 starts.
+>
+> **Revision 3 (2026-09-25):** audited against the official Medusa v2 docs (docs.medusajs.com) and starters. Changes: starters moved to `medusajs/dtc-starter` (the standalone backend and Next.js starters are deprecated); Caching Module replaces the deprecated `cache-redis`; `projectConfig.redisUrl` added; storefront backend URL is `NEXT_PUBLIC_MEDUSA_BACKEND_URL`; `@medusajs/ui` has its own version line; marketplace order split, POS order creation and booking validation aligned with the official recipes / workflow reference. Changed sections: 3.2, 4.1, 4.2, 6.2, 6.3, 6.4, 6.5, 6.6, 8, 9, 10.
 >
 > **Revision 2 (2026-09-24):** every category folder is now a complete business project with one sub-folder per deployable (`backend/`, `storefront/`, and a portal or app where needed). Each deployable has its own `Dockerfile` and `.env.example` (committed as ready templates). Changed sections: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10.
 
@@ -25,14 +27,14 @@ Contents
 
 | # | Requirement | How this plan meets it |
 |---|---|---|
-| R1 | Use official Medusa source, never modify upstream, latest Medusa and pnpm | Medusa is consumed **only as published npm packages** (`@medusajs/*`). No fork, no git submodule, no `pnpm patch`, no edits inside `node_modules`. Customization only through official extension points (§3). |
+| R1 | Use official Medusa source, never modify upstream, latest Medusa and pnpm | Medusa is consumed **only as published npm packages** (`@medusajs/*`). No fork, no git submodule, no `pnpm patch`, no edits inside `node_modules`. Customization only through official extension points (§3). Boilerplate is copied from the official **`medusajs/dtc-starter`** (§4). |
 | R2 | Always compatible with Medusa updates; deploy an update any time | Exact version pins, lockfile per deployable, a scripted update per category, a CI gate (build + typecheck + migrate + health check) before any deploy, and Dokploy rollback (§3, §8). |
 | R3 | Dokploy-ready, **not a monorepo**, one folder per scenario; each folder holds the backend **and** storefront (and portal/app) with their own `Dockerfile` and env; every deployment works independently | Six category folders; inside each, one sub-folder per deployable with its own `Dockerfile`, `.env.example` and (in the build phase) its own `package.json` + lockfile. No root `package.json`, no workspace, no shared code. Each sub-folder is its own Docker context and Dokploy Build Path (§2, §5). |
 | R4 | Each scenario has its own dependencies | Each deployable sub-folder has its own `package.json`, `pnpm-lock.yaml` and `node_modules`; nothing is shared between sub-folders or categories. |
 | R5 | Side-by-side comparison in project root | `COMPARISON.md` |
 | R6 | Pre-build plan with recommended build order in project root | This file, §7 |
 
-**Honest limit on R2.** Storefronts and portals start from the official Next.js starter, which is a *template you copy*, not a package; its upstream changes are merged by hand (§8.1). Their `@medusajs/*` packages are pinned like the backend's. No repository can guarantee that *every* future Medusa release is non-breaking; Medusa occasionally ships breaking changes in minor versions (listed in its release notes), and database migrations are forward-only. What this plan guarantees is that **an update can never reach production without passing the CI gate**, that each category (and each deployable in it) is updated and deployed independently, and that the previous working image can be redeployed. See §8.
+**Honest limit on R2.** Backends and storefronts start from the official `dtc-starter`, which is a *template you copy*, not a package; its upstream changes are merged by hand (§8.1). Their `@medusajs/*` packages are pinned like the backend's. No repository can guarantee that *every* future Medusa release is non-breaking; Medusa occasionally ships breaking changes in minor versions (listed in its release notes), and database migrations are forward-only. What this plan guarantees is that **an update can never reach production without passing the CI gate**, that each category (and each deployable in it) is updated and deployed independently, and that the previous working image can be redeployed. See §8.
 
 ---
 
@@ -107,7 +109,7 @@ Names are lowercase kebab-case because they become Dokploy build paths, image na
 
 ### 3.2 Version policy
 
-- All `@medusajs/*` packages pinned to the **exact same version** (no `^`/`~`).
+- All `@medusajs/*` packages that follow the Medusa release line pinned to the **exact same version** (no `^`/`~`). Exception: **`@medusajs/ui` has its own version line** (4.x while Medusa is 2.21.1); pin it to the exact version the official `dtc-starter` uses for that Medusa release.
 - `packageManager: "pnpm@<exact>"` in each `package.json`; the Dockerfile installs exactly that version.
 - `pnpm install --frozen-lockfile` everywhere (local CI and Docker). A build never resolves new versions on its own.
 - Only public imports: `@medusajs/framework/*`, `@medusajs/medusa/*`, `@medusajs/medusa/core-flows`, `@medusajs/admin-sdk`, `@medusajs/ui`. Never import from `dist/` paths.
@@ -151,11 +153,11 @@ Two standards: **4.1 backend** (identical in every `*/backend`) and **4.2 web cl
     └── scripts/              # seed scripts
 ```
 
-Source of truth for the boilerplate: the official **`medusajs/medusa-starter-default`** repository (backend only; its yarn files are replaced by pnpm ones).
+Source of truth for the boilerplate: **`apps/backend`** of the official **`medusajs/dtc-starter`** repository (the older `medusa-starter-default` is deprecated). The DTC starter is a pnpm + Turborepo monorepo; only `apps/backend` is copied, and the workspace-level settings are moved into this app's own `pnpm-workspace.yaml`. Record the starter commit in the backend README. Add a `predeploy` script (`medusa db:migrate`) and a `typecheck` script; the starter ships neither.
 
 #### `pnpm-workspace.yaml` (per deployable)
 
-pnpm ≥ 11 reads project settings from `pnpm-workspace.yaml` and **ignores the starter's `.npmrc` hoisting settings**. Without a `packages:` key this file only holds settings, so the app is still a single package.
+The official [pnpm guide](https://docs.medusajs.com/learn/configurations/pnpm) puts the four `public-hoist-pattern` entries in `.npmrc`; pnpm ≥ 11 no longer reads them there, so the same entries go into `pnpm-workspace.yaml` as `publicHoistPattern` (same packages, same intent as the docs). Without a `packages:` key this file only holds settings, so the app is still a single package.
 
 ```yaml
 publicHoistPattern:          # required by the Medusa Admin build
@@ -164,7 +166,7 @@ publicHoistPattern:          # required by the Medusa Admin build
   - "react-i18next"
   - "react-router-dom"
 allowBuilds:                 # pnpm blocks install scripts unless allowed
-  "@medusajs/telemetry": false
+  "@medusajs/telemetry": false   # dtc-starter uses true; false = opt out of telemetry
   "@swc/core": true
   esbuild: true
   msgpackr-extract: true
@@ -176,14 +178,15 @@ allowBuilds:                 # pnpm blocks install scripts unless allowed
 | Env | Effect |
 |---|---|
 | `DATABASE_URL` | Postgres connection (one database per business project) |
-| `REDIS_URL` set | Enables official Redis modules: `cache-redis`, `event-bus-redis`, `workflow-engine-redis` (`{ redis: { redisUrl } }`), `locking` + `locking-redis`. Unset = in-memory (dev only). |
-| `MEDUSA_WORKER_MODE` | `shared` (default), `server` (HTTP only) or `worker` (jobs/subscribers only) |
-| `DISABLE_MEDUSA_ADMIN` | Disable the dashboard; forced off on workers |
-| `MEDUSA_BACKEND_URL` | Admin backend URL; leave empty when admin is served by the same app |
+| `REDIS_URL` set | Sets `projectConfig.redisUrl` (session store) and enables the modules from the official [deployment guide](https://docs.medusajs.com/learn/deployment/general): `caching` + provider `@medusajs/caching-redis` (separate npm package), `event-bus-redis`, `workflow-engine-redis` (`{ redis: { redisUrl } }`), `locking` + provider `locking-redis`. One Redis URL is used for all of them. Unset = in-memory (dev only). |
+| `MEDUSA_FF_CACHING` | `true`. The Caching Module is still behind this feature flag in 2.21.x but is what the deployment guide configures; the old `cache-redis` module is deprecated since v2.11.0. |
+| `MEDUSA_WORKER_MODE` | `projectConfig.workerMode`: `shared` (default), `server` (HTTP only) or `worker` (jobs/subscribers only) |
+| `DISABLE_MEDUSA_ADMIN` | `admin.disable`; `true` on workers |
+| `MEDUSA_BACKEND_URL` | `admin.backendUrl`; leave empty when admin is served by the same app |
 | `S3_*` set | Enables `file` + `file-s3` provider (S3 / R2 / MinIO). Containers are ephemeral, so uploads must go to S3 in production. |
 | `STORE_CORS`, `ADMIN_CORS`, `AUTH_CORS`, `JWT_SECRET`, `COOKIE_SECRET` | Standard Medusa settings |
 
-The newer Medusa **Caching module** is still behind a `[WIP]` feature flag in 2.21.x, so the stable `cache-redis` module is used until it graduates.
+Variable names match the official deployment guide (`MEDUSA_WORKER_MODE`, `DISABLE_MEDUSA_ADMIN`, `MEDUSA_BACKEND_URL`). Migrations run only on the server instance, like the guide's `predeploy` step; the worker never migrates.
 
 #### Backend Dockerfile design
 
@@ -222,6 +225,7 @@ S3_REGION=
 S3_BUCKET=
 S3_ENDPOINT=
 S3_FORCE_PATH_STYLE=false
+MEDUSA_FF_CACHING=true
 ```
 
 Scenario-specific variables are listed in each scenario plan in §6.
@@ -233,7 +237,7 @@ Scenario-specific variables are listed in each scenario plan in §6.
 
 ```
 <category>/<client>/
-├── package.json          # own deps; @medusajs/js-sdk, ui, types pinned to the backend's version
+├── package.json          # own deps; @medusajs/js-sdk, icons, types, ui-preset pinned to the backend's version
 ├── pnpm-lock.yaml
 ├── pnpm-workspace.yaml   # settings only (allowBuilds for sharp, etc.)
 ├── next.config.js        # MUST set output: "standalone"
@@ -244,19 +248,20 @@ Scenario-specific variables are listed in each scenario plan in §6.
 └── src/
 ```
 
-- **Framework:** Next.js for every web client (one Dockerfile pattern). Storefronts start from the official **`medusajs/nextjs-starter-medusa`**; portals and the POS app start from a plain Next.js app using `@medusajs/js-sdk`.
-- **Starter changes required** (the starter ships with `latest` versions and yarn):
-  1. Replace `latest` with the exact backend version for `@medusajs/js-sdk`, `@medusajs/ui`, `@medusajs/icons`, `@medusajs/types`, `@medusajs/ui-preset`.
-  2. Switch to pnpm (`packageManager`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`).
+- **Framework:** Next.js for every web client (one Dockerfile pattern). Storefronts start from **`apps/storefront`** of the official **`medusajs/dtc-starter`** (since Medusa v2.14 the standalone `nextjs-starter-medusa` is deprecated and archived); portals and the POS app start from a plain Next.js app using `@medusajs/js-sdk`.
+- **Starter changes required** (the storefront is a workspace package of the DTC monorepo, already on pnpm and pinned to the Medusa version):
+  1. Give it its own `packageManager`, `pnpm-lock.yaml` and settings-only `pnpm-workspace.yaml`; carry over the root `pnpm.overrides` (`@types/react`, `@types/react-dom`) from the DTC root `package.json`. Keep `@medusajs/js-sdk`, `@medusajs/icons`, `@medusajs/types`, `@medusajs/ui-preset`, `@medusajs/instantsearch-adapter` on the exact backend version.
+  2. Rename the package (`@dtc/storefront` → `<category>-storefront`).
   3. Add `output: "standalone"` to `next.config.js`.
-  4. Image domains: read `S3_IMAGE_HOSTNAME` / `S3_IMAGE_PATHNAME` in `next.config.js` so product images from your bucket work with `next/image`.
+  4. Image domains: the starter reads `MEDUSA_CLOUD_S3_HOSTNAME` / `MEDUSA_CLOUD_S3_PATHNAME`; change these two reads to `S3_IMAGE_HOSTNAME` / `S3_IMAGE_PATHNAME` so any bucket (S3, R2, MinIO) works.
   5. **Make the build independent of the backend:** the starter's `generateStaticParams` (products, collections, categories) calls the backend during `next build`, and the categories one fails the build if the backend is unreachable. Wrap each in a guard that returns `[]` on error, so pages render on demand instead. The build then only needs the publishable key.
+  6. *(Optional)* **Internal backend URL on the server:** the starter's `src/lib/config.ts` uses `NEXT_PUBLIC_MEDUSA_BACKEND_URL` for both browser and server. Change it to prefer a server-only `MEDUSA_BACKEND_URL` when `typeof window === "undefined"`, so server-side calls use the private Dokploy hostname. Without this change the runtime `MEDUSA_BACKEND_URL` is unused.
 - **Dockerfile design:** same fully-qualified multi-arch base image as the backend; `pnpm install --frozen-lockfile`; `pnpm build`; runtime stage copies only `.next/standalone`, `.next/static`, `public`; runs `node server.js` as `node` user. Storefront port 8000, portals / POS app 3000.
-- **Env split:** `NEXT_PUBLIC_*` (and anything read by `next.config.js`) = **Dokploy Build-time Arguments** (declared as `ARG` in the Dockerfile); secrets and server-side URLs = **runtime variables**. Build-time URLs must be public; runtime `MEDUSA_BACKEND_URL` can be the internal Dokploy hostname.
+- **Env split:** `NEXT_PUBLIC_*` (and anything read by `next.config.js`) = **Dokploy Build-time Arguments** (declared as `ARG` in the Dockerfile); secrets and server-side URLs = **runtime variables**. Build-time URLs must be public; runtime `MEDUSA_BACKEND_URL` can be the internal Dokploy hostname (after change 6).
 
 | Client | Build-time args | Runtime vars |
 |---|---|---|
-| storefront | `MEDUSA_BACKEND_URL` (public), `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY`, `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_DEFAULT_REGION`, `NEXT_PUBLIC_STRIPE_KEY`, `S3_IMAGE_HOSTNAME`, `S3_IMAGE_PATHNAME` (+ scenario args) | `MEDUSA_BACKEND_URL`, `REVALIDATE_SECRET` (+ scenario vars) |
+| storefront | `NEXT_PUBLIC_MEDUSA_BACKEND_URL` (public), `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY`, `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_DEFAULT_REGION`, `NEXT_PUBLIC_STRIPE_KEY`, `S3_IMAGE_HOSTNAME`, `S3_IMAGE_PATHNAME` (+ scenario args) | `MEDUSA_BACKEND_URL`, `REVALIDATE_SECRET` (+ scenario vars) |
 | vendor-portal / seller-portal / pos-app | `NEXT_PUBLIC_MEDUSA_BACKEND_URL`, `NEXT_PUBLIC_BASE_URL` | `MEDUSA_BACKEND_URL`, `COOKIE_SECRET` |
 
 ### 4.3 Local testing
@@ -298,11 +303,12 @@ Each scenario lists: custom modules (tables are prefixed to avoid collisions), l
 
 - **Custom module `pos`:** `pos_register` (name, code, is_active), `pos_shift` (status open/closed, opened_by, closed_by, opened_at, closed_at, currency_code, opening_cash, counted_cash, expected_cash, notes).
 - **Links:** register ↔ stock location (many → one), register ↔ sales channel (many → one), shift → orders (one → many).
-- **Workflows:** `open-shift` (one open shift per register), `close-shift` (compute expected cash from cash payments, store variance), `pos-checkout` (calls core cart workflows, marks payment captured, links order to shift).
-- **API routes:** `/admin/pos/registers`, `/admin/pos/shifts/open|close`, barcode lookup by SKU/EAN.
+- **Workflows:** `open-shift` (one open shift per register), `close-shift` (compute expected cash from cash payments, store variance), `pos-checkout` — follows the official POS recipe: creates the sale as a **draft order** in the POS sales channel (core draft-order workflows; the `@medusajs/draft-order` plugin ships with the starter), applies promotions, records payment, converts it to an order and links the order to the shift.
+- **API routes:** `/admin/pos/registers`, `/admin/pos/shifts/open|close`, barcode lookup on the variant's `barcode` / `ean` / `upc` / `sku` fields (recipe: custom route).
 - **Admin:** shift report page (per register / per cashier / per day).
 - **Client apps:** `pos/storefront` (online shop on the same stock) and `pos/pos-app` (Next.js PWA for tablets): login, barcode scan, cart, customer lookup, payment (cash / card / QR), receipt.
 - **Env:** none extra at MVP. `ADMIN_CORS` includes the POS app domain (the POS app uses the admin API with a cashier user).
+- **Card payments:** the recipe suggests a terminal provider (e.g. Stripe Terminal) as a payment provider; decided under D1.
 - **Later:** offline queue in the POS app, click-and-collect, in-store returns of online orders.
 - **Acceptance:** a sale at a register reduces stock at that shop's location only; a shift closes with a correct cash variance.
 
@@ -311,20 +317,23 @@ Each scenario lists: custom modules (tables are prefixed to avoid collisions), l
 - **Custom module `booking`:** `booking_resource` (name, type staff/room/equipment/venue, capacity, timezone, is_active), `booking_schedule` (weekday, start_time, end_time), `booking` (starts_at, ends_at in UTC, status pending/confirmed/cancelled/expired/completed/no_show, hold_expires_at, customer_id, cart_id, line_item_id, notes).
 - **Links:** resource ↔ product variant (many ↔ many: which services a resource offers), booking → order (many → one).
 - **Service methods:** `isSlotAvailable` (overlap + capacity; pending holds count only until they expire), `createHold`.
-- **Hooks / workflows:** `addToCartWorkflow` `validate` hook → slot must be available; `add-booking-to-cart` workflow creates the hold and the line item together (compensation removes the hold); `completeCartWorkflow` `validate` hook re-checks the hold; subscriber `order.placed` → confirm bookings and link to order; `cancel-booking` workflow applies the cancellation policy and triggers the refund.
+- **Hooks / workflows:** `addToCartWorkflow` `validate` hook → slot must be available; `add-booking-to-cart` workflow creates the hold and the line item together (compensation removes the hold); `completeCartWorkflow` `validate` hook re-checks the hold — read-only (the reference forbids mutating the cart in this hook) and a hold owned by the same cart counts as valid, so a retried completion stays idempotent; subscriber `order.placed` → confirm bookings and link to order; `cancel-booking` workflow applies the cancellation policy and triggers the refund.
 - **Jobs:** release expired holds (every minute); reminders 24 h before.
 - **API routes:** `GET /store/booking/availability`, `GET /store/booking/slots` (free slots for service + date), `POST /store/booking/cancel`.
 - **Admin:** day/week calendar per resource; walk-in booking.
 - **Client app:** `booking-services/storefront` — starter + service pages, slot picker, booking management in the customer account.
 - **Env:** `BOOKING_HOLD_MINUTES` (default 15), `BOOKING_DEFAULT_TIMEZONE`, `BOOKING_CANCEL_HOURS`.
-- **Services are products with no shipping** (variants per duration / staff level).
+- **Services are products with no shipping** (variants per duration / staff level; shipping disabled on the variants, as in the Ticket Booking recipe).
+- **Tickets / fixed-capacity events** (no staff calendar): follow the official Ticket Booking recipe instead — seat capacity as **inventory items** per show date and section — and keep the `booking` module for time-slot services.
 - **Acceptance:** two customers cannot hold the same slot; an abandoned checkout frees the slot automatically; cancellation inside the policy refunds.
 
 ### 6.4 Wholesale — `wholesale/`
 
+- **Start from the official B2B starter** (`medusajs/b2b-starter`, maintained): reuse its company / employee / quote / approval module designs rather than inventing new ones; copy code into `wholesale/backend` like any starter (§8.1).
 - **Custom module `company`:** `company` (name, contacts, tax_id, status, payment_terms prepaid/net_15/net_30/net_60, credit_limit, currency_code), `employee` (spending_limit, is_admin). **Later:** `quote`.
 - **Links:** employee ↔ customer (one ↔ one), company ↔ customer group (the price tier).
-- **Pricing:** core **price lists** with a customer-group rule per tier; quantity tiers via price rules.
+- **Catalog scope (recipe):** a B2B **sales channel** + its own publishable key, so the B2B storefront only sees B2B products.
+- **Pricing:** core **price lists** with a customer-group rule (`customer.groups.id`) per tier; quantity tiers via each price's `min_quantity` / `max_quantity`.
 - **Hooks / workflows:** `addToCartWorkflow` `validate` → minimum order quantity and approved company; `completeCartWorkflow` `validate` → employee spending limit and company credit limit; `request-quote` / `accept-quote` (via draft orders); approval flow for orders above a limit.
 - **Payments:** manual "invoice / net terms" payment provider; invoice PDF.
 - **API routes:** `/store/companies/me`, `/store/companies/me/employees`, `/store/quotes`.
@@ -338,7 +347,7 @@ Each scenario lists: custom modules (tables are prefixed to avoid collisions), l
 - **Custom module `seller`:** `seller` (handle, name, email, domain, status, commission_rate), `seller_commission` (order_id unique, order_total, rate, amount, currency_code, status pending/approved/paid/cancelled, paid_at). **Later:** `seller_payout`.
 - **Links:** seller ↔ sales channel (one ↔ one — the seller's storefront publishable key).
 - **Workflows:** `record-seller-commission` (order → sales channel → seller → commission; idempotent; ignores channels without an active seller), triggered by subscriber `order.placed`; `cancel-commission` on order cancel / refund; monthly payout batch.
-- **Seller auth:** custom actor type `seller` (auth identity), seller-scoped routes under `/sellers/*`.
+- **Seller auth:** custom actor type `seller` (auth identity via `setAuthAppMetadataStep`; `/auth/seller/emailpass`), seller-scoped routes under `/sellers/*` protected with `authenticate("seller", ["session", "bearer"])`. `/sellers/*` is not covered by `storeCors`/`adminCors`, so a CORS middleware reading `SELLER_CORS` is added for it; portal domains also go in `AUTH_CORS`.
 - **API routes:** `/sellers/me`, `/sellers/me/products` (choose which of your products appear in their channel), `/sellers/me/commissions`.
 - **Client apps:** `reseller/storefront` — one multi-tenant deployment serving every seller domain; it resolves the seller by domain (`SELLER_RESOLVE_MODE`) and uses that seller's publishable key. `reseller/seller-portal` — product selection, sales, commissions.
 - **Env:** `RESELLER_DEFAULT_COMMISSION_RATE`, `RESELLER_PAYOUT_DAY`.
@@ -348,8 +357,8 @@ Each scenario lists: custom modules (tables are prefixed to avoid collisions), l
 
 - **Custom module `marketplace`:** `vendor` (handle, name, email, logo, status, commission_rate), `vendor_admin` (email, names), `vendor_payout` (amount, currency, status, period, paid_at, reference).
 - **Links:** vendor → products, vendor → orders (child orders), vendor → stock locations.
-- **Vendor auth:** custom actor type `vendor`; signup → admin approval; vendor-scoped routes under `/vendors/*` (every query filtered by the logged-in vendor).
-- **Workflows:** `create-vendor`, `create-vendor-product` (links product to vendor, status draft until approved), **`split-order-by-vendor`** on `order.placed` (parent order + one child order per vendor, with compensation), `record-vendor-commission`, `create-payouts` (scheduled).
+- **Vendor auth:** custom actor type `vendor` (as in the official Vendors example: `/auth/vendor/emailpass/register` → `create-vendor` workflow with `setAuthAppMetadataStep` → `authenticate("vendor", ["session", "bearer"])`); signup → admin approval; vendor-scoped routes under `/vendors/*` (every query filtered by the logged-in vendor). A CORS middleware reading `VENDOR_CORS` covers `/vendors/*`.
+- **Workflows:** `create-vendor`, `create-vendor-product` (links product to vendor, status draft until approved), **`create-vendor-orders`** exactly as in the official Vendors example: a custom route **`POST /store/carts/:id/complete-vendor`** runs a workflow that calls `completeCartWorkflow` (parent order), groups items by vendor, creates one child order per vendor with `createOrderWorkflow`, and links them (compensation deletes child orders). The storefront calls this route instead of the core complete-cart route. Wrap it in `acquireLockStep` / `releaseLockStep` on the cart id and check existing links first, as the `completeCartWorkflow` reference requires for wrappers, `record-vendor-commission`, `create-payouts` (scheduled).
 - **Admin:** vendor approval queue, product moderation, payout report.
 - **Client apps:** `marketplace/storefront` (shows vendor name/shop pages) and `marketplace/vendor-portal` (products, orders, fulfillments, payouts).
 - **Env:** `MARKETPLACE_DEFAULT_COMMISSION_RATE`, `MARKETPLACE_REQUIRE_PRODUCT_APPROVAL`, `MARKETPLACE_PAYOUT_DAY`.
@@ -385,7 +394,7 @@ scripts/update-medusa.sh <category|category/app|all> [version]   # default: late
 Per deployable, the script will:
 
 1. Read the target version (`npm view @medusajs/medusa version` when not given).
-2. Set **every** `@medusajs/*` dependency (backend **and** that category's clients) to that exact version; optionally bump `packageManager` to the latest pnpm.
+2. Set every `@medusajs/*` dependency on the Medusa release line (backend **and** that category's clients) to that exact version; set `@medusajs/ui` (own version line) to the version the `dtc-starter` pins for that release; optionally bump `packageManager` to the latest pnpm.
 3. `pnpm install` → new `pnpm-lock.yaml`.
 4. Run `scripts/verify.sh <category>`:
    - `pnpm build` then `pnpm typecheck`
@@ -397,7 +406,7 @@ Per deployable, the script will:
 
 Release:
 
-1. Read the Medusa release notes for every version skipped (breaking changes are called out there).
+1. Read the Medusa release notes for every version skipped (breaking changes are called out there) and run any codemod they list (e.g. `replace-zod-imports` for v2.13).
 2. **Back up the app's database** (migrations cannot be rolled back automatically).
 3. Deploy to staging via Dokploy, smoke test, then production.
 4. Rollback = redeploy the previous commit / image **and restore the backup if the new version ran migrations**.
@@ -409,7 +418,7 @@ Automation (Phase 0): Dependabot (or Renovate) configured **per deployable folde
 
 ### 8.1 Storefront / portal starter updates
 
-The Next.js starter is copied, not installed. Each client's README records the starter commit it was copied from. To take upstream starter improvements: diff the starter between the recorded commit and its latest commit, apply the relevant parts by hand, update the recorded commit. Medusa package updates for clients go through the normal update script.
+The `dtc-starter` (backend and storefront) is copied, not installed. Each client's README records the starter commit it was copied from. To take upstream starter improvements: diff the starter between the recorded commit and its latest commit, apply the relevant parts by hand, update the recorded commit. Medusa package updates for clients go through the normal update script.
 ## 9. Verified technical notes (from a prototype spike)
 
 A throwaway prototype was built on Medusa 2.21.1 + pnpm 12.6.0 to test this plan. The code was not kept (this repo is plan-only), but these findings are confirmed and must be followed in Phase 0:
@@ -425,10 +434,10 @@ A throwaway prototype was built on Medusa 2.21.1 + pnpm 12.6.0 to test this plan
 | Service method names | Generated from the **object keys** passed to `MedusaService({...})`: key `Resource` → `createResources`, not the table name. |
 | Workflows | Returning the result of `when(...).then(...)` directly in `WorkflowResponse` fails typecheck; wrap it: `new WorkflowResponse({ result })`. |
 | Link queries | Reading a linked record through `useQueryGraphStep` (e.g. `sales_channel` → `seller.*`) works in a workflow. |
-| Redis modules | Workflow engine option shape is `{ redis: { redisUrl } }` (`url` is deprecated). Caching module is still `[WIP]` behind a feature flag → use `cache-redis`. |
+| Redis modules | Workflow engine option shape is `{ redis: { redisUrl } }` (`url` deprecated since v2.12.2). Caching Module needs `MEDUSA_FF_CACHING=true` and the `@medusajs/caching-redis` package; `cache-redis` is deprecated (docs-verified 2026-09-25). |
 | S3 provider options | `file_url`, `access_key_id`, `secret_access_key`, `region`, `bucket`, `endpoint`, `additional_client_config` (e.g. `forcePathStyle` for MinIO). |
-| Storefront starter | Official `nextjs-starter-medusa` uses yarn, `latest` for `@medusajs/*`, no `output: "standalone"`, requires `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` at build (build aborts without it), and its `generateStaticParams` call the backend during `next build` (the categories page is not guarded). Hence the changes in §4.2. |
-| Storefront env | Server-side backend URL is `MEDUSA_BACKEND_URL` (the old `NEXT_PUBLIC_MEDUSA_BACKEND_URL` name is no longer used by the starter). |
+| Storefront starter | *Superseded 2026-09-25:* the spike used the standalone `nextjs-starter-medusa`, now archived. The `dtc-starter` storefront is pnpm-based and pinned, but still has no `output: "standalone"`, still requires `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` at build (`check-env-variables.js`), and still calls the backend from `generateStaticParams`. Re-verify the guard need in Phase 0. |
+| Storefront env | *Corrected 2026-09-25:* the `dtc-starter` storefront reads **`NEXT_PUBLIC_MEDUSA_BACKEND_URL`** (`src/lib/config.ts`), for both browser and server. A server-only `MEDUSA_BACKEND_URL` requires starter change 6 (§4.2). |
 | Runtime check | Production build (server + Redis) started cleanly; `/health` and `/app` returned 200 for all six backend shapes (storefront/portal images are first built in Phase 0); booking hold / double-booking / hold-expiry and reseller commission idempotency behaved as designed. |
 
 ---
@@ -447,4 +456,5 @@ A throwaway prototype was built on Medusa 2.21.1 + pnpm 12.6.0 to test this plan
 | R-b | Migration applied then rollback needed → requires DB backup restore | every release |
 | R-c | Duplicated boilerplate drifts between folders → Phase 0 `verify.sh` also diffs the standard files across folders | ongoing |
 | R-d | Client built against an old publishable key or backend URL → keys and URLs are build args; changing them means rebuilding that client (documented in each `.env.example`) | ongoing |
+| R-f | Official starters/recipes change (e.g. the v2.14 move to `dtc-starter`) → re-check docs.medusajs.com and the starter repos at the start of every phase, not only Medusa package versions | every phase |
 | R-e | Worker and server accidentally both run migrations → worker env always has `RUN_MIGRATIONS=false` (in every backend `.env.example`) | every deploy |

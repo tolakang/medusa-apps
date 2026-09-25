@@ -50,7 +50,7 @@ After the first deploy, every service can be redeployed, rebuilt or rolled back 
   - `STORE_CORS` = storefront domain
   - `ADMIN_CORS` = backend/admin domain
   - `AUTH_CORS` = every domain where someone logs in
-- Runtime `MEDUSA_BACKEND_URL` in a client can be the backend's **internal** Dokploy hostname (faster, private; copy the exact name Dokploy shows for the service, it may carry a suffix). Build-time URLs must be **public**, because the build runs on the build server.
+- The storefront reaches the backend through the public `NEXT_PUBLIC_MEDUSA_BACKEND_URL` (build-time). Runtime `MEDUSA_BACKEND_URL` can be the backend's **internal** Dokploy hostname once starter change 6 in BUILD_PLAN.md §4.2 is applied (faster, private; copy the exact name Dokploy shows for the service, it may carry a suffix). Build-time URLs must be **public**, because the build runs on the build server.
 - `NEXT_PUBLIC_*` values are baked in at build time. Changing one = rebuild that client.
 
 ## Independence rules
