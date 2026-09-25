@@ -45,6 +45,8 @@ After the first deploy, every service can be redeployed, rebuilt or rolled back 
 
 ## Staging project: `ecommerce-staging` (decision D6)
 
+Step-by-step setup: **[DOKPLOY_STAGING.md](./DOKPLOY_STAGING.md)** (Dokploy field names, env, health checks, rollback test).
+
 Staging is a **second Dokploy project** built from this same folder — never a
 second environment inside the production project:
 
