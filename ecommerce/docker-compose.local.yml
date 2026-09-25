@@ -33,7 +33,8 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_started }
-    ports: ["9000:9000"]
+    # 8000 belongs to the storefront, which shares this network namespace.
+    ports: ["9000:9000", "8000:8000"]
     # No curl in the slim image; Node 22 has fetch.
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:9000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
@@ -67,6 +68,28 @@ services:
       MEDUSA_WORKER_MODE: worker
       DISABLE_MEDUSA_ADMIN: "true"
       RUN_MIGRATIONS: "false"
+
+  # Shares the backend's network namespace, so "localhost:9000" means the
+  # backend both in the browser (host) and inside this container. Local only:
+  # on Dokploy the public URL is used, plus MEDUSA_BACKEND_URL (internal).
+  # Get the key after seeding (backend/README.md):
+  #   STOREFRONT_PUBLISHABLE_KEY=pk_... podman compose -f ecommerce/docker-compose.local.yml up -d --build storefront
+  storefront:
+    build:
+      context: ./storefront
+      args:
+        NEXT_PUBLIC_MEDUSA_BACKEND_URL: http://localhost:9000
+        NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: ${STOREFRONT_PUBLISHABLE_KEY:-pk_set_me}
+        NEXT_PUBLIC_BASE_URL: http://localhost:8000
+        NEXT_PUBLIC_DEFAULT_REGION: dk
+    container_name: ecommerce-local-storefront
+    network_mode: service:backend
+    depends_on:
+      backend: { condition: service_healthy }
+    environment:
+      NODE_ENV: production
+      PORT: "8000"
+      MEDUSA_BACKEND_URL: http://localhost:9000
 
 volumes:
   postgres_data:
