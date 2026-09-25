@@ -9,7 +9,7 @@
 
 | Phase | Category | Size | Status |
 |---|---|---|---|
-| 0 | Foundation (in `ecommerce/`) | M | Not started |
+| 0 | Foundation (in `ecommerce/`) | M | In progress: local work done; waiting on D3/D6, Dokploy staging and the first CI run |
 | 1 | Ecommerce | S | Not started |
 | 2 | POS | M | Not started |
 | 3 | Booking services | M–L | Not started |
@@ -29,29 +29,29 @@
 ## Phase 0: Foundation (`ecommerce/`) · plan §2–§5, §7, §8
 
 **Decisions needed first**
-- [ ] P0-01 Re-check Medusa, pnpm and Node versions on the start day (MEDUSA_SKILL §1). If they changed, refresh the skill (§14) and log it. Don't edit the plan.
+- [x] P0-01 Re-check Medusa, pnpm and Node versions on the start day (MEDUSA_SKILL §1). If they changed, refresh the skill (§14) and log it. Don't edit the plan. — done: unchanged (Medusa 2.21.1, pnpm 12.6.0, Node `^20.19 \|\| >=22.12`); dtc-starter `e3a237c9b877` pins 2.21.1
 - [ ] P0-02 Decide **D3** file storage (S3 / R2 / MinIO) and **D6** staging setup. Record them in the Decisions log below.
 
 **Backend standard (`ecommerce/backend`) · plan §4.1**
-- [ ] P0-03 Copy `apps/backend` from `medusajs/dtc-starter` at the version-matching commit. Record the commit in `ecommerce/backend/README.md`. Rename the package.
-- [ ] P0-04 Set up pnpm: `packageManager: pnpm@<exact>`; `pnpm-workspace.yaml` with `publicHoistPattern` + `allowBuilds` (no `packages:` key); exact `@medusajs/*` pins (`@medusajs/ui` on its own line).
-- [ ] P0-05 Add the scripts `predeploy` (`medusa db:migrate`), `typecheck` (`tsc --noEmit`) and the three test scripts (MEDUSA_SKILL §10).
-- [ ] P0-06 Write an env-driven `medusa-config.ts` per plan §4.1 and MEDUSA_SKILL §2: `redisUrl`, conditional Redis modules (caching + `@medusajs/caching-redis`, event-bus, workflow-engine, locking), `MEDUSA_FF_CACHING`, conditional S3, `workerMode`, `admin.disable`/`backendUrl`.
-- [ ] P0-07 Gate 1 green (install, build, typecheck).
-- [ ] P0-08 Keep the committed `Dockerfile`, `docker-entrypoint.sh` (safe migrate flags) and `.env.example`. Adjust only if evidence requires it, and log it.
-- [ ] P0-09 Gate 2 + Gate 4: image builds. Server container: migrations run, `/health` 200, `/app` 200. Worker container starts with admin disabled and no migrations.
+- [x] P0-03 Copy `apps/backend` from `medusajs/dtc-starter` at the version-matching commit. Record the commit in `ecommerce/backend/README.md`. Rename the package. — done: f717457, starter `e3a237c9b877` (demo seed moved out of migration-scripts, F-002)
+- [x] P0-04 Set up pnpm: `packageManager: pnpm@<exact>`; `pnpm-workspace.yaml` with `publicHoistPattern` + `allowBuilds` (no `packages:` key); exact `@medusajs/*` pins (`@medusajs/ui` on its own line). — done: f717457 (ui 4.2.4 = starter pin, see F-006)
+- [x] P0-05 Add the scripts `predeploy` (`medusa db:migrate`), `typecheck` (`tsc --noEmit`) and the three test scripts (MEDUSA_SKILL §10). — done: f717457 (+ `seed:*`; `predeploy` uses safe flags)
+- [x] P0-06 Write an env-driven `medusa-config.ts` per plan §4.1 and MEDUSA_SKILL §2: `redisUrl`, conditional Redis modules (caching + `@medusajs/caching-redis`, event-bus, workflow-engine, locking), `MEDUSA_FF_CACHING`, conditional S3, `workerMode`, `admin.disable`/`backendUrl`. — done: f717457 (+ `DATABASE_SSL`, F-003)
+- [x] P0-07 Gate 1 green (install, build, typecheck). — done: f717457, build and `tsc --noEmit` exit 0
+- [x] P0-08 Keep the committed `Dockerfile`, `docker-entrypoint.sh` (safe migrate flags) and `.env.example`. Adjust only if evidence requires it, and log it. — done: templates unchanged except `DATABASE_SSL=false` in all 6 backend `.env.example` (F-003)
+- [x] P0-09 Gate 2 + Gate 4: image builds. Server container: migrations run, `/health` 200, `/app` 200. Worker container starts with admin disabled and no migrations. — done: f717457; fresh DB migrate ok, `/health` 200, `/app/` 200, worker `/app/` 404, both uid `node`; the worker waits for a healthy server
 
 **Web client standard (`ecommerce/storefront`) · plan §4.2**
-- [ ] P0-10 Copy `apps/storefront` from `dtc-starter` and record the commit. Apply starter changes 1–5 (6 optional, decide and log).
-- [ ] P0-11 `pnpm build` succeeds with the backend **down** (static-params guards). The image builds and serves on 8000.
+- [x] P0-10 Copy `apps/storefront` from `dtc-starter` and record the commit. Apply starter changes 1–5 (6 optional, decide and log). — done: 159252e, changes 1–6 applied; change 6 proven (bogus runtime URL → SSR 500, correct → 200)
+- [x] P0-11 `pnpm build` succeeds with the backend **down** (static-params guards). The image builds and serves on 8000. — done: 159252e; build with the backend down ok; container `/dk` 200, product SSR 200
 
 **Tooling · plan §4.3, §8**
-- [ ] P0-12 `docker-compose.local.yml` (Postgres + Redis + backend + storefront).
-- [ ] P0-13 `scripts/verify.sh <category>` = DEV_FLOW Gates 1–4 (fresh DB and upgrade-path DB).
-- [ ] P0-14 `scripts/guard.sh` = DEV_FLOW Gate 5, including "BUILD_PLAN.md unchanged".
-- [ ] P0-15 `scripts/update-medusa.sh <category|category/app|all> [version]` per plan §8.
-- [ ] P0-16 Integration-test skeleton: one `integration-tests/http` test and one module test, running with a Postgres service.
-- [ ] P0-17 CI matrix: one job per deployable running verify + guard. Dependabot/Renovate per folder, grouping `@medusajs/*` per category.
+- [x] P0-12 `docker-compose.local.yml` (Postgres + Redis + backend + storefront). — done: f717457 + 159252e (`ecommerce/docker-compose.local.yml`)
+- [x] P0-13 `scripts/verify.sh <category>` = DEV_FLOW Gates 1–4 (fresh DB and upgrade-path DB). — done: ba32c02; ran `verify.sh ecommerce --image` PASS, image smoke on a fresh DB `/health` 200. Upgrade path = point `VERIFY_DATABASE_URL` at a copy of the previous version's DB (first used at the first real update)
+- [x] P0-14 `scripts/guard.sh` = DEV_FLOW Gate 5, including "BUILD_PLAN.md unchanged". — done: ba32c02 (checksum `.build-plan.sha256`; negative test caught a planted `as any`)
+- [x] P0-15 `scripts/update-medusa.sh <category|category/app|all> [version]` per plan §8. — done: ba32c02; rehearsal on 2.21.1 → no diff, verify PASS
+- [x] P0-16 Integration-test skeleton: one `integration-tests/http` test and one module test, running with a Postgres service. — done: f717457, `integration-tests/http/health.spec.ts` 2/2 on real Postgres; module suite wired (`--passWithNoTests`), and the first module test lands with the first custom module (Phase 2)
+- [~] P0-17 CI matrix: one job per deployable running verify + guard. Dependabot/Renovate per folder, grouping `@medusajs/*` per category. — in progress: e3d988a `ci.yml` written (not yet run on GitHub). Dependabot replaced by `medusa-update-check.yml` (F-008, needs approval)
 
 **Deploy · plan §5**
 - [ ] P0-18 Dokploy staging project: Postgres, Redis, backend server, worker, storefront. Build paths, watch paths, health check `/health`, first-deploy order.
@@ -208,4 +208,13 @@ Record anything where verified evidence differs from or adds to `BUILD_PLAN.md`.
 
 | # | Date | Plan § | Finding | Evidence | Action | Approved by |
 |---|---|---|---|---|---|---|
+| F-002 | 2026-09-25 | 5, 6.1 | The starter ships a demo seed in `src/migration-scripts/`, which **runs automatically on every `db:migrate` in production**. | `db:migrate` log (runs migration scripts); CLI reference `db:migrate` | Moved to `src/scripts/seed-initial-data.ts` (`pnpm seed:initial`). `guard.sh` blocks seeds in migration-scripts. Matches the plan §5 manual first-deploy setup. | Implementation detail |
+| F-003 | 2026-09-25 | 4.1 env table | Medusa turns Postgres **SSL on** for any non-localhost `DATABASE_URL`, so migrations hang on the Dokploy/compose Postgres ("connection timed out after 10 seconds"). `?ssl_mode=disable` alone did not fix it. | `@medusajs/utils/.../load-module-database-config.js` `getDefaultDriverOptions`; reproduced and fixed | New env `DATABASE_SSL` (false/true/unset) → `projectConfig.databaseDriverOptions`. Added to all 6 backend `.env.example` (`false`). | Implementation detail (new env var) |
+| F-004 | 2026-09-25 | 10 (R-h) | The plan says `db:migrate` takes no lock. It takes a per-module advisory lock (`pg_advisory_xact_lock`). | `@medusajs/modules-sdk/dist/medusa-app.js` | "One server replica while migrating" is still the rule. MEDUSA_SKILL corrected. | No change needed |
+| F-005 | 2026-09-25 | 5 (first deploy) | Medusa 2.21.1 creates a default sales channel and a "Default Publishable API Key" on first server boot. | `api_key.created_at` = first boot, before any seed | First deploy: regions still have to be created; reuse the default channel and key, or create a dedicated one. | Informational |
+| F-006 | 2026-09-25 | 3.2 | `@medusajs/dashboard@2.21.1` depends on `@medusajs/ui` **4.2.5**, but dtc-starter pins **4.2.4**, so the lockfile holds both. | `npm view @medusajs/dashboard@2.21.1 dependencies`; `pnpm-lock.yaml` | Plan rule followed (starter pin). `update-medusa.sh` prints a note when they differ. **Decide:** keep the starter pin, or pin to the dashboard's version. | **Needs decision** |
+| F-007 | 2026-09-25 | — | Integration-test teardown logs `[Search] Failed to seed "product" … terminating connection`: the Search Module seeds on app start while the runner drops the DB. Tests pass. | test output; stack in `SearchModuleService.onApplicationStart_` | Documented in MEDUSA_SKILL §12 as noise. | Informational |
+| F-008 | 2026-09-25 | 8 (automation) | Dependabot supports pnpm **v7–v10**; this repo pins pnpm **12.6.0**. Renovate support for pnpm 12 is unverified. | docs.github.com "Supported ecosystems" (pnpm row) | Weekly `medusa-update-check.yml` fails visibly when a pin is behind npm `latest`; a human runs `update-medusa.sh`. | **Needs approval** |
+| F-009 | 2026-09-25 | 4.1 | Production `medusa start` must run inside `.medusa/server` (from the root: "Could not find index.html…"). | docs `learn/deployment/general`; reproduced | The Dockerfile already does this; DEV_FLOW Gate 2 corrected. | Implementation detail |
+| F-010 | 2026-09-25 | 4.2 | A stray `~/yarn.lock` made Next.js trace from `/Users/kt`, so `server.js` was not at the standalone root. | `.next/standalone/Documents/...`; Next type docs for `outputFileTracingRoot` | `outputFileTracingRoot: __dirname` in `next.config.js` (deterministic on any machine). | Implementation detail |
 | F-001 | 2026-09-25 | 6.2, 10 (R-g) | Plan says 2.21.1 has "no admin roles". RBAC code exists behind the undocumented flag `MEDUSA_FF_RBAC` (default `false`); the end-to-end PR medusajs/medusa#15620 is still open. | `node_modules/@medusajs/medusa/dist/feature-flags/rbac.js`; `@medusajs/core-flows/dist/rbac/*` | Keep the `cashier` actor type (plan decision stands; the flag is undocumented). Re-evaluate when the docs publish RBAC. | Plan decision (no change) |
