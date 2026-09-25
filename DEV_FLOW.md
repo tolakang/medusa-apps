@@ -61,10 +61,14 @@ For storefronts, portals and the POS app, `pnpm build` must succeed **without th
 ### Gate 2: Database and boot (backend)
 Run against a **fresh** Postgres (`docker-compose.local.yml`), then once more against a database migrated by the previous commit (upgrade path):
 ```bash
-pnpm medusa db:migrate --execute-safe-links --execute-safe-search
-pnpm start &                                   # or the built image, see Gate 4
-curl -fsS http://localhost:9000/health         # must return 200
-curl -fsS -o /dev/null http://localhost:9000/app  # must return 200 (server/shared mode)
+pnpm medusa db:migrate --execute-safe-links --execute-safe-search < /dev/null   # stdin closed: a prompt would fail, not hang
+# Production start runs INSIDE .medusa/server, never in the project root
+# (docs learn/deployment/general; from the root it fails with
+#  "Could not find index.html in the admin build directory").
+cp pnpm-lock.yaml pnpm-workspace.yaml .medusa/server/
+(cd .medusa/server && pnpm install --prod --frozen-lockfile && pnpm start) &   # or the built image, see Gate 4
+curl -fsS http://localhost:9000/health            # must return 200
+curl -fsS -o /dev/null http://localhost:9000/app/ # must return 200 (server/shared mode)
 ```
 Also check that `db:migrate` printed no prompt and no "links to delete". An unsafe link or search change is a **release step** (BUILD_PLAN §8), not part of the task.
 

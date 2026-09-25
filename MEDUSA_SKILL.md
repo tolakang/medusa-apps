@@ -85,6 +85,7 @@ The snippet above is the pattern only. The real config makes the Redis modules c
 | Rule | Source |
 |---|---|
 | The Caching Module needs **`MEDUSA_FF_CACHING=true`** and the separate npm package **`@medusajs/caching-redis`**. `cache-redis` has been deprecated since v2.11.0 | `resources/infrastructure-modules/caching` |
+| **Postgres SSL default:** if `DATABASE_URL` matches `localhost\|127.0.0.1\|ssl_mode=(disable\|false)\|sslmode=disable`, SSL is off; **otherwise SSL is ON** (`{ rejectUnauthorized: false }`). An internal Postgres without SSL (Dokploy `<project>-postgres`, compose `postgres`) therefore hangs migrations. This project sets `projectConfig.databaseDriverOptions = { connection: { ssl: false } }` when `DATABASE_SSL=false`. Verified: reproduced with a non-localhost URL, fixed by this option. A `?ssl_mode=disable` URL param alone did **not** fix the migration connection | `@medusajs/utils/dist/modules-sdk/load-module-database-config.js` (`getDefaultDriverOptions`); docs `learn/configurations/medusa-config#databasedriveroptions` |
 | `loadEnv` only supports `NODE_ENV` values `development`, `production`, `staging`, `test` | `learn/fundamentals/environment-variables` |
 | S3 provider: `resolve: "@medusajs/medusa/file"` with provider `@medusajs/medusa/file-s3`. Options: `file_url`, `access_key_id`, `secret_access_key`, `region`, `bucket`, `endpoint`, `additional_client_config` (e.g. `forcePathStyle` for MinIO) | `resources/infrastructure-modules/file/s3` |
 | Stripe: provider `@medusajs/medusa/payment-stripe` with options `apiKey` and `webhookSecret` (required when deployed). Webhook URL: `{server_url}/hooks/payment/{provider_id}` → `/hooks/payment/stripe_stripe` | `resources/commerce-modules/payment/payment-provider/stripe` |
@@ -323,7 +324,9 @@ moduleIntegrationTestRunner<BlogModuleService>({ moduleName: BLOG_MODULE, module
 | `medusa exec ./src/scripts/<file>.ts [args]` | Run a script (seed) |
 | `medusa plugin:develop \| plugin:build \| plugin:db:generate \| plugin:publish \| plugin:add` | Plugin lifecycle (`learn/fundamentals/plugins`) |
 
-`db:migrate` takes **no lock**, so run one instance at a time. It also runs `src/migration-scripts/*` (skip with `--skip-scripts`).
+`db:migrate` takes a Postgres **advisory lock per module** (`pg_advisory_xact_lock(hashtext('db-module-migration:<module>'))`, in `@medusajs/modules-sdk/dist/medusa-app.js`, verified 2.21.1). Still run one migrating instance per deploy: the lock serializes each module's migration, not the whole deploy. It also runs `src/migration-scripts/*` (skip with `--skip-scripts`). **Any file in `src/migration-scripts/` runs automatically in production**, so never put demo seeds there.
+
+**Connection check:** before migrating, `db:migrate` runs `SELECT 1` with a timeout of `MEDUSA_DB_MIGRATION_CONNECTION_TIMEOUT` (default 10000 ms). The pool hides connect errors (`propagateCreateError: false`), so a wrong URL **or wrong SSL setting** shows up as "The connection timed out after 10 seconds", not as the real error.
 
 ## 12. pnpm and build facts (plan spike §9, docs pnpm guide)
 
@@ -331,6 +334,8 @@ moduleIntegrationTestRunner<BlogModuleService>({ moduleName: BLOG_MODULE, module
 - pnpm 12 blocks install scripts until `allowBuilds` is set (`@swc/core`, `esbuild`, `msgpackr-extract`, `protobufjs`).
 - `medusa build` doesn't copy the lockfile into `.medusa/server`. Copy it there before `pnpm install --prod --frozen-lockfile`.
 - `tsc --noEmit` needs `.medusa/types`, so **build before typecheck**.
+- `medusa start` must run **inside `.medusa/server`** after its own prod install. From the project root it fails with "Could not find index.html in the admin build directory" (verified 2.21.1; docs `learn/deployment/general`).
+- The `medusaIntegrationTestRunner` teardown can log `[Search] Failed to seed "product" … terminating connection due to administrator command`. The Search Module seeds its index on app start and the runner drops the test database under it. The tests still pass; this is noise, not a failure (observed 2.21.1).
 - Plugin or shared packages that import `@medusajs/framework` must declare it as a `peerDependency`, not a `devDependency` (docs pnpm guide).
 
 ## 13. Scenario → official reference map

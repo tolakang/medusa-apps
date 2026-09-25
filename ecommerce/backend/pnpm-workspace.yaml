@@ -1,0 +1,22 @@
+# pnpm SETTINGS for this app only. No `packages:` key, so this is a single
+# package, not a workspace (BUILD_PLAN.md §4.1, MEDUSA_SKILL.md §12).
+
+# Required by the Medusa Admin build. The docs put these in .npmrc
+# (learn/configurations/pnpm); pnpm >= 11 reads them from here instead.
+publicHoistPattern:
+  - "*@medusajs/*"
+  - "@tanstack/react-query"
+  - "react-i18next"
+  - "react-router-dom"
+
+# pnpm blocks dependency install scripts unless they are allowed.
+allowBuilds:
+  "@medusajs/telemetry": false
+  "@swc/core": true
+  esbuild: true
+  msgpackr-extract: true
+  protobufjs: true
+
+# Carried over from the dtc-starter root package.json (pnpm.overrides).
+overrides:
+  tsconfig-paths: ^4.2.0
