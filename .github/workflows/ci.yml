@@ -1,0 +1,66 @@
+# CI gate (BUILD_PLAN.md §3.3, §8; DEV_FLOW.md §10). One verify job per
+# deployable; add a matrix entry when a new deployable gets app code.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # guard diffs against .guard-baseline / origin/main
+      - name: Guardrails (DEV_FLOW Gate 5)
+        run: scripts/guard.sh all
+
+  verify:
+    needs: guard
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        deployable:
+          - ecommerce/backend
+          - ecommerce/storefront
+    services:
+      postgres:
+        image: docker.io/library/postgres:15-alpine
+        env:
+          POSTGRES_USER: medusa
+          POSTGRES_PASSWORD: medusa
+          POSTGRES_DB: verify
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U medusa" --health-interval 5s
+          --health-timeout 5s --health-retries 20
+    env:
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_USERNAME: medusa
+      DB_PASSWORD: medusa
+      CONTAINER_CLI: docker
+      VERIFY_DOCKER_NETWORK: host
+      VERIFY_DATABASE_URL: postgres://medusa:medusa@localhost:5432/verify
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: ${{ matrix.deployable }}/package.json # pnpm version from packageManager
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: ${{ matrix.deployable }}/pnpm-lock.yaml
+      - name: Verify (DEV_FLOW Gates 1-4)
+        run: scripts/verify.sh ${{ matrix.deployable }} --image
