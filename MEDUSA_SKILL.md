@@ -33,7 +33,7 @@ When the docs and the installed types disagree, **the installed types win** (the
 | Medusa | `2.21.1` (npm `latest`) | `npm view @medusajs/medusa version` |
 | Node | `^20.19.0 \|\| >=22.12.0`; docs say "less than v25". Project uses **Node 22** | `npm view @medusajs/medusa engines`; docs `resources/nextjs-starter` |
 | pnpm | `12.6.0`; supported since Medusa v2.13.0 | `npm view pnpm version`; docs `learn/configurations/pnpm` |
-| Versioning | All `@medusajs/*` packages share one version, **except** design-system packages (`@medusajs/ui` = `4.2.x`) | docs `learn/update` |
+| Versioning | All `@medusajs/*` packages share one version, **except** design-system packages (`@medusajs/ui` = `4.2.x`). This repo pins `@medusajs/ui` to the version `@medusajs/dashboard@<release>` depends on (`4.2.5` for 2.21.1), so the lockfile holds one copy — TASKS.md F-006 | docs `learn/update`; `npm view @medusajs/dashboard@2.21.1 dependencies` |
 | Minor releases | **May contain breaking changes.** Always read the release notes | docs `learn/update` |
 | Starters | `medusajs/dtc-starter` (the old `medusa-starter-default` and `nextjs-starter-medusa` are deprecated) | starter READMEs |
 
