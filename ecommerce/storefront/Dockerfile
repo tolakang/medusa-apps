@@ -1,16 +1,18 @@
 # =====================================================================
 # ecommerce / storefront — Next.js (customer storefront)
 #
-# Dokploy: Build Type = Dockerfile, Build Path = /ecommerce/storefront
+# Dokploy: Build Type = Dockerfile, Build Path = /,
+#   Docker File = ecommerce/storefront/Dockerfile,
+#   Docker Context Path = ecommerce/storefront,
+#   Watch Paths = ecommerce/storefront/**
 #   Environment -> Build-time Arguments: the ARG values below
 #   Environment -> Runtime variables   : see .env.example
 #   Domain -> port 8000
+#   Full steps: ecommerce/DOKPLOY_STAGING.md section 4.
 #
 # NEXT_PUBLIC_* values are baked into the JS bundle at build time, so
 # changing one requires a rebuild (Dokploy: Rebuild).
-#
-# STATUS: ready template. Builds once the app code is added
-# (BUILD_PLAN.md §4.2). Requires `output: "standalone"` in next.config.
+# Requires `output: "standalone"` in next.config.
 # =====================================================================
 ARG NODE_VERSION=22
 
