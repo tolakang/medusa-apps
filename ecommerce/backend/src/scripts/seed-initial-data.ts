@@ -6,21 +6,19 @@ import {
   ProductStatus,
 } from "@medusajs/framework/utils";
 import {
-  createApiKeysWorkflow,
   createCollectionsWorkflow,
+  createDefaultsWorkflow,
   createInventoryLevelsWorkflow,
   createProductCategoriesWorkflow,
   createProductOptionsWorkflow,
   createProductsWorkflow,
   createRegionsWorkflow,
-  createSalesChannelsWorkflow,
   createShippingOptionsWorkflow,
   createShippingProfilesWorkflow,
   createStockLocationsWorkflow,
-  createStoresWorkflow,
   createTaxRegionsWorkflow,
-  linkSalesChannelsToApiKeyWorkflow,
   linkSalesChannelsToStockLocationWorkflow,
+  updateStoresWorkflow,
 } from "@medusajs/medusa/core-flows";
 
 export default async function initial_data_seed({
@@ -38,60 +36,31 @@ export default async function initial_data_seed({
   const countries = ["gb", "de", "dk", "se", "fr", "es", "it"];
 
   logger.info("Seeding store data...");
-  const {
-    result: [defaultSalesChannel],
-  } = await createSalesChannelsWorkflow(container).run({
-    input: {
-      salesChannelsData: [
-        {
-          name: "Default Sales Channel",
-          description: "Created by Medusa",
-        },
-      ],
-    },
-  });
+  // Medusa creates a default store, sales channel and publishable API key on
+  // first boot (TASKS F-005), and this seed runs after that boot. Reuse them
+  // (createDefaultsWorkflow only creates what is missing). A second channel and
+  // key would leave the first-boot key with no products (TASKS F-017).
+  const { result: store } = await createDefaultsWorkflow(container).run();
+  if (!store?.default_sales_channel_id) {
+    throw new Error("The default store has no default sales channel.");
+  }
+  const defaultSalesChannel = { id: store.default_sales_channel_id };
 
-  const {
-    result: [publishableApiKey],
-  } = await createApiKeysWorkflow(container).run({
+  await updateStoresWorkflow(container).run({
     input: {
-      api_keys: [
-        {
-          title: "Default Publishable API Key",
-          type: "publishable",
-          created_by: "",
-        },
-      ],
-    },
-  });
-
-  await linkSalesChannelsToApiKeyWorkflow(container).run({
-    input: {
-      id: publishableApiKey.id,
-      add: [defaultSalesChannel.id],
-    },
-  });
-
-  const {
-    result: [store],
-  } = await createStoresWorkflow(container).run({
-    input: {
-      stores: [
-        {
-          name: "Default Store",
-          supported_currencies: [
-            {
-              currency_code: "eur",
-              is_default: true,
-            },
-            {
-              currency_code: "usd",
-              is_default: false,
-            },
-          ],
-          default_sales_channel_id: defaultSalesChannel.id,
-        },
-      ],
+      selector: { id: store.id },
+      update: {
+        supported_currencies: [
+          {
+            currency_code: "eur",
+            is_default: true,
+          },
+          {
+            currency_code: "usd",
+            is_default: false,
+          },
+        ],
+      },
     },
   });
 
