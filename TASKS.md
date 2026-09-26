@@ -54,7 +54,7 @@
 - [x] P0-17 CI matrix: one job per deployable running verify + guard. Dependabot/Renovate per folder, grouping `@medusajs/*` per category. — done: e3d988a; first run on PR #1 (run 36136903265, head 1bfe394) green: guard PASS, verify backend (tests 2/2, image smoke `/health` 200) PASS, verify storefront PASS. Dependabot replaced by `medusa-update-check.yml` (F-008 approved)
 
 **Deploy · plan §5**
-- [~] P0-18 Dokploy staging project: Postgres, Redis, backend server, worker, storefront. Build paths, watch paths, health check `/health`, first-deploy order. — in progress: `ecommerce-staging` backend live at api2.nokor24.com (`/health` 200, `/app/` 200, store w/o key 400, admin w/o login 401, CORS shop2 allowed / foreign refused); admin user + staging seed done; storefront live at shop2.nokor24.com (2026-09-26: `/dk/products/t-shirt` 200 with title "Medusa T-Shirt | Medusa Store" server-rendered, `/dk/products/does-not-exist-xyz` 404, baked key `pk_c26703b7c…` → `/store/products` count 4); worker pending
+- [~] P0-18 Dokploy staging project: Postgres, Redis, backend server, worker, storefront. Build paths, watch paths, health check `/health`, first-deploy order. — in progress: `ecommerce-staging` backend live at api2.nokor24.com (`/health` 200, `/app/` 200, store w/o key 400, admin w/o login 401, CORS shop2 allowed / foreign refused); admin user + staging seed done; storefront live at shop2.nokor24.com (2026-09-26: `/dk/products/t-shirt` 200 with title "Medusa T-Shirt | Medusa Store" server-rendered, `/dk/products/does-not-exist-xyz` 404, baked key `pk_c26703b7c…` → `/store/products` count 4); worker `ecommerce-worker` live (2026-09-26 00:12 UTC log: `Starting Medusa (worker mode: worker)`, Redis event-bus/locking/workflow-engine/cache connected, no errors); only open item: the backend health-check question below
 - [ ] P0-19 Independence proof: redeploy each app alone, then roll one back.
 - [ ] P0-20 Phase exit checklist.
 
@@ -198,11 +198,11 @@ Current position: **Phase 0**. P0-01 to P0-17 are done, and PR #1 and PR #2 are 
 **Staging status (checked from outside):**
 - Backend `https://api2.nokor24.com`: live. `/health` 200, `/app/` 200, store API without key 400, admin API without login 401, CORS allows `https://shop2.nokor24.com` and refuses foreign origins. The admin user is created and the staging demo seed has run.
 - Storefront `https://shop2.nokor24.com`: `/` redirects to `/dk`; `/dk`, `/dk/store` and `/dk/categories/shirts` return 200. Product pages work (2026-09-26): `/dk/products/t-shirt` 200 with the title server-rendered, `/dk/products/does-not-exist-xyz` 404. The F-015 fix is deployed and the storefront uses the seed's key (`pk_c26703b7c…`, count 4), fixing F-017.
-- Worker `ecommerce-worker`: not set up yet (runbook section 3).
+- Worker `ecommerce-worker`: live (2026-09-26). Log shows worker mode, all Redis modules connected, no errors. Medusa still listens on 9000 in worker mode (runbook section 3 corrected).
 
 **Next steps, in order (the operator clicks in Dokploy; the builder verifies with curl):**
 1. ~~Storefront publishable key~~ and 2. ~~product page checks~~: done 2026-09-26 (see status above).
-3. Set up the worker (runbook section 3; same `DATABASE_URL`/`REDIS_URL` as the backend, plus the three worker overrides).
+3. ~~Set up the worker~~ done 2026-09-26. Was: set up the worker (runbook section 3; same `DATABASE_URL`/`REDIS_URL` as the backend, plus the three worker overrides).
 4. Tick P0-18 with the evidence, then do P0-19 (runbook section 6) and the P0-20 phase exit.
 
 **Open question to ask the operator first:** what fixed the backend's first 502 (after `DATABASE_URL` was corrected, logs showed "Server is ready on port: 9000", but the domain stayed 502 until ~14:07 UTC)? Was the Swarm **Health Check** cleared, or was it only redeployed? If clearing the health check fixed it, the runbook's health check JSON must be corrected against Dokploy's documented format before the P0-19 rollback test, which depends on it.

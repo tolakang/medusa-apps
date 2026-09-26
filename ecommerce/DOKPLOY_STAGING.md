@@ -82,12 +82,12 @@ openssl rand -base64 32   # COOKIE_SECRET
    DISABLE_MEDUSA_ADMIN=true
    RUN_MIGRATIONS=false
    ```
-3. **No domain. No health check** (the worker serves no HTTP). Swarm **Update Config**:
+3. **No domain. No health check.** Medusa still opens its HTTP listener in worker mode (the log shows `Server is ready on port: 9000`), but it is internal only and not routed, so nothing needs to probe it. Swarm **Update Config**:
    ```json
    { "Parallelism": 1, "Delay": 10000000000, "FailureAction": "rollback", "Order": "stop-first" }
    ```
    `stop-first` = never two workers at once during a deploy.
-4. **Deploy** (only after the backend is healthy, because it relies on the migrations). **Logs** must show `[entrypoint] Starting Medusa (worker mode: worker)` and no errors.
+4. **Deploy** (only after the backend is healthy, because it relies on the migrations). **Logs** must show `[entrypoint] Starting Medusa (worker mode: worker)`, the Redis connections for `event-bus-redis`, `locking-redis` and `workflow-engine-redis`, then `Server is ready on port: 9000`, and no errors.
 
 ## 4. Storefront: `ecommerce-storefront`
 
