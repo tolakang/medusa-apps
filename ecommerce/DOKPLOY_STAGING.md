@@ -67,11 +67,11 @@ openssl rand -base64 32   # COOKIE_SECRET
    ```bash
    docker-entrypoint.sh medusa user -e <your-email> -p <password>
    ```
-10. **Staging demo data** (region, sales channel, publishable key, 4 products). In the same terminal:
+10. **Staging demo data** (region, stock location, shipping, 4 products; it reuses the store, sales channel and publishable key Medusa created on first boot). In the same terminal:
     ```bash
     docker-entrypoint.sh medusa exec ./src/scripts/seed-initial-data.js
     ```
-    Then log in at `https://<api host>/app` → **Settings → Publishable API Keys**. Medusa also creates its own default key on first boot (finding F-005), so pick the key whose sales channel is **Default Sales Channel** and that shows products. Copy its token (`pk_…`).
+    Then log in at `https://<api host>/app` → **Settings → Publishable API Keys** and copy the token (`pk_…`) of the one key there. Databases seeded before the F-017 fix have two keys and two "Default Sales Channel"s: pick the key whose channel shows products.
 
 ## 3. Worker: `ecommerce-worker`
 
