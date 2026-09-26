@@ -61,6 +61,7 @@ openssl rand -base64 32   # COOKIE_SECRET
      ```json
      { "Parallelism": 1, "Delay": 10000000000, "FailureAction": "rollback", "Order": "start-first" }
      ```
+     Newer Dokploy versions show **form fields** instead of a JSON box. Enter the same values: Parallelism `1`, Delay `10000000000`, Failure Action **Rollback**, Monitor `10000000000`, Max Failure Ratio `0`, Order **Start First**, then **Save Update Config**. Grey text in a field is only a placeholder, not a saved value. On staging (2026-09-26) the two dropdowns showed blank again after a successful save while the numbers stayed (finding F-020), so check the live value on the server: `docker service inspect <service> --format '{{json .Spec.UpdateConfig}}'` (Dokploy applies it on the next deploy).
    - Keep **Replicas = 1** (one migrating server per deploy, plan §8).
 8. **Deploy.** Wait for the deployment to finish, then open `https://<api host>/health` → it must say `OK` (HTTP 200).
 9. **First admin user.** Open the backend's terminal in Dokploy and run (the terminal opens in `/`. Images built before the entrypoint `cd /app` fix need `cd /app &&` in front):
@@ -121,7 +122,7 @@ openssl rand -base64 32   # COOKIE_SECRET
      "Retries": 3
    }
    ```
-   **Update Config:** same as the backend (`start-first`, `rollback`).
+   **Update Config:** same as the backend (`start-first`, `rollback`), including the form-field note there.
 6. **Deploy.** Open `https://<shop host>/`: it redirects to `/dk` and shows the store.
 
    **Checks that catch the staging mistakes seen so far:**
@@ -151,6 +152,13 @@ Reply with: **`<api host>`**, **`<shop host>`**, and which Dockerfile path setti
 1. **Redeploy each app alone.** In `ecommerce-storefront` click **Deploy**. Afterwards, check that `ecommerce-backend` and `ecommerce-worker` show **no new deployment** in their **Deployments** tab. Repeat with the worker, then the backend.
 2. **Watch paths.** I push a harmless commit that touches only `ecommerce/storefront/` (a comment), and only `ecommerce-storefront` should auto-deploy.
 3. **Automatic rollback.** Dokploy's documented rollback without a registry is the Swarm health check. In `ecommerce-storefront` → Swarm Settings → Health Check, temporarily change `favicon.ico` to `does-not-exist` and **Deploy**. The new task fails its health check, Swarm rolls back, and `https://<shop host>/` keeps working the whole time. Then **restore** `favicon.ico` and deploy again.
+   **Needs a shell on the Dokploy server** to prove the rollback: the Dokploy UI can report such a deployment as successful (upstream issue Dokploy/dokploy#3987), and the Update Config dropdowns may not show their saved value (F-020). Before and after the test run:
+   ```bash
+   docker service inspect <storefront service> --format '{{json .Spec.UpdateConfig}}'
+   docker service inspect <storefront service> --format '{{json .UpdateStatus}}'
+   docker service ps <storefront service> --no-trunc
+   ```
+   Pass = `FailureAction` is `rollback`, `UpdateStatus.State` ends as `rollback_completed`, the new tasks show as failed/unhealthy, and the old task keeps running while the site answers 200 throughout.
 4. Tell me the result of each step. I tick P0-18 / P0-19 in `TASKS.md` with this evidence, then run the phase exit checklist (P0-20).
 
 **If anything fails:** send the deployment's log lines around the error. Don't retry with changed settings first. Same rule as `DEV_FLOW.md` §6.
