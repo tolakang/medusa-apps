@@ -191,6 +191,25 @@
 
 ---
 
+## Session handoff (2026-09-26): start here in a new session
+
+Current position: **Phase 0**. P0-01 to P0-17 are done, and PR #1 and PR #2 are merged (`main` = `530b3ce`). **P0-18 is in progress** on Dokploy project `ecommerce-staging`, following `ecommerce/DOKPLOY_STAGING.md`.
+
+**Staging status (checked from outside):**
+- Backend `https://api2.nokor24.com`: live. `/health` 200, `/app/` 200, store API without key 400, admin API without login 401, CORS allows `https://shop2.nokor24.com` and refuses foreign origins. The admin user is created and the staging demo seed has run.
+- Storefront `https://shop2.nokor24.com`: `/` redirects to `/dk`; `/dk`, `/dk/store` and `/dk/categories/shirts` return 200. Product pages returned 500 (F-015). **The fix is merged but not deployed yet.**
+- Worker `ecommerce-worker`: not set up yet (runbook section 3).
+
+**Next steps, in order (the operator clicks in Dokploy; the builder verifies with curl):**
+1. Storefront **Build Time Arguments**: set `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` to the key linked to **Default Sales Channel**. The current key `pk_02c4ca0b…` is Medusa's auto-created one and sees 0 products (F-017). Check with `curl -H "x-publishable-api-key: <pk>" https://api2.nokor24.com/store/products?fields=handle`, where `count` must be 4. Then **Deploy** the storefront from `main`.
+2. Verify: `/dk/products/t-shirt` returns 200 with the title server-rendered, and `/dk/products/does-not-exist-xyz` returns 404.
+3. Set up the worker (runbook section 3; same `DATABASE_URL`/`REDIS_URL` as the backend, plus the three worker overrides).
+4. Tick P0-18 with the evidence, then do P0-19 (runbook section 6) and the P0-20 phase exit.
+
+**Open question to ask the operator first:** what fixed the backend's first 502 (after `DATABASE_URL` was corrected, logs showed "Server is ready on port: 9000", but the domain stayed 502 until ~14:07 UTC)? Was the Swarm **Health Check** cleared, or was it only redeployed? If clearing the health check fixed it, the runbook's health check JSON must be corrected against Dokploy's documented format before the P0-19 rollback test, which depends on it.
+
+**Operator notes:** don't paste real secrets into chat (a Redis password was pasted on 2026-09-25; rotating it is recommended). The Dokploy terminal opens in `/`; images built from `main` ≥ `87f6ca7` handle that (F-013).
+
 ## Decisions log (plan §10)
 
 | ID | Decision | Needed by | Choice | Date | Evidence / reason |
