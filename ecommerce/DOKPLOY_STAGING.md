@@ -75,7 +75,7 @@ openssl rand -base64 32   # COOKIE_SECRET
 
 ## 3. Worker: `ecommerce-worker`
 
-1. **Create Service → Application**, name `ecommerce-worker`. Use the **same** provider, branch, Build Path (`/`), Build Type, Docker File (`ecommerce/backend/Dockerfile`), Context (`ecommerce/backend`) and Watch Paths as the backend.
+1. **Create Service → Application**, name `ecommerce-worker`. Use the **same** provider, branch, Build Path (`/`), Build Type, Docker File (`ecommerce/backend/Dockerfile`), Context (`ecommerce/backend`) and **Watch Paths `ecommerce/backend/**`** as the backend. Don't leave Watch Paths empty: an empty box redeploys the worker on every push to `main` (finding F-019).
 2. **Environment:** the same variables as the backend, with these three changed:
    ```
    MEDUSA_WORKER_MODE=worker
