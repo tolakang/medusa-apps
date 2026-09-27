@@ -57,7 +57,7 @@ openssl rand -base64 32   # COOKIE_SECRET
      ```json
      { "Parallelism": 1, "Delay": 10000000000, "FailureAction": "rollback", "Order": "start-first" }
      ```
-     Newer Dokploy versions show **form fields** instead of a JSON box. Enter the same values: Parallelism `1`, Delay `10000000000`, Failure Action **Rollback**, Monitor `10000000000`, Max Failure Ratio `0`, Order **Start First**, then **Save Update Config**. Grey text in a field is only a placeholder, not a saved value. On staging (2026-09-26) the two dropdowns showed blank again after a successful save while the numbers stayed (finding F-020), so check the live value on the server: `docker service inspect <service> --format '{{json .Spec.UpdateConfig}}'` (Dokploy applies it on the next deploy).
+     Newer Dokploy versions show **form fields** instead of a JSON box. Enter the same values: Parallelism `1`, Delay `10000000000`, Failure Action **Rollback**, Monitor `10000000000`, Max Failure Ratio `0`, Order **Start First**, then **Save Update Config**. Grey text in a field is only a placeholder, not a saved value. On staging the two dropdowns show blank again after a successful save, but the values are stored (finding F-020, confirmed on the server 2026-09-27). To check the live value on the server: `docker service inspect <service> --format '{{json .Spec.UpdateConfig}}'` (Dokploy applies it on the next deploy).
    - Keep **Replicas = 1** (one migrating server per deploy, plan §8).
 8. **Deploy.** Wait for the deployment to finish, then open `https://<api host>/health` → it must say `OK` (HTTP 200).
 9. **First admin user.** Open the backend's terminal in Dokploy and run (the terminal opens in `/`. Images built before the entrypoint `cd /app` fix need `cd /app &&` in front):
@@ -152,6 +152,8 @@ Reply with: **`<api host>`**, **`<shop host>`**, and which Dockerfile path setti
    docker service ps <storefront service> --no-trunc
    ```
    Pass = `FailureAction` is `rollback`, `UpdateStatus.State` ends as `rollback_completed`, the new tasks show as failed/unhealthy, and the old task keeps running while the site answers 200 throughout.
+   Passed on staging 2026-09-27 (TASKS P0-19): rollback took about 2.5 min (60 s start period + 3 failed checks). The Dokploy **Deployments tab still shows the rolled-back deploy as "Done"**, so after any deploy check `UpdateStatus` on the server, not the tab.
+   **Restore afterwards:** Swarm rolls back, but Dokploy keeps `does-not-exist` saved, and the next deploy (including an auto-deploy from a push) would send it again. Put `favicon.ico` back, **Save Health Check**, reopen to confirm, and deploy.
 4. Tell me the result of each step. I tick P0-18 / P0-19 in `TASKS.md` with this evidence, then run the phase exit checklist (P0-20).
 
 **If anything fails:** send the deployment's log lines around the error. Don't retry with changed settings first. Same rule as `DEV_FLOW.md` §6.
