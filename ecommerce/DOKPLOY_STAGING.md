@@ -80,6 +80,7 @@ openssl rand -base64 32   # COOKIE_SECRET
    DISABLE_MEDUSA_ADMIN=true
    RUN_MIGRATIONS=false
    ```
+   Notification keys (`RESEND_API_KEY`, `RESEND_FROM`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, TASKS P1-04) go on **both** apps: the worker runs the `order.placed` subscriber. Empty = that channel only logs. Enter them only in Dokploy, never in chat or git.
 3. **No domain. No health check.** Medusa still opens its HTTP listener in worker mode (the log shows `Server is ready on port: 9000`), but it is internal only and not routed, so nothing needs to probe it. Swarm **Update Config**:
    ```json
    { "Parallelism": 1, "Delay": 10000000000, "FailureAction": "rollback", "Order": "stop-first" }

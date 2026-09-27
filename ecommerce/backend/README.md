@@ -16,6 +16,8 @@ pnpm install --frozen-lockfile
 pnpm medusa db:migrate --execute-safe-links --execute-safe-search
 pnpm dev                                    # http://localhost:9000/app
 pnpm medusa user -e admin@example.com -p <password>
+# Notifications (TASKS P1-04): order.placed → customer email (Resend) + staff alert (Telegram).
+# Without RESEND_API_KEY / TELEGRAM_BOT_TOKEN both channels only log (notification-local).
 pnpm seed                                   # real shop: Cambodia region (USD + KHR), tax region, Phnom Penh delivery (TASKS P1-02)
 pnpm seed:initial                           # optional demo data (EU regions, demo products, publishable key)
 ```

@@ -5,8 +5,11 @@ loadEnv(process.env.NODE_ENV || "development", process.cwd())
 // Env-driven config (BUILD_PLAN.md §4.1). Option shapes: MEDUSA_SKILL.md §2.
 // REDIS_URL unset = in-memory infrastructure (development only).
 // S3_BUCKET unset = local file storage (development only).
+// RESEND_API_KEY / TELEGRAM_BOT_TOKEN unset = that channel only logs (TASKS P1-04).
 const REDIS_URL = process.env.REDIS_URL
 const S3_BUCKET = process.env.S3_BUCKET
+const RESEND_API_KEY = process.env.RESEND_API_KEY
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
 
 // Postgres SSL. Medusa turns SSL ON for any DATABASE_URL whose host is not
 // localhost/127.0.0.1 (@medusajs/utils load-module-database-config.js,
@@ -92,6 +95,48 @@ const fileModules = S3_BUCKET
     ]
   : []
 
+// Notification Module (TASKS D2, P1-04). Every channel the workflows use needs a
+// provider, or createNotifications fails ("Could not find a notification
+// provider for channel"), so an unconfigured channel falls back to
+// notification-local, which only logs. "feed" keeps Medusa's default provider
+// (docs: learn/configurations/medusa-config, Notification Module example).
+const localProvider = (id: string, channel: string) => ({
+  resolve: "@medusajs/medusa/notification-local",
+  id,
+  options: { name: `Local ${channel}`, channels: [channel] },
+})
+
+const notificationModule = {
+  resolve: "@medusajs/medusa/notification",
+  options: {
+    providers: [
+      localProvider("local", "feed"),
+      RESEND_API_KEY
+        ? {
+            resolve: "./src/modules/resend",
+            id: "resend",
+            options: {
+              channels: ["email"],
+              api_key: RESEND_API_KEY,
+              from: process.env.RESEND_FROM,
+            },
+          }
+        : localProvider("local-email", "email"),
+      TELEGRAM_BOT_TOKEN
+        ? {
+            resolve: "./src/modules/telegram",
+            id: "telegram",
+            options: {
+              channels: ["telegram"],
+              bot_token: TELEGRAM_BOT_TOKEN,
+              chat_id: process.env.TELEGRAM_CHAT_ID,
+            },
+          }
+        : localProvider("local-telegram", "telegram"),
+    ],
+  },
+}
+
 module.exports = defineConfig({
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
@@ -110,5 +155,5 @@ module.exports = defineConfig({
     disable: process.env.DISABLE_MEDUSA_ADMIN === "true",
     backendUrl: process.env.MEDUSA_BACKEND_URL || undefined,
   },
-  modules: [...redisModules, ...fileModules],
+  modules: [...redisModules, ...fileModules, notificationModule],
 })
