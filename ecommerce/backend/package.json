@@ -15,6 +15,7 @@
     "lint": "medusa lint",
     "typecheck": "tsc --noEmit",
     "predeploy": "medusa db:migrate --execute-safe-links --execute-safe-search",
+    "seed": "medusa exec ./src/scripts/seed.ts",
     "seed:initial": "medusa exec ./src/scripts/seed-initial-data.ts",
     "seed:demo-products": "medusa exec ./src/scripts/seed-demo-products.ts",
     "test:integration:http": "TEST_TYPE=integration:http NODE_OPTIONS=--experimental-vm-modules jest --silent=false --runInBand --forceExit",

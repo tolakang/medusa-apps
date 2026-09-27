@@ -16,6 +16,7 @@ pnpm install --frozen-lockfile
 pnpm medusa db:migrate --execute-safe-links --execute-safe-search
 pnpm dev                                    # http://localhost:9000/app
 pnpm medusa user -e admin@example.com -p <password>
+pnpm seed                                   # real shop: Cambodia region (USD + KHR), tax region, Phnom Penh delivery (TASKS P1-02)
 pnpm seed:initial                           # optional demo data (EU regions, demo products, publishable key)
 ```
 
