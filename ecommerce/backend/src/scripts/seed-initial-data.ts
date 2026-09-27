@@ -1,6 +1,7 @@
 import { MedusaContainer } from "@medusajs/framework";
 import {
   ContainerRegistrationKeys,
+  MedusaError,
   ModuleRegistrationName,
   Modules,
   ProductStatus,
@@ -42,7 +43,10 @@ export default async function initial_data_seed({
   // key would leave the first-boot key with no products (TASKS F-017).
   const { result: store } = await createDefaultsWorkflow(container).run();
   if (!store?.default_sales_channel_id) {
-    throw new Error("The default store has no default sales channel.");
+    throw new MedusaError(
+      MedusaError.Types.NOT_FOUND,
+      "The default store has no default sales channel."
+    );
   }
   const defaultSalesChannel = { id: store.default_sales_channel_id };
 

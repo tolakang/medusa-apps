@@ -68,6 +68,7 @@ openssl rand -base64 32   # COOKIE_SECRET
     ```bash
     docker-entrypoint.sh medusa exec ./src/scripts/seed-initial-data.js
     ```
+    **Real shop (Cambodia):** run the production seed instead, or in addition on staging: `docker-entrypoint.sh medusa exec ./src/scripts/seed.js`. It creates the Cambodia region (USD checkout), store currencies USD (default) + KHR, a Cambodia tax region without a rate, a Phnom Penh stock location and one flat "Phnom Penh Delivery" option (placeholder $1.50; change rates and add options in the admin). It adds no products and is safe to re-run. Set the storefront's `NEXT_PUBLIC_DEFAULT_REGION=kh`.
     Then log in at `https://<api host>/app` → **Settings → Publishable API Keys** and copy the token (`pk_…`) of the one key there. Databases seeded before the F-017 fix have two keys and two "Default Sales Channel"s: pick the key whose channel shows products.
 
 ## 3. Worker: `ecommerce-worker`
