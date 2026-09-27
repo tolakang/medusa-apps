@@ -47,16 +47,12 @@ openssl rand -base64 32   # COOKIE_SECRET
    > **Check before saving:** `DATABASE_URL` comes from **`ecommerce-postgres`**, and `REDIS_URL` from **`ecommerce-redis`**. A Redis URL in `DATABASE_URL` makes migrations hang for 60 s with `Knex: Timeout acquiring a connection`, and the domain shows Bad Gateway (seen on staging, finding F-012).
 6. **Domains → Add Domain**: host `<api host>`, path `/`, **container port `9000`**, HTTPS on (Let's Encrypt) if you use your own DNS.
 7. **Advanced → Cluster Settings → Swarm Settings.** The image has no `curl`, so the health check uses Node's `fetch`:
-   - **Health Check**
-     ```json
-     {
-       "Test": ["CMD", "node", "-e", "fetch('http://localhost:9000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"],
-       "Interval": 30000000000,
-       "Timeout": 10000000000,
-       "StartPeriod": 120000000000,
-       "Retries": 3
-     }
-     ```
+   - **Health Check** (form fields; verified healthy on staging 2026-09-27, finding F-021). **Test Commands** takes one array item per box, so use exactly **two** boxes:
+     1. `CMD-SHELL`
+     2. `node -e "fetch('http://localhost:9000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"`
+
+     Interval `30000000000`, Timeout `10000000000`, Start Period `120000000000`, Retries `3`, then **Save Health Check**.
+     Don't paste a JSON array into one box (Docker gets one invalid item and never runs the check), and don't use `CMD` with the whole command in one box (Docker tries to run the whole line as a program). Both leave the task stuck in "Starting" or unhealthy. Check on the server after a deploy: `docker ps --filter name=<service> --format '{{.Names}} {{.Status}}'` must show `(healthy)`.
    - **Update Config**
      ```json
      { "Parallelism": 1, "Delay": 10000000000, "FailureAction": "rollback", "Order": "start-first" }
@@ -112,16 +108,13 @@ openssl rand -base64 32   # COOKIE_SECRET
    ```
    The public API URL is fine for staging. The backend's internal hostname also works (starter change 6), but only use it once you have confirmed the exact name.
 4. **Domains:** host `<shop host>`, path `/`, **container port `8000`**, HTTPS as for the backend.
-5. **Swarm Settings → Health Check.** `/favicon.ico` bypasses the middleware, so the check doesn't depend on the backend:
-   ```json
-   {
-     "Test": ["CMD", "node", "-e", "fetch('http://localhost:8000/favicon.ico').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"],
-     "Interval": 30000000000,
-     "Timeout": 10000000000,
-     "StartPeriod": 60000000000,
-     "Retries": 3
-   }
-   ```
+5. **Swarm Settings → Health Check.** `/favicon.ico` bypasses the middleware, so the check doesn't depend on the backend.
+   **Health Check** (form fields; verified healthy on staging 2026-09-27, finding F-021). **Test Commands** takes one array item per box, so use exactly **two** boxes:
+     1. `CMD-SHELL`
+     2. `node -e "fetch('http://localhost:8000/favicon.ico').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"`
+
+     Interval `30000000000`, Timeout `10000000000`, Start Period `60000000000`, Retries `3`, then **Save Health Check**.
+     Don't paste a JSON array into one box (Docker gets one invalid item and never runs the check), and don't use `CMD` with the whole command in one box (Docker tries to run the whole line as a program). Both leave the task stuck in "Starting" or unhealthy. Check on the server after a deploy: `docker ps --filter name=<service> --format '{{.Names}} {{.Status}}'` must show `(healthy)`.
    **Update Config:** same as the backend (`start-first`, `rollback`), including the form-field note there.
 6. **Deploy.** Open `https://<shop host>/`: it redirects to `/dk` and shows the store.
 
@@ -151,7 +144,7 @@ Reply with: **`<api host>`**, **`<shop host>`**, and which Dockerfile path setti
 
 1. **Redeploy each app alone.** In `ecommerce-storefront` click **Deploy**. Afterwards, check that `ecommerce-backend` and `ecommerce-worker` show **no new deployment** in their **Deployments** tab. Repeat with the worker, then the backend.
 2. **Watch paths.** I push a harmless commit that touches only `ecommerce/storefront/` (a comment), and only `ecommerce-storefront` should auto-deploy.
-3. **Automatic rollback.** Dokploy's documented rollback without a registry is the Swarm health check. In `ecommerce-storefront` → Swarm Settings → Health Check, temporarily change `favicon.ico` to `does-not-exist` and **Deploy**. The new task fails its health check, Swarm rolls back, and `https://<shop host>/` keeps working the whole time. Then **restore** `favicon.ico` and deploy again.
+3. **Automatic rollback.** Dokploy's documented rollback without a registry is the Swarm health check. In `ecommerce-storefront` → Swarm Settings → Health Check, temporarily change `favicon.ico` to `does-not-exist` inside the second Test Commands box and **Deploy**. The new task fails its health check, Swarm rolls back, and `https://<shop host>/` keeps working the whole time. Then **restore** `favicon.ico` and deploy again.
    **Needs a shell on the Dokploy server** to prove the rollback: the Dokploy UI can report such a deployment as successful (upstream issue Dokploy/dokploy#3987), and the Update Config dropdowns may not show their saved value (F-020). Before and after the test run:
    ```bash
    docker service inspect <storefront service> --format '{{json .Spec.UpdateConfig}}'
