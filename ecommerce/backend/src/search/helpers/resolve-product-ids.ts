@@ -97,22 +97,25 @@ export async function resolveProductIds(
         (row) => [row.product_id],
         deleted,
       );
+    // Options can be shared between products since 2.21, so an option has
+    // `products` rather than a `product_id` (ProductOptionDTO, @medusajs/types
+    // 2.21.1; TASKS F-023).
     case "product-option":
       return relatedProductIds(
         query,
         "product_option",
-        ["product_id"],
+        ["products.id"],
         ids,
-        (row) => [row.product_id],
+        (row) => (row?.products ?? []).map((product) => product?.id),
         deleted,
       );
     case "product-option-value":
       return relatedProductIds(
         query,
         "product_option_value",
-        ["option.product_id"],
+        ["option.products.id"],
         ids,
-        (row) => [row.option?.product_id],
+        (row) => (row?.option?.products ?? []).map((product) => product?.id),
         deleted,
       );
     case "product-tag":
