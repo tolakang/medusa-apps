@@ -31,6 +31,7 @@ export const notifyOrderPlacedWorkflow = createWorkflow(
         "currency_code",
         "total",
         "items.title",
+        "items.variant_title",
         "items.quantity",
         "items.total",
         "shipping_address.first_name",

@@ -2,6 +2,7 @@
 // customer-entered text needs no escaping).
 import {
   formatMoney,
+  itemLabel,
   ORDER_PLACED_STAFF_TEMPLATE,
   type OrderNotificationData,
 } from "../../lib/order-notification"
@@ -11,7 +12,7 @@ function orderPlacedStaff(order: OrderNotificationData) {
   const name = [address?.first_name, address?.last_name].filter(Boolean).join(" ")
   const items = (order.items ?? [])
     .filter(Boolean)
-    .map((item) => `• ${item!.quantity ?? 1} × ${item!.title ?? "item"}`)
+    .map((item) => `• ${item!.quantity ?? 1} × ${itemLabel(item!)}`)
   const delivery = (order.shipping_methods ?? [])
     .map((method) => method?.name)
     .filter(Boolean)
