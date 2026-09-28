@@ -193,6 +193,9 @@ importers:
       '@medusajs/framework':
         specifier: 2.21.1
         version: 2.21.1(@medusajs/cli@2.21.1(@types/node@20.19.43)(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1))(@types/node@20.19.43)(debug@4.4.3(supports-color@8.1.1))(ioredis@5.11.1(supports-color@8.1.1))(supports-color@8.1.1)(vite@7.3.6(@types/node@20.19.43)(jiti@2.7.0)(yaml@2.9.1))(zod@4.2.0)
+      '@medusajs/js-sdk':
+        specifier: 2.21.1
+        version: 2.21.1
       '@medusajs/medusa':
         specifier: 2.21.1
         version: 2.21.1(1d1bf14e1088a242f8b9f5101dccb73e)

@@ -17,7 +17,8 @@ pnpm medusa db:migrate --execute-safe-links --execute-safe-search
 pnpm dev                                    # http://localhost:9000/app
 pnpm medusa user -e admin@example.com -p <password>
 # Product images (TASKS P1-11): upload JPEG, PNG or WebP, about 2000 px on the longest
-# side, max 2 MB (UPLOAD_MAX_FILE_SIZE_MB); SVG is rejected. The shop serves images
+# side, max 2 MB by default; admins change the limit in Settings → Store (up to
+# UPLOAD_MAX_FILE_SIZE_CEILING_MB, default 20); SVG is rejected. The shop serves images
 # as uploaded, so smaller files load faster for customers.
 # Notifications (TASKS P1-04): order.placed → customer email (Resend) + staff alert (Telegram).
 # Without RESEND_API_KEY / TELEGRAM_BOT_TOKEN both channels only log (notification-local).

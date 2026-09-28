@@ -4,6 +4,7 @@ import type {
   MedusaResponse,
 } from "@medusajs/framework/http"
 import { MedusaError } from "@medusajs/framework/utils"
+import { currentUploadLimitMb } from "../lib/upload-limit-setting"
 
 // Limits for admin file uploads (TASKS P1-11). Medusa 2.21.1 sets none: its
 // POST /admin/uploads route parses files with multer without `limits`
@@ -12,9 +13,10 @@ import { MedusaError } from "@medusajs/framework/utils"
 // same route run after Medusa's multer, so `req.files` is already parsed and
 // nothing has been stored yet.
 
-// Default 2 MB (owner's choice, 2026-09-28): a 2000 px JPEG/WebP product photo
-// is usually 0.3–2 MB; raw camera files (10–30 MB) are rejected.
-export const DEFAULT_UPLOAD_MAX_FILE_SIZE_MB = 2
+// The size limit comes from src/lib/upload-limit-setting.ts: the admin setting
+// in Settings → Store (TASKS P1-12), else UPLOAD_MAX_FILE_SIZE_MB, else 2 MB
+// (owner's choice: a 2000 px JPEG/WebP photo is usually 0.3–2 MB), capped by
+// UPLOAD_MAX_FILE_SIZE_CEILING_MB.
 
 // SVG can carry scripts, which run on the file host (the RustFS domain that
 // also serves its console) when an SVG is opened directly.
@@ -22,11 +24,6 @@ const BLOCKED_TYPES = ["image/svg+xml"]
 const BLOCKED_EXTENSIONS = [".svg", ".svgz"]
 
 type UploadedFile = { originalname: string; mimetype: string; size: number }
-
-export function maxUploadBytes(env: string | undefined = process.env.UPLOAD_MAX_FILE_SIZE_MB) {
-  const mb = Number(env)
-  return (Number.isFinite(mb) && mb > 0 ? mb : DEFAULT_UPLOAD_MAX_FILE_SIZE_MB) * 1024 * 1024
-}
 
 export function uploadProblem(file: UploadedFile, maxBytes: number): string | null {
   const name = file.originalname.toLowerCase()
@@ -44,13 +41,21 @@ export function uploadProblem(file: UploadedFile, maxBytes: number): string | nu
   return null
 }
 
-export function enforceUploadLimits(
+export async function enforceUploadLimits(
   req: MedusaRequest,
   _res: MedusaResponse,
   next: MedusaNextFunction
 ) {
   const files = ((req as unknown as { files?: UploadedFile[] }).files ?? []) as UploadedFile[]
-  const maxBytes = maxUploadBytes()
+  if (!files.length) {
+    return next()
+  }
+  let maxBytes: number
+  try {
+    maxBytes = (await currentUploadLimitMb(req.scope)) * 1024 * 1024
+  } catch (e) {
+    return next(e)
+  }
   const problems = files
     .map((file) => uploadProblem(file, maxBytes))
     .filter((problem): problem is string => problem !== null)

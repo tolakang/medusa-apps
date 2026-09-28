@@ -1,4 +1,9 @@
-import { configureStoreSearch, defineMiddlewares } from '@medusajs/framework/http'
+import {
+  configureStoreSearch,
+  defineMiddlewares,
+  validateAndTransformBody,
+} from '@medusajs/framework/http'
+import { PostAdminUploadLimit } from './admin/upload-limit/validators'
 import { enforceUploadLimits } from './upload-limits'
 
 // The product index declares filterable `status` and `sales_channel_ids`, so
@@ -21,6 +26,12 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/admin/uploads',
       middlewares: [enforceUploadLimits],
+    },
+    {
+      // Admin setting for the upload limit (TASKS P1-12).
+      method: ['POST'],
+      matcher: '/admin/upload-limit',
+      middlewares: [validateAndTransformBody(PostAdminUploadLimit)],
     },
   ],
 })
