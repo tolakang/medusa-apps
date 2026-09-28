@@ -6,6 +6,7 @@ import { sortProducts } from "@lib/util/sort-products"
 import { HttpTypes } from "@medusajs/types"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import { getAuthHeaders, getCacheOptions } from "./cookies"
+import { CATALOG_REVALIDATE_SECONDS } from "@lib/catalog-cache"
 import { getRegion, retrieveRegion } from "./regions"
 
 type ProductListQueryParams = (HttpTypes.FindParams &
@@ -58,6 +59,7 @@ export const listProducts = async ({
 
   const next = {
     ...(await getCacheOptions("products")),
+    revalidate: CATALOG_REVALIDATE_SECONDS,
   }
 
   return sdk.client
