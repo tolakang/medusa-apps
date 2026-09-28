@@ -6,6 +6,7 @@ import { mapKeys } from "lodash"
 import React, { useEffect, useMemo, useState } from "react"
 import AddressSelect from "../address-select"
 import CountrySelect from "../country-select"
+import { phoneInputProps } from "@lib/util/phone"
 
 const ShippingAddress = ({
   customer,
@@ -208,7 +209,7 @@ const ShippingAddress = ({
         <Input
           label="Phone"
           name="shipping_address.phone"
-          autoComplete="tel"
+          {...phoneInputProps}
           value={formData["shipping_address.phone"]}
           onChange={handleChange}
           data-testid="shipping-phone-input"

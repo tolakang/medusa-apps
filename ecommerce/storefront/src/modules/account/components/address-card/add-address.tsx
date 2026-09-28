@@ -11,6 +11,7 @@ import CountrySelect from "@modules/checkout/components/country-select"
 import { SubmitButton } from "@modules/checkout/components/submit-button"
 import Input from "@modules/common/components/input"
 import Modal from "@modules/common/components/modal"
+import { phoneInputProps } from "@lib/util/phone"
 
 const AddAddress = ({
   region,
@@ -129,7 +130,7 @@ const AddAddress = ({
               <Input
                 label="Phone"
                 name="phone"
-                autoComplete="phone"
+                {...phoneInputProps}
                 data-testid="phone-input"
               />
             </div>

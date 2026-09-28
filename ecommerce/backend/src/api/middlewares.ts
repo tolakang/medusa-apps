@@ -4,6 +4,7 @@ import {
   validateAndTransformBody,
 } from '@medusajs/framework/http'
 import { PostAdminUploadLimit } from './admin/upload-limit/validators'
+import { validatePhoneFields } from './phone-validation'
 import { enforceUploadLimits } from './upload-limits'
 
 // The product index declares filterable `status` and `sales_channel_ids`, so
@@ -32,6 +33,32 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/admin/upload-limit',
       middlewares: [validateAndTransformBody(PostAdminUploadLimit)],
+    },
+    {
+      // Phone numbers: digits only (spaces, +, -, parentheses allowed).
+      method: ['POST'],
+      matcher: '/store/carts/:id',
+      middlewares: [validatePhoneFields],
+    },
+    {
+      method: ['POST'],
+      matcher: '/store/customers',
+      middlewares: [validatePhoneFields],
+    },
+    {
+      method: ['POST'],
+      matcher: '/store/customers/me',
+      middlewares: [validatePhoneFields],
+    },
+    {
+      method: ['POST'],
+      matcher: '/store/customers/me/addresses',
+      middlewares: [validatePhoneFields],
+    },
+    {
+      method: ['POST'],
+      matcher: '/store/customers/me/addresses/:address_id',
+      middlewares: [validatePhoneFields],
     },
   ],
 })

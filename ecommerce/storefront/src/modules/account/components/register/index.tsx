@@ -7,6 +7,7 @@ import ErrorMessage from "@modules/checkout/components/error-message"
 import { SubmitButton } from "@modules/checkout/components/submit-button"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { signup } from "@lib/data/customer"
+import { phoneInputProps } from "@lib/util/phone"
 
 type Props = {
   setCurrentView: (view: LOGIN_VIEW) => void
@@ -63,8 +64,7 @@ const Register = ({ setCurrentView }: Props) => {
           <Input
             label="Phone"
             name="phone"
-            type="tel"
-            autoComplete="tel"
+            {...phoneInputProps}
             data-testid="phone-input"
           />
           <Input

@@ -2,6 +2,7 @@ import { HttpTypes } from "@medusajs/types"
 import Input from "@modules/common/components/input"
 import React, { useState } from "react"
 import CountrySelect from "../country-select"
+import { phoneInputProps } from "@lib/util/phone"
 
 const BillingAddress = ({ cart }: { cart: HttpTypes.StoreCart | null }) => {
   const [formData, setFormData] = useState<Record<string, string>>({
@@ -101,7 +102,7 @@ const BillingAddress = ({ cart }: { cart: HttpTypes.StoreCart | null }) => {
         <Input
           label="Phone"
           name="billing_address.phone"
-          autoComplete="tel"
+          {...phoneInputProps}
           value={formData["billing_address.phone"]}
           onChange={handleChange}
           data-testid="billing-phone-input"
