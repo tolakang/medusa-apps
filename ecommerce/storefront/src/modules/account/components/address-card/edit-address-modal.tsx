@@ -14,6 +14,7 @@ import Modal from "@modules/common/components/modal"
 import { Button, Heading, Text, clx } from "@modules/common/components/ui"
 import Spinner from "@modules/common/icons/spinner"
 import React, { useActionState, useEffect, useState } from "react"
+import { phoneInputProps } from "@lib/util/phone"
 
 type EditAddressProps = {
   region: HttpTypes.StoreRegion
@@ -203,7 +204,7 @@ const EditAddress: React.FC<EditAddressProps> = ({
               <Input
                 label="Phone"
                 name="phone"
-                autoComplete="phone"
+                {...phoneInputProps}
                 defaultValue={address.phone || undefined}
                 data-testid="phone-input"
               />

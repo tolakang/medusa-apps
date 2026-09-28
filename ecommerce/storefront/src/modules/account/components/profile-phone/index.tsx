@@ -7,6 +7,7 @@ import Input from "@modules/common/components/input"
 import AccountInfo from "../account-info"
 import { HttpTypes } from "@medusajs/types"
 import { updateCustomer } from "@lib/data/customer"
+import { phoneInputProps } from "@lib/util/phone"
 
 type MyInformationProps = {
   customer: HttpTypes.StoreCustomer
@@ -59,8 +60,7 @@ const ProfileEmail: React.FC<MyInformationProps> = ({ customer }) => {
           <Input
             label="Phone"
             name="phone"
-            type="phone"
-            autoComplete="phone"
+            {...phoneInputProps}
             required
             defaultValue={customer.phone ?? ""}
             data-testid="phone-input"
