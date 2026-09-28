@@ -28,9 +28,9 @@ const run = async (files: ReturnType<typeof file>[]) => {
 }
 
 describe("upload limit precedence (TASKS P1-11, P1-12)", () => {
-  it("default 2 MB, environment overrides it, admin setting overrides both", () => {
+  it("default 0.8 MB, environment overrides it, admin setting overrides both", () => {
     expect(resolveUploadLimit(undefined, {})).toEqual(
-      expect.objectContaining({ limitMb: 2, source: "default", ceilingMb: 20 })
+      expect.objectContaining({ limitMb: 0.8, defaultMb: 0.8, source: "default", ceilingMb: 20 })
     )
     expect(resolveUploadLimit(undefined, { limit: "5" })).toEqual(
       expect.objectContaining({ limitMb: 5, source: "environment", defaultMb: 5 })
@@ -48,7 +48,7 @@ describe("upload limit precedence (TASKS P1-11, P1-12)", () => {
 
   it("ignores invalid values", () => {
     expect(resolveUploadLimit("abc", { limit: "0" })).toEqual(
-      expect.objectContaining({ limitMb: 2, source: "default" })
+      expect.objectContaining({ limitMb: 0.8, source: "default" })
     )
     expect(resolveUploadLimit(-1, { ceiling: "x" }).ceilingMb).toEqual(20)
   })
@@ -56,12 +56,13 @@ describe("upload limit precedence (TASKS P1-11, P1-12)", () => {
 
 describe("admin upload checks (TASKS P1-11)", () => {
   it("accepts a normal product photo", () => {
-    expect(uploadProblem(file("tee.jpg", "image/jpeg", 1.5 * MB), 2 * MB)).toBeNull()
+    expect(uploadProblem(file("tee.jpg", "image/jpeg", 0.6 * MB), 0.8 * MB)).toBeNull()
+    expect(uploadProblem(file("tee.jpg", "image/jpeg", 0.9 * MB), 0.8 * MB)).toContain("the limit is 0.8 MB")
   })
 
   it("rejects a file over the limit with a helpful message", () => {
     expect(uploadProblem(file("raw.jpg", "image/jpeg", 12.3 * MB), 5 * MB)).toEqual(
-      '"raw.jpg" is 12.3 MB; the limit is 5 MB. Resize it (about 2000 px on the longest side) and try again.'
+      '"raw.jpg" is 12.3 MB; the limit is 5 MB. Resize it (about 1600 px on the longest side, JPEG quality ~80, or save as WebP) and try again.'
     )
   })
 

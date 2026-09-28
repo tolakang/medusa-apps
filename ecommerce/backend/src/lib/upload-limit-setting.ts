@@ -2,13 +2,15 @@ import type { MedusaContainer } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 
 // Upload size limit that admins can change in Settings → Store (TASKS P1-12).
-// Precedence: admin setting (store metadata) → UPLOAD_MAX_FILE_SIZE_MB → 2 MB,
+// Precedence: admin setting (store metadata) → UPLOAD_MAX_FILE_SIZE_MB → 0.8 MB,
 // never above UPLOAD_MAX_FILE_SIZE_CEILING_MB (default 20), so an admin
 // account cannot make the server accept huge uploads (multer holds the whole
 // request in memory, TASKS P1-11).
 
 export const UPLOAD_LIMIT_METADATA_KEY = "upload_max_file_size_mb"
-export const DEFAULT_UPLOAD_MAX_FILE_SIZE_MB = 2
+// Default 0.8 MB (≈ 800 KB, owner's choice 2026-09-28): enough for a web product
+// photo exported at ~1600 px (JPEG quality ~80) or as WebP.
+export const DEFAULT_UPLOAD_MAX_FILE_SIZE_MB = 0.8
 export const DEFAULT_UPLOAD_MAX_FILE_SIZE_CEILING_MB = 20
 // Other server instances pick up a change within this time.
 const CACHE_MS = 60_000
