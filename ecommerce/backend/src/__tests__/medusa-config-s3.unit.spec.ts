@@ -63,3 +63,27 @@ describe("medusa-config S3 file provider", () => {
     expect(s3Options({ S3_BUCKET: undefined })).toBeUndefined()
   })
 })
+
+// The admin's in-browser size check must equal the upload ceiling (TASKS F-027).
+describe("medusa-config admin upload size", () => {
+  const adminMaxBytes = (ceiling: string | undefined) => {
+    const saved = { ...process.env }
+    if (ceiling === undefined) delete process.env.UPLOAD_MAX_FILE_SIZE_CEILING_MB
+    else process.env.UPLOAD_MAX_FILE_SIZE_CEILING_MB = ceiling
+    let config: { admin?: { maxUploadFileSize?: number } } | undefined
+    jest.isolateModules(() => {
+      config = require("../../medusa-config")
+    })
+    process.env = saved
+    return config!.admin?.maxUploadFileSize
+  }
+
+  it("defaults to the default upload ceiling", () => {
+    const { DEFAULT_UPLOAD_MAX_FILE_SIZE_CEILING_MB } = require("../lib/upload-limit-setting")
+    expect(adminMaxBytes(undefined)).toEqual(DEFAULT_UPLOAD_MAX_FILE_SIZE_CEILING_MB * 1024 * 1024)
+  })
+
+  it("follows UPLOAD_MAX_FILE_SIZE_CEILING_MB", () => {
+    expect(adminMaxBytes("8")).toEqual(8 * 1024 * 1024)
+  })
+})

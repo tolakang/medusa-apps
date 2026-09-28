@@ -147,6 +147,12 @@ const notificationModule = {
   },
 }
 
+// Must match DEFAULT_UPLOAD_MAX_FILE_SIZE_CEILING_MB in
+// src/lib/upload-limit-setting.ts (checked by a unit test).
+const uploadCeilingMb = Number(process.env.UPLOAD_MAX_FILE_SIZE_CEILING_MB)
+const uploadCeilingBytes =
+  (Number.isFinite(uploadCeilingMb) && uploadCeilingMb > 0 ? uploadCeilingMb : 5) * 1024 * 1024
+
 module.exports = defineConfig({
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
@@ -163,6 +169,11 @@ module.exports = defineConfig({
   },
   admin: {
     disable: process.env.DISABLE_MEDUSA_ADMIN === "true",
+    // The dashboard checks file size in the browser before uploading (default
+    // 1 MB, @medusajs/types AdminOptions.maxUploadFileSize; baked in at build).
+    // Set it to the upload ceiling so it never blocks what Settings → Store
+    // allows; the server enforces the live limit (TASKS P1-12, F-027).
+    maxUploadFileSize: uploadCeilingBytes,
     backendUrl: process.env.MEDUSA_BACKEND_URL || undefined,
   },
   modules: [...redisModules, ...fileModules, notificationModule],

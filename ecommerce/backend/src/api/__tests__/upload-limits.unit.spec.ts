@@ -30,7 +30,7 @@ const run = async (files: ReturnType<typeof file>[]) => {
 describe("upload limit precedence (TASKS P1-11, P1-12)", () => {
   it("default 0.8 MB, environment overrides it, admin setting overrides both", () => {
     expect(resolveUploadLimit(undefined, {})).toEqual(
-      expect.objectContaining({ limitMb: 0.8, defaultMb: 0.8, source: "default", ceilingMb: 20 })
+      expect.objectContaining({ limitMb: 0.8, defaultMb: 0.8, source: "default", ceilingMb: 5 })
     )
     expect(resolveUploadLimit(undefined, { limit: "5" })).toEqual(
       expect.objectContaining({ limitMb: 5, source: "environment", defaultMb: 5 })
@@ -41,7 +41,7 @@ describe("upload limit precedence (TASKS P1-11, P1-12)", () => {
   })
 
   it("never goes above the ceiling", () => {
-    expect(resolveUploadLimit(500, {}).limitMb).toEqual(20)
+    expect(resolveUploadLimit(500, {}).limitMb).toEqual(5)
     expect(resolveUploadLimit(15, { ceiling: "10" }).limitMb).toEqual(10)
     expect(resolveUploadLimit(undefined, { limit: "50", ceiling: "10" }).limitMb).toEqual(10)
   })
@@ -50,7 +50,7 @@ describe("upload limit precedence (TASKS P1-11, P1-12)", () => {
     expect(resolveUploadLimit("abc", { limit: "0" })).toEqual(
       expect.objectContaining({ limitMb: 0.8, source: "default" })
     )
-    expect(resolveUploadLimit(-1, { ceiling: "x" }).ceilingMb).toEqual(20)
+    expect(resolveUploadLimit(-1, { ceiling: "x" }).ceilingMb).toEqual(5)
   })
 })
 
