@@ -3,11 +3,13 @@ import type {
   MedusaRequest,
   MedusaResponse,
 } from "@medusajs/framework/http"
-import {
-  enforceUploadLimits,
-  maxUploadBytes,
-  uploadProblem,
-} from "../upload-limits"
+import { enforceUploadLimits, uploadProblem } from "../upload-limits"
+import { currentUploadLimitMb, resolveUploadLimit } from "../../lib/upload-limit-setting"
+
+jest.mock("../../lib/upload-limit-setting", () => ({
+  ...jest.requireActual("../../lib/upload-limit-setting"),
+  currentUploadLimitMb: jest.fn(),
+}))
 
 const MB = 1024 * 1024
 const file = (originalname: string, mimetype: string, size: number) => ({
@@ -15,18 +17,46 @@ const file = (originalname: string, mimetype: string, size: number) => ({
   mimetype,
   size,
 })
+const run = async (files: ReturnType<typeof file>[]) => {
+  const next = jest.fn()
+  await enforceUploadLimits(
+    { files, scope: {} } as unknown as MedusaRequest,
+    {} as MedusaResponse,
+    next as unknown as MedusaNextFunction
+  )
+  return next
+}
 
-describe("admin upload limits (TASKS P1-11)", () => {
-  it("defaults to 2 MB and accepts UPLOAD_MAX_FILE_SIZE_MB", () => {
-    expect(maxUploadBytes(undefined)).toEqual(2 * MB)
-    expect(maxUploadBytes("5")).toEqual(5 * MB)
-    expect(maxUploadBytes("not-a-number")).toEqual(2 * MB)
-    expect(maxUploadBytes("0")).toEqual(2 * MB)
+describe("upload limit precedence (TASKS P1-11, P1-12)", () => {
+  it("default 2 MB, environment overrides it, admin setting overrides both", () => {
+    expect(resolveUploadLimit(undefined, {})).toEqual(
+      expect.objectContaining({ limitMb: 2, source: "default", ceilingMb: 20 })
+    )
+    expect(resolveUploadLimit(undefined, { limit: "5" })).toEqual(
+      expect.objectContaining({ limitMb: 5, source: "environment", defaultMb: 5 })
+    )
+    expect(resolveUploadLimit(3, { limit: "5" })).toEqual(
+      expect.objectContaining({ limitMb: 3, source: "admin", defaultMb: 5 })
+    )
   })
 
+  it("never goes above the ceiling", () => {
+    expect(resolveUploadLimit(500, {}).limitMb).toEqual(20)
+    expect(resolveUploadLimit(15, { ceiling: "10" }).limitMb).toEqual(10)
+    expect(resolveUploadLimit(undefined, { limit: "50", ceiling: "10" }).limitMb).toEqual(10)
+  })
+
+  it("ignores invalid values", () => {
+    expect(resolveUploadLimit("abc", { limit: "0" })).toEqual(
+      expect.objectContaining({ limitMb: 2, source: "default" })
+    )
+    expect(resolveUploadLimit(-1, { ceiling: "x" }).ceilingMb).toEqual(20)
+  })
+})
+
+describe("admin upload checks (TASKS P1-11)", () => {
   it("accepts a normal product photo", () => {
-    expect(uploadProblem(file("tee.jpg", "image/jpeg", 1.5 * MB), 5 * MB)).toBeNull()
-    expect(uploadProblem(file("tee.webp", "image/webp", 5 * MB), 5 * MB)).toBeNull()
+    expect(uploadProblem(file("tee.jpg", "image/jpeg", 1.5 * MB), 2 * MB)).toBeNull()
   })
 
   it("rejects a file over the limit with a helpful message", () => {
@@ -41,25 +71,15 @@ describe("admin upload limits (TASKS P1-11)", () => {
     expect(uploadProblem(file("x.svgz", "image/png", 1000), 5 * MB)).toContain("SVG files are not allowed")
   })
 
-  it("middleware passes an error to next() when any file breaks a rule", () => {
-    const next = jest.fn()
-    const req = { files: [file("ok.jpg", "image/jpeg", MB), file("big.png", "image/png", 9 * MB)] }
-    enforceUploadLimits(
-      req as unknown as MedusaRequest,
-      {} as MedusaResponse,
-      next as unknown as MedusaNextFunction
-    )
-    expect(next).toHaveBeenCalledTimes(1)
-    expect(next.mock.calls[0][0].message).toContain('"big.png" is 9.0 MB')
+  it("middleware uses the current setting and rejects a too-large file", async () => {
+    jest.mocked(currentUploadLimitMb).mockResolvedValue(3)
+    const next = await run([file("ok.jpg", "image/jpeg", MB), file("big.png", "image/png", 4 * MB)])
+    expect(next.mock.calls[0][0].message).toContain('"big.png" is 4.0 MB; the limit is 3 MB')
   })
 
-  it("middleware calls next() without error when all files are fine", () => {
-    const next = jest.fn()
-    enforceUploadLimits(
-      { files: [file("ok.jpg", "image/jpeg", MB)] } as unknown as MedusaRequest,
-      {} as MedusaResponse,
-      next as unknown as MedusaNextFunction
-    )
+  it("middleware passes files within the current setting", async () => {
+    jest.mocked(currentUploadLimitMb).mockResolvedValue(5)
+    const next = await run([file("four.jpg", "image/jpeg", 4 * MB)])
     expect(next).toHaveBeenCalledWith()
   })
 })
