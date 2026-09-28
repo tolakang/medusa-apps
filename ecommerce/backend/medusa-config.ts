@@ -68,6 +68,15 @@ const redisModules = REDIS_URL
     ]
   : []
 
+// S3_ACL: empty = @medusajs/file-s3 default ("public-read" / "private" per
+// file); "false" = send no ACL header, needed for AWS buckets with Object
+// Ownership "Bucket owner enforced" (the AWS default for new buckets; file-s3
+// resolveAcl comment), public read then comes from the bucket policy; any other
+// value = that canned ACL. Tested with RustFS and SeaweedFS (TASKS P1-05).
+const S3_ACL = process.env.S3_ACL
+const s3Acl =
+  S3_ACL === "false" ? false : S3_ACL || undefined
+
 const fileModules = S3_BUCKET
   ? [
       {
@@ -83,6 +92,7 @@ const fileModules = S3_BUCKET
                 secret_access_key: process.env.S3_SECRET_ACCESS_KEY,
                 region: process.env.S3_REGION,
                 bucket: S3_BUCKET,
+                ...(s3Acl !== undefined ? { acl: s3Acl } : {}),
                 endpoint: process.env.S3_ENDPOINT || undefined,
                 additional_client_config: {
                   forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
