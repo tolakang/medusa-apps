@@ -14,9 +14,8 @@ import { currentUploadLimitMb } from "../lib/upload-limit-setting"
 // nothing has been stored yet.
 
 // The size limit comes from src/lib/upload-limit-setting.ts: the admin setting
-// in Settings → Store (TASKS P1-12), else UPLOAD_MAX_FILE_SIZE_MB, else 2 MB
-// (owner's choice: a 2000 px JPEG/WebP photo is usually 0.3–2 MB), capped by
-// UPLOAD_MAX_FILE_SIZE_CEILING_MB.
+// in Settings → Store (TASKS P1-12), else UPLOAD_MAX_FILE_SIZE_MB, else 0.8 MB
+// (owner's choice), capped by UPLOAD_MAX_FILE_SIZE_CEILING_MB.
 
 // SVG can carry scripts, which run on the file host (the RustFS domain that
 // also serves its console) when an SVG is opened directly.
@@ -36,7 +35,7 @@ export function uploadProblem(file: UploadedFile, maxBytes: number): string | nu
   if (file.size > maxBytes) {
     const limitMb = maxBytes / 1024 / 1024
     const sizeMb = (file.size / 1024 / 1024).toFixed(1)
-    return `"${file.originalname}" is ${sizeMb} MB; the limit is ${limitMb} MB. Resize it (about 2000 px on the longest side) and try again.`
+    return `"${file.originalname}" is ${sizeMb} MB; the limit is ${limitMb} MB. Resize it (about 1600 px on the longest side, JPEG quality ~80, or save as WebP) and try again.`
   }
   return null
 }
