@@ -3,6 +3,7 @@
 import {
   escapeHtml,
   formatMoney,
+  itemLabel,
   ORDER_PLACED_TEMPLATE,
   type OrderNotificationData,
 } from "../../lib/order-notification"
@@ -12,7 +13,7 @@ function orderPlaced(order: OrderNotificationData) {
     .filter(Boolean)
     .map(
       (item) =>
-        `<tr><td>${escapeHtml(item!.title)}</td>` +
+        `<tr><td>${escapeHtml(itemLabel(item!))}</td>` +
         `<td style="text-align:center">${escapeHtml(item!.quantity)}</td>` +
         `<td style="text-align:right">${escapeHtml(formatMoney(item!.total, order.currency_code))}</td></tr>`
     )

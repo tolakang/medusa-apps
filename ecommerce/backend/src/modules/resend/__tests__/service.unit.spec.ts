@@ -11,7 +11,7 @@ const order = {
   email: "customer@example.com",
   currency_code: "usd",
   total: 16.5,
-  items: [{ title: "Tee <b>", quantity: 1, total: 15 }],
+  items: [{ title: "Tee <b>", variant_title: "M / <i>", quantity: 1, total: 15 }],
   shipping_address: { first_name: "Dara", address_1: "St. 51", city: "Phnom Penh" },
   shipping_methods: [{ name: "Phnom Penh Delivery" }],
 }
@@ -78,7 +78,7 @@ describe("Resend provider", () => {
 
   it("escapes customer text in the email HTML", () => {
     const email = renderEmail("order-placed", { order })
-    expect(email?.html).toContain("Tee &lt;b&gt;")
+    expect(email?.html).toContain("Tee &lt;b&gt; (M / &lt;i&gt;)")
     expect(email?.html).not.toContain("Tee <b>")
   })
 })

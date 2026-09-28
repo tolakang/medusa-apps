@@ -10,6 +10,7 @@ export type OrderNotificationData = {
   total?: number | null
   items?: ({
     title?: string | null
+    variant_title?: string | null
     quantity?: number | null
     total?: number | null
   } | null)[] | null
@@ -41,4 +42,15 @@ export function formatMoney(amount: unknown, currencyCode?: string | null) {
   } catch {
     return `${value} ${currency}`
   }
+}
+
+// "Medusa T-Shirt (L / White)", so staff can tell variants apart (size and
+// colour). Products without options get the dashboard's "Default variant"
+// title (@medusajs/dashboard 2.21.1 product create), which says nothing.
+export function itemLabel(item: { title?: string | null; variant_title?: string | null }) {
+  const title = item.title || "item"
+  const variant = item.variant_title?.trim()
+  return variant && variant.toLowerCase() !== "default variant" && variant !== title
+    ? `${title} (${variant})`
+    : title
 }
