@@ -107,8 +107,10 @@ openssl rand -base64 32   # COOKIE_SECRET
    NODE_ENV=production
    PORT=8000
    MEDUSA_BACKEND_URL=https://<api host>
+   REVALIDATE_SECRET=<same value as on the backend and worker>
    ```
    The public API URL is fine for staging. The backend's internal hostname also works (starter change 6), but only use it once you have confirmed the exact name.
+   **Cache refresh (TASKS P1-10):** generate one secret (`openssl rand -hex 32`) and set it as `REVALIDATE_SECRET` here **and** on `ecommerce-backend` and `ecommerce-worker`, together with `STOREFRONT_URL=https://<shop host>` on those two. Then admin changes to products, variants, categories, collections and regions show in the shop within seconds, and anything else (e.g. price lists) within 10 minutes. Check: `curl -s -X POST https://<shop host>/api/revalidate` must answer `401` (the route exists and wants the secret).
 4. **Domains:** host `<shop host>`, path `/`, **container port `8000`**, HTTPS as for the backend.
 5. **Swarm Settings → Health Check.** `/favicon.ico` bypasses the middleware, so the check doesn't depend on the backend.
    **Health Check** (form fields; verified healthy on staging 2026-09-27, finding F-021). **Test Commands** takes one array item per box, so use exactly **two** boxes:
