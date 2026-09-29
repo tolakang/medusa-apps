@@ -266,6 +266,7 @@ const EditAddress: React.FC<EditAddressProps> = ({
                 name="phone"
                 {...phoneInputProps}
                 defaultValue={address.phone || undefined}
+                required
                 data-testid="phone-input"
               />
             </div>

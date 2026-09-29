@@ -188,6 +188,7 @@ const AddAddress = ({
                 label="Phone"
                 name="phone"
                 {...phoneInputProps}
+                required
                 data-testid="phone-input"
               />
             </div>
