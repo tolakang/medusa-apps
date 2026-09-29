@@ -48,11 +48,27 @@ export function validatePhoneFields(
 
 export const SHIPPING_PHONE_REQUIRED_MESSAGE =
   "Add a phone number to the delivery address so the courier can reach you."
+export const EMAIL_REQUIRED_MESSAGE =
+  "Add an email address so we can send your order confirmation."
 
-// The delivery address must have a phone before the order is placed (owner,
-// 2026-09-29). Checked on cart completion, not on every cart update, because
-// the storefront saves the address in steps.
-export async function requireShippingPhone(
+// Required contact before the order is placed, by delivery country (owner,
+// 2026-09-29): Cambodia needs the delivery phone (email optional, TASKS P1-16);
+// other countries need the email, as in the starter (phone optional).
+export function contactProblem(cart: {
+  email?: string | null
+  shipping_address?: { country_code?: string | null; phone?: string | null } | null
+}): string | null {
+  if (cart.shipping_address?.country_code?.toLowerCase() === "kh") {
+    const phone = cart.shipping_address.phone
+    return phone && isValidPhone(phone) ? null : SHIPPING_PHONE_REQUIRED_MESSAGE
+  }
+  return cart.email ? null : EMAIL_REQUIRED_MESSAGE
+}
+
+// Checked on cart completion, not on every cart update, because the
+// storefront saves the address in steps. A cart without a shipping address is
+// left to Medusa's own completion checks.
+export async function requireContact(
   req: MedusaRequest,
   _res: MedusaResponse,
   next: MedusaNextFunction
@@ -62,12 +78,12 @@ export async function requireShippingPhone(
     data: [cart],
   } = await query.graph({
     entity: "cart",
-    fields: ["id", "shipping_address.phone"],
+    fields: ["id", "email", "shipping_address.country_code", "shipping_address.phone"],
     filters: { id: req.params.id },
   })
-  const phone = cart?.shipping_address?.phone
-  if (cart && (!phone || !isValidPhone(phone))) {
-    return next(new MedusaError(MedusaError.Types.INVALID_DATA, SHIPPING_PHONE_REQUIRED_MESSAGE))
+  const problem = cart?.shipping_address ? contactProblem(cart) : null
+  if (problem) {
+    return next(new MedusaError(MedusaError.Types.INVALID_DATA, problem))
   }
   next()
 }

@@ -111,6 +111,8 @@ const ShippingAddress = ({
   const setField = (name: string, value: string) =>
     setFormData((prev) => ({ ...prev, [name]: value }))
 
+  const isKh = formData["shipping_address.country_code"] === KH_COUNTRY_CODE
+
   const firstName = (
     <Input
       label="First name"
@@ -188,7 +190,7 @@ const ShippingAddress = ({
           Country, Company (owner, TASKS P1-15); other countries keep the
           starter's order. */}
       <div className="grid grid-cols-2 gap-4">
-        {formData["shipping_address.country_code"] === KH_COUNTRY_CODE ? (
+        {isKh ? (
           <>
             {firstName}
             {lastName}
@@ -266,6 +268,7 @@ const ShippingAddress = ({
           autoComplete="email"
           value={formData.email}
           onChange={handleChange}
+          required={!isKh}
           data-testid="shipping-email-input"
         />
         <Input
@@ -274,19 +277,22 @@ const ShippingAddress = ({
           {...phoneInputProps}
           value={formData["shipping_address.phone"]}
           onChange={handleChange}
-          required
+          required={isKh}
           data-testid="shipping-phone-input"
         />
-        {/* Email is optional; the phone is the required contact and Telegram
-            an extra one staff can use (owner, TASKS P1-16). */}
-        <Input
-          label="Telegram @username"
-          name={TELEGRAM_CONTACT_KEY}
-          {...telegramInputProps}
-          value={formData[TELEGRAM_CONTACT_KEY]}
-          onChange={handleChange}
-          data-testid="shipping-telegram-input"
-        />
+        {/* Cambodia: the phone is the required contact, email is optional and
+            Telegram an extra one staff can use (owner, TASKS P1-16). Other
+            countries keep the starter's rule: email required, phone optional. */}
+        {isKh && (
+          <Input
+            label="Telegram @username"
+            name={TELEGRAM_CONTACT_KEY}
+            {...telegramInputProps}
+            value={formData[TELEGRAM_CONTACT_KEY]}
+            onChange={handleChange}
+            data-testid="shipping-telegram-input"
+          />
+        )}
       </div>
     </>
   )
