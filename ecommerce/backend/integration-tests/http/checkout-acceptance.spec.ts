@@ -223,6 +223,18 @@ medusaIntegrationTestRunner({
           if (customerTemplates.length < expected.length) await new Promise((r) => setTimeout(r, 250))
         }
         expect(customerTemplates.sort()).toEqual(expected)
+
+        // The staff group heard about every step too.
+        const { data: staffAlerts } = await query.graph({
+          entity: "notification",
+          fields: ["template"],
+          filters: { resource_id: orderId, channel: "telegram" },
+        })
+        expect(staffAlerts.map((n) => String(n.template)).sort()).toEqual([
+          "order-delivered-staff",
+          "order-placed-staff",
+          "order-shipped-staff",
+        ])
       })
     })
   },

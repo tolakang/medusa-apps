@@ -74,6 +74,38 @@ describe("customer messages", () => {
     expect(renderMessage("order-delivered-customer", { order })).toContain("#5 has been delivered")
     expect(renderMessage("order-canceled-customer", { order })).toContain("#5 has been canceled")
     expect(renderMessage(TELEGRAM_START_HELP_TEMPLATE, {})).toContain("order confirmation page")
+    expect(renderMessage("order-already-linked-customer", { order })).toContain(
+      "already getting updates for order #5"
+    )
+  })
+})
+
+describe("staff status alerts", () => {
+  const order = {
+    display_id: 6,
+    currency_code: "usd",
+    total: 63,
+    shipping_address: {
+      first_name: "Tola",
+      last_name: "Kang",
+      phone: "010 622 335",
+      address_1: "#111",
+      city: "Thma Koul District",
+      province: "Battambang",
+    },
+  }
+
+  it("says which order, who and where", () => {
+    expect(renderMessage("order-shipped-staff", { order })).toEqual(
+      [
+        "🚚 Order #6 shipped — $63.00",
+        "Customer: Tola Kang",
+        "Phone: 010 622 335",
+        "Address: #111, Thma Koul District, Battambang",
+      ].join("\n")
+    )
+    expect(renderMessage("order-delivered-staff", { order })).toMatch(/^📦 Order #6 delivered — \$63\.00/)
+    expect(renderMessage("order-canceled-staff", { order })).toMatch(/^❌ Order #6 canceled — \$63\.00/)
   })
 })
 

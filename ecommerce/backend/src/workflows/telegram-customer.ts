@@ -3,7 +3,6 @@ import {
   createWorkflow,
   StepResponse,
   transform,
-  when,
   WorkflowResponse,
 } from "@medusajs/framework/workflows-sdk"
 import {
@@ -11,8 +10,11 @@ import {
   useQueryGraphStep,
 } from "@medusajs/medusa/core-flows"
 import {
+  ORDER_ALREADY_LINKED_CUSTOMER_TEMPLATE,
   ORDER_CONFIRMED_CUSTOMER_TEMPLATE,
   ORDER_NOTIFICATION_FIELDS,
+  ORDER_STATUS_TEMPLATES,
+  type OrderStatusUpdate,
 } from "../lib/order-notification"
 import { TELEGRAM_CUSTOMER_CHANNEL } from "../lib/telegram-customer"
 import { TELEGRAM_START_HELP_TEMPLATE } from "../modules/telegram/templates"
@@ -32,10 +34,10 @@ const linkTelegramChatStep = createStep(
     const service: TelegramLinksModuleService = container.resolve(TELEGRAM_LINKS_MODULE)
     const [existing] = await service.listTelegramOrderChats(input)
     if (existing) {
-      return new StepResponse(existing, null)
+      return new StepResponse({ created: false }, null)
     }
     const created = await service.createTelegramOrderChats(input)
-    return new StepResponse(created, created.id)
+    return new StepResponse({ created: true }, created.id)
   },
   async (createdId: string | null, { container }) => {
     if (!createdId) {
@@ -46,7 +48,10 @@ const linkTelegramChatStep = createStep(
   }
 )
 
-// /start <signed order link> → remember the chat, send the order confirmation.
+// /start <signed order link> → remember the chat and send the order
+// confirmation. A repeat tap for the same order and chat gets a short "already
+// getting updates" reply instead of the whole confirmation again (owner,
+// 2026-09-29). No idempotency key: every tap gets an answer.
 export const linkTelegramChatWorkflow = createWorkflow(
   "link-telegram-chat",
   function (input: ChatInput) {
@@ -56,14 +61,15 @@ export const linkTelegramChatWorkflow = createWorkflow(
       filters: { id: input.order_id },
       options: { throwIfKeyNotFound: true },
     })
-    linkTelegramChatStep(input)
+    const link = linkTelegramChatStep(input)
 
-    // No idempotency key: tapping the button again sends the confirmation again.
-    const notifications = transform({ orders, input }, ({ orders, input }) => [
+    const notifications = transform({ orders, input, link }, ({ orders, input, link }) => [
       {
         to: input.chat_id,
         channel: TELEGRAM_CUSTOMER_CHANNEL,
-        template: ORDER_CONFIRMED_CUSTOMER_TEMPLATE,
+        template: link.created
+          ? ORDER_CONFIRMED_CUSTOMER_TEMPLATE
+          : ORDER_ALREADY_LINKED_CUSTOMER_TEMPLATE,
         data: { order: orders[0] },
         trigger_type: "telegram.start",
         resource_id: orders[0].id,
@@ -74,42 +80,53 @@ export const linkTelegramChatWorkflow = createWorkflow(
   }
 )
 
-// Order event → message to every chat following the order. Retry-safe: one
-// idempotency key per template, order and chat.
-export const notifyTelegramCustomersWorkflow = createWorkflow(
-  "notify-telegram-customers",
-  function (input: { order_id: string; template: string }) {
+// Order shipped / delivered / canceled → an alert to the staff group (channel
+// "telegram", owner 2026-09-29) and, unless the event says no_notification, a
+// message to every customer chat following the order (P1-17). Retry-safe: one
+// idempotency key per template, order and recipient.
+export const notifyOrderStatusWorkflow = createWorkflow(
+  "notify-order-status",
+  function (input: { order_id: string; status: OrderStatusUpdate; notify_customer: boolean }) {
+    const { data: orders } = useQueryGraphStep({
+      entity: "order",
+      fields: ORDER_NOTIFICATION_FIELDS,
+      filters: { id: input.order_id },
+      options: { throwIfKeyNotFound: true },
+    }).config({ name: "status-order" })
     const { data: chats } = useQueryGraphStep({
       entity: "telegram_order_chat",
       fields: ["chat_id"],
       filters: { order_id: input.order_id },
-    }).config({ name: "telegram-order-chats" })
+    }).config({ name: "status-order-chats" })
 
-    const sent = when("has-telegram-chats", { chats }, ({ chats }) => chats.length > 0).then(
-      () => {
-        const { data: orders } = useQueryGraphStep({
-          entity: "order",
-          fields: ORDER_NOTIFICATION_FIELDS,
-          filters: { id: input.order_id },
-          options: { throwIfKeyNotFound: true },
-        }).config({ name: "telegram-order" })
-
-        const notifications = transform({ orders, chats, input }, ({ orders, chats, input }) =>
-          chats.map((chat) => ({
-            to: chat.chat_id,
-            channel: TELEGRAM_CUSTOMER_CHANNEL,
-            template: input.template,
-            data: { order: orders[0] },
-            trigger_type: input.template,
-            resource_id: orders[0].id,
-            resource_type: "order",
-            idempotency_key: `${input.template}:${orders[0].id}:${chat.chat_id}`,
-          }))
-        )
-        return sendNotificationsStep(notifications)
+    const notifications = transform({ orders, chats, input }, ({ orders, chats, input }) => {
+      const order = orders[0]
+      const templates = ORDER_STATUS_TEMPLATES[input.status]
+      const common = {
+        data: { order },
+        trigger_type: `order.${input.status}`,
+        resource_id: order.id,
+        resource_type: "order",
       }
-    )
-    return new WorkflowResponse({ sent })
+      return [
+        {
+          ...common,
+          // The staff bot always posts to its configured group.
+          to: "staff",
+          channel: "telegram",
+          template: templates.staff,
+          idempotency_key: `${templates.staff}:${order.id}`,
+        },
+        ...(input.notify_customer ? chats : []).map((chat) => ({
+          ...common,
+          to: chat.chat_id,
+          channel: TELEGRAM_CUSTOMER_CHANNEL,
+          template: templates.customer,
+          idempotency_key: `${templates.customer}:${order.id}:${chat.chat_id}`,
+        })),
+      ]
+    })
+    return new WorkflowResponse(sendNotificationsStep(notifications))
   }
 )
 

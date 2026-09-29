@@ -7,6 +7,25 @@ export const ORDER_CONFIRMED_CUSTOMER_TEMPLATE = "order-confirmed-customer"
 export const ORDER_SHIPPED_CUSTOMER_TEMPLATE = "order-shipped-customer"
 export const ORDER_DELIVERED_CUSTOMER_TEMPLATE = "order-delivered-customer"
 export const ORDER_CANCELED_CUSTOMER_TEMPLATE = "order-canceled-customer"
+// A repeat /start for an order the chat already follows (owner, 2026-09-29).
+export const ORDER_ALREADY_LINKED_CUSTOMER_TEMPLATE = "order-already-linked-customer"
+// Staff group alerts for order status changes (owner, 2026-09-29).
+export const ORDER_SHIPPED_STAFF_TEMPLATE = "order-shipped-staff"
+export const ORDER_DELIVERED_STAFF_TEMPLATE = "order-delivered-staff"
+export const ORDER_CANCELED_STAFF_TEMPLATE = "order-canceled-staff"
+
+export type OrderStatusUpdate = "shipped" | "delivered" | "canceled"
+
+// Templates per status: staff group (channel "telegram") and customer chats
+// (channel "telegram_customer").
+export const ORDER_STATUS_TEMPLATES: Record<
+  OrderStatusUpdate,
+  { staff: string; customer: string }
+> = {
+  shipped: { staff: ORDER_SHIPPED_STAFF_TEMPLATE, customer: ORDER_SHIPPED_CUSTOMER_TEMPLATE },
+  delivered: { staff: ORDER_DELIVERED_STAFF_TEMPLATE, customer: ORDER_DELIVERED_CUSTOMER_TEMPLATE },
+  canceled: { staff: ORDER_CANCELED_STAFF_TEMPLATE, customer: ORDER_CANCELED_CUSTOMER_TEMPLATE },
+}
 
 // Order fields every notification template may use.
 export const ORDER_NOTIFICATION_FIELDS = [
