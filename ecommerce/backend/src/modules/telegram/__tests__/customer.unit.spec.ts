@@ -78,6 +78,31 @@ describe("customer messages", () => {
       "already getting updates for order #5"
     )
   })
+
+  it("answers a repeat tap with where the order is now", () => {
+    const reply = (extra: object) =>
+      renderMessage("order-already-linked-customer", { order: { display_id: 6, ...extra } })
+    expect(reply({})).toEqual(
+      "You're already getting updates for order #6 here. We will message you when it ships."
+    )
+    expect(reply({ fulfillments: [{ shipped_at: "2026-09-29T11:08:00Z" }] })).toContain(
+      "Order #6 is on its way. We will message you when it is delivered."
+    )
+    expect(
+      reply({ fulfillments: [{ shipped_at: "2026-09-29T11:08:00Z", delivered_at: "2026-09-29T11:08:05Z" }] })
+    ).toContain("Order #6 has been delivered.")
+    // Delivered without a shipping step (owner's order #8) still counts.
+    expect(reply({ fulfillments: [{ delivered_at: "2026-09-29T11:57:00Z" }] })).toContain(
+      "has been delivered"
+    )
+    // A canceled fulfillment doesn't count; a canceled order wins.
+    expect(reply({ fulfillments: [{ shipped_at: "x", canceled_at: "y" }] })).toContain(
+      "when it ships"
+    )
+    expect(reply({ status: "canceled", fulfillments: [{ delivered_at: "x" }] })).toContain(
+      "Order #6 has been canceled."
+    )
+  })
 })
 
 describe("staff status alerts", () => {
