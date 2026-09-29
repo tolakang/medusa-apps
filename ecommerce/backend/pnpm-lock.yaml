@@ -230,6 +230,9 @@ importers:
       '@types/jest':
         specifier: ^29.5.13
         version: 29.5.14
+      '@types/jsonwebtoken':
+        specifier: 9.0.10
+        version: 9.0.10
       '@types/node':
         specifier: ^20.12.11
         version: 20.19.43
@@ -248,6 +251,9 @@ importers:
       jiti:
         specifier: ^2.7.0
         version: 2.7.0
+      jsonwebtoken:
+        specifier: 9.0.3
+        version: 9.0.3
       prop-types:
         specifier: ^15.8.1
         version: 15.8.1
