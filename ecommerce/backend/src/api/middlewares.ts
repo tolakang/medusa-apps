@@ -4,7 +4,7 @@ import {
   validateAndTransformBody,
 } from '@medusajs/framework/http'
 import { PostAdminUploadLimit } from './admin/upload-limit/validators'
-import { requireShippingPhone, validatePhoneFields } from './phone-validation'
+import { requireContact, validatePhoneFields } from './phone-validation'
 import { enforceUploadLimits } from './upload-limits'
 
 // The product index declares filterable `status` and `sales_channel_ids`, so
@@ -41,10 +41,11 @@ export default defineMiddlewares({
       middlewares: [validatePhoneFields],
     },
     {
-      // The delivery address needs a phone before the order is placed.
+      // Required contact before the order is placed: the delivery phone in
+      // Cambodia, the email elsewhere.
       method: ['POST'],
       matcher: '/store/carts/:id/complete',
-      middlewares: [requireShippingPhone],
+      middlewares: [requireContact],
     },
     {
       method: ['POST'],

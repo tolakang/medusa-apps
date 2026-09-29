@@ -2,6 +2,7 @@
 import { Radio, RadioGroup } from "@headlessui/react"
 import { setShippingMethod } from "@lib/data/cart"
 import { calculatePriceForShippingOption } from "@lib/data/fulfillment"
+import { hasRequiredContact } from "@lib/util/contact"
 import { convertToLocale } from "@lib/util/money"
 import { CheckCircleSolid, Loader } from "@medusajs/icons"
 import { HttpTypes } from "@medusajs/types"
@@ -172,7 +173,7 @@ const Shipping: React.FC<ShippingProps> = ({
         {!isOpen &&
           cart?.shipping_address &&
           cart?.billing_address &&
-          cart?.shipping_address?.phone && (
+          hasRequiredContact(cart) && (
             <Text>
               <button
                 onClick={handleEdit}

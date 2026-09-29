@@ -188,7 +188,7 @@ const AddAddress = ({
                 label="Phone"
                 name="phone"
                 {...phoneInputProps}
-                required
+                required={country === KH_COUNTRY_CODE}
                 data-testid="phone-input"
               />
             </div>
