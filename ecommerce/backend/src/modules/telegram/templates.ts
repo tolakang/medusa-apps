@@ -7,8 +7,10 @@ import {
   ORDER_PLACED_STAFF_TEMPLATE,
   type OrderNotificationData,
 } from "../../lib/order-notification"
+import { TELEGRAM_CONTACT_KEY, telegramContactLabel } from "../../lib/telegram-contact"
 
 function orderPlacedStaff(order: OrderNotificationData) {
+  const telegram = telegramContactLabel(order.metadata?.[TELEGRAM_CONTACT_KEY])
   const address = order.shipping_address
   const name = [address?.first_name, address?.last_name].filter(Boolean).join(" ")
   const items = (order.items ?? [])
@@ -24,6 +26,7 @@ function orderPlacedStaff(order: OrderNotificationData) {
     ...items,
     name || order.email ? `Customer: ${[name, order.email].filter(Boolean).join(", ")}` : "",
     address?.phone ? `Phone: ${address.phone}` : "",
+    telegram ? `Telegram: ${telegram.url ?? telegram.text}` : "",
     address?.address_1 ? `Address: ${addressLine(address)}` : "",
     delivery ? `Delivery: ${delivery}` : "",
   ]

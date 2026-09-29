@@ -41,6 +41,7 @@ export const notifyOrderPlacedWorkflow = createWorkflow(
         "shipping_address.province",
         "shipping_address.phone",
         "shipping_methods.name",
+        "metadata",
       ],
       filters: { id: input.id },
       options: { throwIfKeyNotFound: true },

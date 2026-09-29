@@ -23,6 +23,7 @@ export type OrderNotificationData = {
     phone?: string | null
   } | null
   shipping_methods?: ({ name?: string | null } | null)[] | null
+  metadata?: Record<string, unknown> | null
 }
 
 export function escapeHtml(value: unknown): string {

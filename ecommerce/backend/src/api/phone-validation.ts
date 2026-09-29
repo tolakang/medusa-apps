@@ -1,6 +1,11 @@
 import type { MedusaNextFunction, MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
 import { isValidPhone, PHONE_MESSAGE } from "../lib/phone"
+import {
+  isValidTelegramContact,
+  TELEGRAM_CONTACT_KEY,
+  TELEGRAM_CONTACT_MESSAGE,
+} from "../lib/telegram-contact"
 
 // Refuses store requests whose phone fields contain letters or too few/many
 // digits, before Medusa saves them. Covers the cart's shipping and billing
@@ -10,6 +15,7 @@ type Body = {
   phone?: unknown
   shipping_address?: { phone?: unknown } | null
   billing_address?: { phone?: unknown } | null
+  metadata?: Record<string, unknown> | null
 }
 
 export function phoneProblem(body: Body | undefined): string | null {
@@ -19,7 +25,13 @@ export function phoneProblem(body: Body | undefined): string | null {
     ["Billing address phone", body?.billing_address?.phone],
   ]
   const bad = fields.find(([, value]) => !isValidPhone(value))
-  return bad ? `${bad[0]}: ${PHONE_MESSAGE}` : null
+  if (bad) {
+    return `${bad[0]}: ${PHONE_MESSAGE}`
+  }
+  // The optional Telegram contact rides in the cart's metadata (P1-16).
+  return isValidTelegramContact(body?.metadata?.[TELEGRAM_CONTACT_KEY])
+    ? null
+    : TELEGRAM_CONTACT_MESSAGE
 }
 
 export function validatePhoneFields(
