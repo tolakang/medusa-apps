@@ -5,11 +5,13 @@ loadEnv(process.env.NODE_ENV || "development", process.cwd())
 // Env-driven config (BUILD_PLAN.md §4.1). Option shapes: MEDUSA_SKILL.md §2.
 // REDIS_URL unset = in-memory infrastructure (development only).
 // S3_BUCKET unset = local file storage (development only).
-// RESEND_API_KEY / TELEGRAM_BOT_TOKEN unset = that channel only logs (TASKS P1-04).
+// RESEND_API_KEY / TELEGRAM_BOT_TOKEN / TELEGRAM_CUSTOMER_BOT_TOKEN unset = that
+// channel only logs (TASKS P1-04, P1-17).
 const REDIS_URL = process.env.REDIS_URL
 const S3_BUCKET = process.env.S3_BUCKET
 const RESEND_API_KEY = process.env.RESEND_API_KEY
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
+const TELEGRAM_CUSTOMER_BOT_TOKEN = process.env.TELEGRAM_CUSTOMER_BOT_TOKEN
 
 // Postgres SSL. Medusa turns SSL ON for any DATABASE_URL whose host is not
 // localhost/127.0.0.1 (@medusajs/utils load-module-database-config.js,
@@ -143,6 +145,19 @@ const notificationModule = {
             },
           }
         : localProvider("local-telegram", "telegram"),
+      // Customer order updates from a separate customer bot (TASKS P1-17): sends
+      // to each customer's own chat (the notification's `to`).
+      TELEGRAM_CUSTOMER_BOT_TOKEN
+        ? {
+            resolve: "./src/modules/telegram",
+            id: "telegram-customer",
+            options: {
+              channels: ["telegram_customer"],
+              bot_token: TELEGRAM_CUSTOMER_BOT_TOKEN,
+              per_recipient: true,
+            },
+          }
+        : localProvider("local-telegram-customer", "telegram_customer"),
     ],
   },
 }
@@ -176,5 +191,11 @@ module.exports = defineConfig({
     maxUploadFileSize: uploadCeilingBytes,
     backendUrl: process.env.MEDUSA_BACKEND_URL || undefined,
   },
-  modules: [...redisModules, ...fileModules, notificationModule],
+  modules: [
+    ...redisModules,
+    ...fileModules,
+    notificationModule,
+    // Telegram chats following an order (TASKS P1-17).
+    { resolve: "./src/modules/telegram-links" },
+  ],
 })

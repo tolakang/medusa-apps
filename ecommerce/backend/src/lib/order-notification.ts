@@ -2,6 +2,33 @@
 
 export const ORDER_PLACED_TEMPLATE = "order-placed"
 export const ORDER_PLACED_STAFF_TEMPLATE = "order-placed-staff"
+// Customer messages on Telegram (P1-17).
+export const ORDER_CONFIRMED_CUSTOMER_TEMPLATE = "order-confirmed-customer"
+export const ORDER_SHIPPED_CUSTOMER_TEMPLATE = "order-shipped-customer"
+export const ORDER_DELIVERED_CUSTOMER_TEMPLATE = "order-delivered-customer"
+export const ORDER_CANCELED_CUSTOMER_TEMPLATE = "order-canceled-customer"
+
+// Order fields every notification template may use.
+export const ORDER_NOTIFICATION_FIELDS = [
+  "id",
+  "display_id",
+  "email",
+  "no_notification",
+  "currency_code",
+  "total",
+  "items.title",
+  "items.variant_title",
+  "items.quantity",
+  "items.total",
+  "shipping_address.first_name",
+  "shipping_address.last_name",
+  "shipping_address.address_1",
+  "shipping_address.city",
+  "shipping_address.province",
+  "shipping_address.phone",
+  "shipping_methods.name",
+  "metadata",
+]
 
 export type OrderNotificationData = {
   display_id?: number | string | null
