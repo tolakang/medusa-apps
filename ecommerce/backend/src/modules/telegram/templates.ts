@@ -4,11 +4,15 @@ import {
   formatMoney,
   addressLine,
   itemLabel,
+  ORDER_ALREADY_LINKED_CUSTOMER_TEMPLATE,
   ORDER_CANCELED_CUSTOMER_TEMPLATE,
+  ORDER_CANCELED_STAFF_TEMPLATE,
   ORDER_CONFIRMED_CUSTOMER_TEMPLATE,
   ORDER_DELIVERED_CUSTOMER_TEMPLATE,
+  ORDER_DELIVERED_STAFF_TEMPLATE,
   ORDER_PLACED_STAFF_TEMPLATE,
   ORDER_SHIPPED_CUSTOMER_TEMPLATE,
+  ORDER_SHIPPED_STAFF_TEMPLATE,
   type OrderNotificationData,
 } from "../../lib/order-notification"
 import { TELEGRAM_CONTACT_KEY, telegramContactLabel } from "../../lib/telegram-contact"
@@ -36,6 +40,23 @@ function orderPlacedStaff(order: OrderNotificationData) {
   ]
     .filter(Boolean)
     .join("\n")
+}
+
+// Staff group: order status changes (owner, 2026-09-29), with who and where
+// so staff know which order it is.
+function orderStatusStaff(heading: string) {
+  return (order: OrderNotificationData) => {
+    const address = order.shipping_address
+    const name = [address?.first_name, address?.last_name].filter(Boolean).join(" ")
+    return [
+      `${heading.replace("#?", `#${order.display_id ?? "?"}`)} — ${formatMoney(order.total, order.currency_code)}`,
+      name ? `Customer: ${name}` : "",
+      address?.phone ? `Phone: ${address.phone}` : "",
+      address?.address_1 ? `Address: ${addressLine(address)}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n")
+  }
 }
 
 // Customer messages from the customer bot (TASKS P1-17).
@@ -68,6 +89,11 @@ const statusMessages: Record<string, (order: OrderNotificationData) => string> =
     `📦 Order #${order.display_id ?? "?"} has been delivered. Thank you for shopping with us!`,
   [ORDER_CANCELED_CUSTOMER_TEMPLATE]: (order) =>
     `Order #${order.display_id ?? "?"} has been canceled. Contact us if you have any questions.`,
+  [ORDER_ALREADY_LINKED_CUSTOMER_TEMPLATE]: (order) =>
+    `You're already getting updates for order #${order.display_id ?? "?"} here. We will message you when it ships.`,
+  [ORDER_SHIPPED_STAFF_TEMPLATE]: orderStatusStaff("🚚 Order #? shipped"),
+  [ORDER_DELIVERED_STAFF_TEMPLATE]: orderStatusStaff("📦 Order #? delivered"),
+  [ORDER_CANCELED_STAFF_TEMPLATE]: orderStatusStaff("❌ Order #? canceled"),
 }
 
 export const TELEGRAM_START_HELP_TEMPLATE = "telegram-start-help"

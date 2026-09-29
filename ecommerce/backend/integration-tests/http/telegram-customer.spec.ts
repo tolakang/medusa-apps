@@ -4,6 +4,7 @@ import { createDefaultsWorkflow } from "@medusajs/medusa/core-flows"
 import telegramCustomerUpdates, {
   config as subscriberConfig,
 } from "../../src/subscribers/telegram-customer-updates"
+import { notifyOrderStatusWorkflow } from "../../src/workflows/telegram-customer"
 
 // Customer order updates on Telegram (TASKS P1-17). The route and webhook read
 // these at request time. No TELEGRAM_CUSTOMER_BOT_TOKEN, so the
@@ -85,11 +86,15 @@ medusaIntegrationTestRunner({
           [String(CHAT_ID), "order-confirmed-customer"],
         ])
 
-        // A second tap reuses the link and sends the confirmation again.
+        // A second tap reuses the link and gets a short reply, not the whole
+        // confirmation again.
         await webhook(`/start ${payload}`)
         const { data: again } = await query.graph({ entity: "telegram_order_chat", fields: ["id"] })
         expect(again).toHaveLength(1)
-        expect(await customerMessages(query, order.id)).toHaveLength(2)
+        expect((await customerMessages(query, order.id)).map(([, t]) => t).sort()).toEqual([
+          "order-already-linked-customer",
+          "order-confirmed-customer",
+        ])
       })
 
       it("answers /start without a valid link with help, and links nothing", async () => {
@@ -106,7 +111,7 @@ medusaIntegrationTestRunner({
         ])
       })
 
-      it("tells linked chats when the order is canceled, once", async () => {
+      it("tells the staff group and linked chats when the order is canceled, once", async () => {
         const { query, order, store } = await setup()
         const { data } = await api.get(`/store/orders/${order.id}/telegram-link`, store)
         await webhook(`/start ${new URL(data.url).searchParams.get("start")}`)
@@ -120,6 +125,31 @@ medusaIntegrationTestRunner({
 
         const templates = (await customerMessages(query, order.id)).map(([, t]) => t)
         expect(templates.sort()).toEqual(["order-canceled-customer", "order-confirmed-customer"])
+        const { data: staff } = await query.graph({
+          entity: "notification",
+          fields: ["to", "template"],
+          filters: { channel: "telegram", resource_id: order.id },
+        })
+        expect(staff.map((n) => [n.to, n.template])).toEqual([["staff", "order-canceled-staff"]])
+      })
+
+      it("still tells staff when the customer must not be notified", async () => {
+        const { query, order, store } = await setup()
+        const { data } = await api.get(`/store/orders/${order.id}/telegram-link`, store)
+        await webhook(`/start ${new URL(data.url).searchParams.get("start")}`)
+        await notifyOrderStatusWorkflow(getContainer()).run({
+          input: { order_id: order.id, status: "shipped", notify_customer: false },
+        })
+        const { data: sent } = await query.graph({
+          entity: "notification",
+          fields: ["channel", "template"],
+          filters: { resource_id: order.id },
+        })
+        const templates = sent.map((n) => `${n.channel}:${n.template}`).sort()
+        expect(templates).toEqual([
+          "telegram:order-shipped-staff",
+          "telegram_customer:order-confirmed-customer",
+        ])
       })
 
       it("does nothing for an unknown fulfillment", async () => {

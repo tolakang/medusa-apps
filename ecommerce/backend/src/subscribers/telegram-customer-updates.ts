@@ -1,29 +1,27 @@
 import type { SubscriberArgs, SubscriberConfig } from "@medusajs/framework"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
-import {
-  ORDER_CANCELED_CUSTOMER_TEMPLATE,
-  ORDER_DELIVERED_CUSTOMER_TEMPLATE,
-  ORDER_SHIPPED_CUSTOMER_TEMPLATE,
-} from "../lib/order-notification"
-import { notifyTelegramCustomersWorkflow } from "../workflows/telegram-customer"
+import type { OrderStatusUpdate } from "../lib/order-notification"
+import { notifyOrderStatusWorkflow } from "../workflows/telegram-customer"
 
-// Order updates to customers who follow the order on Telegram (TASKS P1-17).
+// Order shipped / delivered / canceled → staff group alert (owner, 2026-09-29)
+// and messages to customers who follow the order on Telegram (TASKS P1-17).
 // Payloads (@medusajs/utils 2.21.1 event docs): shipment.created and
 // delivery.created { id: fulfillment ID, no_notification? }, order.canceled
 // { id: order ID }. A fulfillment's order comes from the core order-fulfillment
-// link (field alias `order` on fulfillment).
-const TEMPLATES: Record<string, string> = {
-  "shipment.created": ORDER_SHIPPED_CUSTOMER_TEMPLATE,
-  "delivery.created": ORDER_DELIVERED_CUSTOMER_TEMPLATE,
-  "order.canceled": ORDER_CANCELED_CUSTOMER_TEMPLATE,
+// link (field alias `order` on fulfillment). no_notification only silences the
+// customer; staff are always told.
+const STATUS: Record<string, OrderStatusUpdate> = {
+  "shipment.created": "shipped",
+  "delivery.created": "delivered",
+  "order.canceled": "canceled",
 }
 
-export default async function telegramCustomerUpdates({
+export default async function orderStatusUpdates({
   event: { name, data },
   container,
 }: SubscriberArgs<{ id: string; no_notification?: boolean }>) {
-  const template = TEMPLATES[name]
-  if (!template || data.no_notification) {
+  const status = STATUS[name]
+  if (!status) {
     return
   }
 
@@ -39,9 +37,11 @@ export default async function telegramCustomerUpdates({
     return
   }
 
-  await notifyTelegramCustomersWorkflow(container).run({ input: { order_id: orderId, template } })
+  await notifyOrderStatusWorkflow(container).run({
+    input: { order_id: orderId, status, notify_customer: !data.no_notification },
+  })
 }
 
 export const config: SubscriberConfig = {
-  event: Object.keys(TEMPLATES),
+  event: Object.keys(STATUS),
 }
