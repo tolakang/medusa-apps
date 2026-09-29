@@ -210,7 +210,7 @@
 
 Current position: **Phase 1 (Ecommerce)**. Phase 0 is complete (P0-01 to P0-20; history in the Phase 0 list and findings F-002 to F-021).
 
-**Staging (Dokploy project `ecommerce-staging`):** backend `https://api2.nokor24.com`, storefront `https://shop2.nokor24.com` (Cambodia region, `/kh`), worker; files on the owner's RustFS (`https://rustfs.ktola.org`, bucket `ecommerce-staging`); order email through Resend and staff alerts through Telegram are live. Health checks and Update Config use the form values in `ecommerce/DOKPLOY_STAGING.md` (F-020, F-021). Watch paths: backend `ecommerce/backend/**`, storefront `ecommerce/storefront/**`; the staging worker's box is empty, so redeploy the worker by hand after backend changes (or set it to `ecommerce/backend/**`, F-019).
+**Staging (Dokploy project `ecommerce-staging`):** backend `https://e-api.nokor24.com`, storefront `https://e-shop.nokor24.com` (Cambodia region, `/kh`; owner's new hosts 2026-09-29, earlier `api2` / `shop2`; host checklist in `ecommerce/DOKPLOY_STAGING.md`), worker; files on the owner's RustFS (`https://rustfs.ktola.org`, bucket `ecommerce-staging`); order email through Resend and staff alerts through Telegram are live. Health checks and Update Config use the form values in `ecommerce/DOKPLOY_STAGING.md` (F-020, F-021). Watch paths: backend `ecommerce/backend/**`, storefront `ecommerce/storefront/**`; the staging worker's box is empty, so redeploy the worker by hand after backend changes (or set it to `ecommerce/backend/**`, F-019).
 
 **Phase 1 status:** done P1-01, P1-02, P1-04 to P1-06, P1-10 to P1-14; P1-15 (Cambodian address fields) in review. Open:
 1. **P1-03 ABA PayWay:** needs the owner's PayWay sandbox keys (entered only as Dokploy env, never in chat).

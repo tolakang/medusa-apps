@@ -4,6 +4,8 @@ Follow the steps in order. Field names are Dokploy's own (docs.dokploy.com, chec
 
 **You need:** a Dokploy server with the GitHub provider connected to `tolakang/medusa-apps` (Dokploy → Git → GitHub App), and two hostnames. Either use your DNS (`api.staging.<your-domain>`, `shop.staging.<your-domain>` → the Dokploy server IP), or use Dokploy's **Generated** domains.
 
+**Hosts in use (owner, 2026-09-29):** `<api host>` = `e-api.nokor24.com`, `<shop host>` = `e-shop.nokor24.com` (earlier `api2.nokor24.com` / `shop2.nokor24.com`). Changing hosts means: backend `STORE_CORS`, `ADMIN_CORS`, `AUTH_CORS`, `STOREFRONT_URL` (and `MEDUSA_BACKEND_URL` if set); worker `STOREFRONT_URL`; storefront build args `NEXT_PUBLIC_MEDUSA_BACKEND_URL` and `NEXT_PUBLIC_BASE_URL` (rebuild); the Domains tab of both apps; and the customer bot's webhook (`telegram-set-webhook.js https://<api host>/telegram/webhook`, TASKS P1-17).
+
 **Values to generate** (on your own machine, never commit them):
 ```bash
 openssl rand -base64 32   # JWT_SECRET
