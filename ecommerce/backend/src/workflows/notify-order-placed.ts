@@ -38,6 +38,7 @@ export const notifyOrderPlacedWorkflow = createWorkflow(
         "shipping_address.last_name",
         "shipping_address.address_1",
         "shipping_address.city",
+        "shipping_address.province",
         "shipping_address.phone",
         "shipping_methods.name",
       ],

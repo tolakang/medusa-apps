@@ -2,6 +2,7 @@
 // customer-entered text needs no escaping).
 import {
   formatMoney,
+  addressLine,
   itemLabel,
   ORDER_PLACED_STAFF_TEMPLATE,
   type OrderNotificationData,
@@ -23,7 +24,7 @@ function orderPlacedStaff(order: OrderNotificationData) {
     ...items,
     name || order.email ? `Customer: ${[name, order.email].filter(Boolean).join(", ")}` : "",
     address?.phone ? `Phone: ${address.phone}` : "",
-    address?.address_1 ? `Address: ${address.address_1}${address.city ? `, ${address.city}` : ""}` : "",
+    address?.address_1 ? `Address: ${addressLine(address)}` : "",
     delivery ? `Delivery: ${delivery}` : "",
   ]
     .filter(Boolean)

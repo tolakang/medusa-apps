@@ -15,6 +15,8 @@ import { Button, Heading, Text, clx } from "@modules/common/components/ui"
 import Spinner from "@modules/common/icons/spinner"
 import React, { useActionState, useEffect, useState } from "react"
 import { phoneInputProps } from "@lib/util/phone"
+import { KH_COUNTRY_CODE } from "@lib/util/kh-locations"
+import { KhLocationFieldsWithState } from "@modules/common/components/kh-location-fields"
 
 type EditAddressProps = {
   region: HttpTypes.StoreRegion
@@ -29,6 +31,11 @@ const EditAddress: React.FC<EditAddressProps> = ({
 }) => {
   const [removing, setRemoving] = useState(false)
   const [successState, setSuccessState] = useState(false)
+  // Cambodia shows Province / Khan / Postal code fields (TASKS P1-15).
+  const [country, setCountry] = useState(
+    address.country_code ||
+      (region.countries?.length === 1 ? region.countries[0].iso_2 ?? "" : "")
+  )
   const { state, open, close: closeModal } = useToggleState(false)
 
   const [formState, formAction] = useActionState(updateCustomerAddress, {
@@ -146,61 +153,114 @@ const EditAddress: React.FC<EditAddressProps> = ({
                   data-testid="last-name-input"
                 />
               </div>
-              <Input
-                label="Company"
-                name="company"
-                autoComplete="organization"
-                defaultValue={address.company || undefined}
-                data-testid="company-input"
-              />
-              <Input
-                label="Address"
-                name="address_1"
-                required
-                autoComplete="address-line1"
-                defaultValue={address.address_1 || undefined}
-                data-testid="address-1-input"
-              />
-              <Input
-                label="Apartment, suite, etc."
-                name="address_2"
-                autoComplete="address-line2"
-                defaultValue={address.address_2 || undefined}
-                data-testid="address-2-input"
-              />
-              <div className="grid grid-cols-[144px_1fr] gap-x-2">
-                <Input
-                  label="Postal code"
-                  name="postal_code"
-                  required
-                  autoComplete="postal-code"
-                  defaultValue={address.postal_code || undefined}
-                  data-testid="postal-code-input"
-                />
-                <Input
-                  label="City"
-                  name="city"
-                  required
-                  autoComplete="locality"
-                  defaultValue={address.city || undefined}
-                  data-testid="city-input"
-                />
-              </div>
-              <Input
-                label="Province / State"
-                name="province"
-                autoComplete="address-level1"
-                defaultValue={address.province || undefined}
-                data-testid="state-input"
-              />
-              <CountrySelect
-                name="country_code"
-                region={region}
-                required
-                autoComplete="country"
-                defaultValue={address.country_code || undefined}
-                data-testid="country-select"
-              />
+              {country === KH_COUNTRY_CODE ? (
+                <>
+                  <Input
+                    label="Address"
+                    name="address_1"
+                    required
+                    autoComplete="address-line1"
+                    defaultValue={address.address_1 || undefined}
+                    data-testid="address-1-input"
+                  />
+                  <Input
+                    label="Apartment, suite, etc."
+                    name="address_2"
+                    autoComplete="address-line2"
+                    defaultValue={address.address_2 || undefined}
+                    data-testid="address-2-input"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <KhLocationFieldsWithState
+                      names={{
+                        province: "province",
+                        city: "city",
+                        postal_code: "postal_code",
+                      }}
+                      defaults={{
+                        province: address.province || "",
+                        city: address.city || "",
+                        postal_code: address.postal_code || "",
+                      }}
+                    />
+                    <CountrySelect
+                      value={country}
+                      onChange={(e) => setCountry(e.target.value)}
+                      name="country_code"
+                      region={region}
+                      required
+                      autoComplete="country"
+                      data-testid="country-select"
+                    />
+                  </div>
+                  <Input
+                    label="Company"
+                    name="company"
+                    autoComplete="organization"
+                    defaultValue={address.company || undefined}
+                    data-testid="company-input"
+                  />
+                </>
+              ) : (
+                <>
+                  <Input
+                    label="Company"
+                    name="company"
+                    autoComplete="organization"
+                    defaultValue={address.company || undefined}
+                    data-testid="company-input"
+                  />
+                  <Input
+                    label="Address"
+                    name="address_1"
+                    required
+                    autoComplete="address-line1"
+                    defaultValue={address.address_1 || undefined}
+                    data-testid="address-1-input"
+                  />
+                  <Input
+                    label="Apartment, suite, etc."
+                    name="address_2"
+                    autoComplete="address-line2"
+                    defaultValue={address.address_2 || undefined}
+                    data-testid="address-2-input"
+                  />
+                  <div className="grid grid-cols-[144px_1fr] gap-x-2">
+                    <Input
+                      label="Postal code"
+                      name="postal_code"
+                      required
+                      autoComplete="postal-code"
+                      defaultValue={address.postal_code || undefined}
+                      data-testid="postal-code-input"
+                    />
+                    <Input
+                      label="City"
+                      name="city"
+                      required
+                      autoComplete="locality"
+                      defaultValue={address.city || undefined}
+                      data-testid="city-input"
+                    />
+                  </div>
+                  <Input
+                    label="Province / State"
+                    name="province"
+                    autoComplete="address-level1"
+                    defaultValue={address.province || undefined}
+                    data-testid="state-input"
+                  />
+                  <CountrySelect
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
+                    name="country_code"
+                    region={region}
+                    required
+                    autoComplete="country"
+                    data-testid="country-select"
+                  />
+                </>
+              )}
               <Input
                 label="Phone"
                 name="phone"

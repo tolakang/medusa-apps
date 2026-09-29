@@ -1,6 +1,7 @@
 // Email templates for the Resend provider. The workflow passes `data.order`
 // (fields selected in src/workflows/notify-order-placed.ts).
 import {
+  addressLine,
   escapeHtml,
   formatMoney,
   itemLabel,
@@ -35,7 +36,7 @@ function orderPlaced(order: OrderNotificationData) {
 <tfoot><tr><td colspan="2"><strong>Order total</strong></td><td style="text-align:right"><strong>${escapeHtml(formatMoney(order.total, order.currency_code))}</strong></td></tr></tfoot>
 </table>
 ${delivery ? `<p>Delivery: ${escapeHtml(delivery)}</p>` : ""}
-${address?.address_1 ? `<p>Ship to: ${escapeHtml(address.address_1)}${address.city ? `, ${escapeHtml(address.city)}` : ""}</p>` : ""}
+${address?.address_1 ? `<p>Ship to: ${escapeHtml(addressLine(address))}</p>` : ""}
 </body></html>`
 
   return {

@@ -35,6 +35,8 @@ const ShippingDetails = ({ order }: ShippingDetailsProps) => {
             {order.shipping_address?.city}
           </Text>
           <Text className="txt-medium text-ui-fg-subtle">
+            {order.shipping_address?.province &&
+              `${order.shipping_address?.province}, `}
             {order.shipping_address?.country_code?.toUpperCase()}
           </Text>
         </div>
