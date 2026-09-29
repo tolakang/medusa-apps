@@ -4,6 +4,8 @@
 > Baseline checked 2026-09-25: **Medusa 2.21.1**, **pnpm 12.6.0**, **Node 22 LTS**.
 > Re-check these versions on the day Phase 0 starts.
 >
+> **Revision 5 (2026-09-29, owner):** Cambodia localisation for the ecommerce storefront. Cambodian address fields (Province / Capital, Khan / Srok, official postal code), phone number format, and Khmer place names kept for a later Khmer language option. Also records the Phase 1 decisions D1–D4 and delivery. Recorded first in TASKS.md (P1-14, P1-15, F-028). Changed sections: 6.1, 10.
+>
 > **Revision 4 (2026-09-25):** full technical review against the Medusa 2.21.1 docs, the CLI source and the official `dtc-starter` / `b2b-starter` repos. Changes: `db:migrate` runs non-interactively (`--execute-safe-links --execute-safe-search`); built-in **Search Module** (default since 2.21.1) replaces the "Later: Meilisearch/Algolia" item; POS cashiers get their own actor type because v2 has no admin roles yet; wholesale starts from `b2b-starter` (backend **and** storefront, quotes in MVP); reseller storefront sends the publishable key per request; booking guards line-item updates; official `db:rollback` added to the release process. Changed sections: 4.1, 4.2, 6.1–6.6, 7, 8, 10.
 >
 > **Revision 3 (2026-09-25):** audited against the official Medusa v2 docs (docs.medusajs.com) and starters. Changes: starters moved to `medusajs/dtc-starter` (the standalone backend and Next.js starters are deprecated); Caching Module replaces the deprecated `cache-redis`; `projectConfig.redisUrl` added; storefront backend URL is `NEXT_PUBLIC_MEDUSA_BACKEND_URL`; `@medusajs/ui` has its own version line; marketplace order split, POS order creation and booking validation aligned with the official recipes / workflow reference. Changed sections: 3.2, 4.1, 4.2, 6.2, 6.3, 6.4, 6.5, 6.6, 8, 9, 10.
@@ -303,6 +305,14 @@ Each scenario lists: custom modules (tables are prefixed to avoid collisions), l
 - **Search (MVP, built in):** since 2.21.1 the **Search Module** is registered by default with the PostgreSQL provider. The starter already ships `src/search/product.ts` and the storefront's `@medusajs/instantsearch-adapter`, so product search needs no extra service. Move to another provider only if Postgres search is outgrown.
 - **Later:** abandoned cart and restock alerts (Commerce Automation recipe), reviews.
 - **Acceptance:** browse → cart → checkout → order visible in admin; update script and CI gate proven on this app first.
+- **Cambodia localisation (Revision 5, storefront only):** applies when the address country is Cambodia (`kh`); other countries keep the starter form. No custom module, no new columns: Medusa's own address fields are reused.
+  - **Address fields, in this order:** First name, Last name, Address, Province / Capital, Khan / Srok, Postal code, Country, Company. "Province / Capital" is saved in `province`, "Khan / Srok" in `city`, the postal code in `postal_code`.
+  - **Choosing a place:** Province / Capital and Khan / Srok are type-to-match lists (English or Khmer). The form accepts only values from the lists; the Khan / Srok list shows only the chosen province's districts.
+  - **Postal code:** filled in from the chosen Khan / Srok (still editable, optional for Cambodia). Official codes are 6 digits (province 2, district 2, commune 2).
+  - **Place data:** 25 provinces / capital and 210 khan / srok / krong with their postal codes, from the Ministry of Posts and Telecommunications list (Prakas No. 77, 30.12.2025), published by Open Development Cambodia under CC BY-SA 4.0. Kept in the storefront as a generated file (`src/lib/data/kh-locations.ts`, built by `scripts/build-kh-locations.mjs`), with the source credited. Re-generate it when the ministry publishes a new list.
+  - **Khmer names:** every province and khan / srok keeps its Khmer name (`name_km`). Medusa always stores the English name (one stable value for staff, search and reports); a future Khmer storefront shows the Khmer name by looking it up from the English one.
+  - **Phone numbers:** digits only (with `+`, spaces, hyphens, brackets), 8–15 digits, checked in the browser and by a store API middleware. Cambodian numbers are shown as written locally: `012 345 678`, `097 123 4567`, `+855 12 345 678`.
+  - **Where addresses are shown:** checkout summary, order page, staff alert and order email show street, khan / srok and province.
 
 ### 6.2 POS — `pos/`
 
@@ -470,3 +480,10 @@ A throwaway prototype was built on Medusa 2.21.1 + pnpm 12.6.0 to test this plan
 | R-g | No admin roles in 2.21.1 → every admin user has full access; cashiers, vendors and sellers never get admin users (custom actor types instead) | Phase 2 |
 | R-h | Two server replicas migrating at once (no migration lock) → scale to 1 during deploys | every deploy |
 | R-e | Worker and server accidentally both run migrations → worker env always has `RUN_MIGRATIONS=false` (in every backend `.env.example`) | every deploy |
+
+**Decided in Phase 1 (owner; details in TASKS.md):**
+- **D1 Payments:** ABA PayWay (cards, ABA Pay, KHQR) as a custom payment module provider, replacing Stripe in 6.1. Built against the PayWay sandbox once the owner has the keys.
+- **D2 Notifications:** customer email through Resend; new-order alerts to the owner and staff through a Telegram bot.
+- **D3 Files:** S3-compatible storage (RustFS; SeaweedFS also supported).
+- **D4 Storefront design:** keep the starter's look for now; restyle later.
+- **Delivery:** Phnom Penh delivery at launch; more shipping options with their own rates can be added later in the admin.
