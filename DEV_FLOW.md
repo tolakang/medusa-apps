@@ -101,6 +101,7 @@ grep -rn -A2 "createWorkflow(" $D/src | grep -E "async +(function|\()"         #
 grep -rnE "@ts-ignore|@ts-nocheck|as any\b" $D/src                             # no type suppression
 grep -n "patchedDependencies" $D/package.json $D/pnpm-workspace.yaml 2>/dev/null # no pnpm patch
 git ls-files | grep -E '(^|/)\.env(\.[a-z]+)?$' | grep -v '\.env\.example$'    # no env files committed
+git grep -nE '^(<<<<<<<|>>>>>>>|\|\|\|\|\|\|\|)( |$)' -- .                     # no merge conflict markers
 grep -c -- "--execute-safe-links --execute-safe-search" $D/docker-entrypoint.sh 2>/dev/null  # backend: must print 1
 ```
 Migrations of custom modules may only create or alter **their own prefixed tables**. Review `$D/src/modules/*/migrations/*.ts` for any `alter table` on a core table: that is forbidden.
