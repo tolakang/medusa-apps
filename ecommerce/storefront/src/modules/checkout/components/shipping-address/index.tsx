@@ -7,6 +7,10 @@ import React, { useEffect, useMemo, useState } from "react"
 import AddressSelect from "../address-select"
 import CountrySelect from "../country-select"
 import { phoneInputProps } from "@lib/util/phone"
+import {
+  TELEGRAM_CONTACT_KEY,
+  telegramInputProps,
+} from "@lib/util/telegram-contact"
 import { KH_COUNTRY_CODE } from "@lib/util/kh-locations"
 import { KhLocationFields } from "@modules/common/components/kh-location-fields"
 
@@ -36,6 +40,8 @@ const ShippingAddress = ({
     "shipping_address.province": cart?.shipping_address?.province || "",
     "shipping_address.phone": cart?.shipping_address?.phone || "",
     email: cart?.email || "",
+    [TELEGRAM_CONTACT_KEY]:
+      (cart?.metadata?.[TELEGRAM_CONTACT_KEY] as string | undefined) || "",
   })
 
   const countriesInRegion = useMemo(
@@ -260,7 +266,6 @@ const ShippingAddress = ({
           autoComplete="email"
           value={formData.email}
           onChange={handleChange}
-          required
           data-testid="shipping-email-input"
         />
         <Input
@@ -271,6 +276,16 @@ const ShippingAddress = ({
           onChange={handleChange}
           required
           data-testid="shipping-phone-input"
+        />
+        {/* Email is optional; the phone is the required contact and Telegram
+            an extra one staff can use (owner, TASKS P1-16). */}
+        <Input
+          label="Telegram @username"
+          name={TELEGRAM_CONTACT_KEY}
+          {...telegramInputProps}
+          value={formData[TELEGRAM_CONTACT_KEY]}
+          onChange={handleChange}
+          data-testid="shipping-telegram-input"
         />
       </div>
     </>

@@ -357,7 +357,14 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
         province: formData.get("shipping_address.province"),
         phone: formData.get("shipping_address.phone"),
       },
-      email: formData.get("email"),
+      // Email is optional (TASKS P1-16): Medusa refuses "" as an email, so an
+      // empty field clears it instead. The Telegram contact goes in the cart's
+      // metadata ("" removes the key), which Medusa copies to the order.
+      email: (formData.get("email") as string)?.trim() || null,
+      metadata: {
+        telegram_contact:
+          (formData.get("telegram_contact") as string)?.trim() || "",
+      },
     } as any
 
     const sameAsBilling = formData.get("same_as_billing")

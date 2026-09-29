@@ -2,6 +2,10 @@
 import { setAddresses } from "@lib/data/cart"
 import useToggleState from "@lib/hooks/use-toggle-state"
 import compareAddresses from "@lib/util/compare-addresses"
+import {
+  TELEGRAM_CONTACT_KEY,
+  telegramContactLabel,
+} from "@lib/util/telegram-contact"
 import { CheckCircleSolid } from "@medusajs/icons"
 import { HttpTypes } from "@medusajs/types"
 import Divider from "@modules/common/components/divider"
@@ -26,6 +30,7 @@ const Addresses = ({
   const pathname = usePathname()
 
   const isOpen = searchParams.get("step") === "address"
+  const telegram = telegramContactLabel(cart?.metadata?.[TELEGRAM_CONTACT_KEY])
 
   const { state: sameAsBilling, toggle: toggleSameAsBilling } = useToggleState(
     cart?.shipping_address && cart?.billing_address
@@ -134,6 +139,11 @@ const Addresses = ({
                     <Text className="txt-medium text-ui-fg-subtle">
                       {cart.email}
                     </Text>
+                    {telegram && (
+                      <Text className="txt-medium text-ui-fg-subtle">
+                        Telegram: {telegram.text}
+                      </Text>
+                    )}
                   </div>
 
                   <div
