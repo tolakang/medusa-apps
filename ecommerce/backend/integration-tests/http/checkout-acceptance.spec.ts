@@ -7,6 +7,7 @@ import {
 import jwt from "jsonwebtoken"
 import seedInitialData from "../../src/scripts/seed-initial-data"
 import seed from "../../src/scripts/seed"
+import { renderMessage } from "../../src/modules/telegram/templates"
 
 // P1-07 acceptance test (plan §6.1): browse → cart → checkout → order visible
 // in admin, through the same store and admin APIs the storefront and the
@@ -235,6 +236,23 @@ medusaIntegrationTestRunner({
           "order-placed-staff",
           "order-shipped-staff",
         ])
+
+        // 10. Tapping the button again after delivery says where the order is.
+        await api.post(
+          "/telegram/webhook",
+          { update_id: 2, message: { text: `/start ${new URL(link.url).searchParams.get("start")}`, chat } },
+          { headers: { "x-telegram-bot-api-secret-token": "test_webhook_secret" } }
+        )
+        const {
+          data: [repeat],
+        } = await query.graph({
+          entity: "notification",
+          fields: ["template", "data"],
+          filters: { resource_id: orderId, template: "order-already-linked-customer" },
+        })
+        expect(renderMessage(repeat.template, repeat.data as Record<string, unknown>)).toMatch(
+          /order #\d+ here\. Order #\d+ has been delivered\.$/
+        )
       })
     })
   },

@@ -47,6 +47,13 @@ export const ORDER_NOTIFICATION_FIELDS = [
   "shipping_address.phone",
   "shipping_methods.name",
   "metadata",
+  // Order state for the Telegram "already getting updates" reply (P1-17):
+  // OrderStatus "canceled"; fulfillment shipped_at / delivered_at / canceled_at
+  // (@medusajs/types 2.21.1 FulfillmentDTO).
+  "status",
+  "fulfillments.shipped_at",
+  "fulfillments.delivered_at",
+  "fulfillments.canceled_at",
 ]
 
 export type OrderNotificationData = {
@@ -70,6 +77,30 @@ export type OrderNotificationData = {
   } | null
   shipping_methods?: ({ name?: string | null } | null)[] | null
   metadata?: Record<string, unknown> | null
+  status?: string | null
+  fulfillments?: ({
+    shipped_at?: string | Date | null
+    delivered_at?: string | Date | null
+    canceled_at?: string | Date | null
+  } | null)[] | null
+}
+
+// Where the order is now: canceled, delivered, shipped or not shipped yet.
+// Canceled fulfillments don't count.
+export function orderProgress(
+  order: OrderNotificationData
+): "canceled" | "delivered" | "shipped" | "open" {
+  if (order.status === "canceled") {
+    return "canceled"
+  }
+  const active = (order.fulfillments ?? []).filter((f) => f && !f.canceled_at)
+  if (active.some((f) => f!.delivered_at)) {
+    return "delivered"
+  }
+  if (active.some((f) => f!.shipped_at)) {
+    return "shipped"
+  }
+  return "open"
 }
 
 export function escapeHtml(value: unknown): string {

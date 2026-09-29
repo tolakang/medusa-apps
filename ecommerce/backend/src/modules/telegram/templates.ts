@@ -13,6 +13,7 @@ import {
   ORDER_PLACED_STAFF_TEMPLATE,
   ORDER_SHIPPED_CUSTOMER_TEMPLATE,
   ORDER_SHIPPED_STAFF_TEMPLATE,
+  orderProgress,
   type OrderNotificationData,
 } from "../../lib/order-notification"
 import { TELEGRAM_CONTACT_KEY, telegramContactLabel } from "../../lib/telegram-contact"
@@ -89,8 +90,16 @@ const statusMessages: Record<string, (order: OrderNotificationData) => string> =
     `📦 Order #${order.display_id ?? "?"} has been delivered. Thank you for shopping with us!`,
   [ORDER_CANCELED_CUSTOMER_TEMPLATE]: (order) =>
     `Order #${order.display_id ?? "?"} has been canceled. Contact us if you have any questions.`,
-  [ORDER_ALREADY_LINKED_CUSTOMER_TEMPLATE]: (order) =>
-    `You're already getting updates for order #${order.display_id ?? "?"} here. We will message you when it ships.`,
+  [ORDER_ALREADY_LINKED_CUSTOMER_TEMPLATE]: (order) => {
+    const id = `#${order.display_id ?? "?"}`
+    const now = {
+      canceled: `Order ${id} has been canceled.`,
+      delivered: `Order ${id} has been delivered.`,
+      shipped: `Order ${id} is on its way. We will message you when it is delivered.`,
+      open: "We will message you when it ships.",
+    }[orderProgress(order)]
+    return `You're already getting updates for order ${id} here. ${now}`
+  },
   [ORDER_SHIPPED_STAFF_TEMPLATE]: orderStatusStaff("🚚 Order #? shipped"),
   [ORDER_DELIVERED_STAFF_TEMPLATE]: orderStatusStaff("📦 Order #? delivered"),
   [ORDER_CANCELED_STAFF_TEMPLATE]: orderStatusStaff("❌ Order #? canceled"),
