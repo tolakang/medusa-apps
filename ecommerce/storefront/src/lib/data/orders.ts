@@ -29,6 +29,21 @@ export const retrieveOrder = async (id: string) => {
     .catch((err) => medusaError(err))
 }
 
+// Deep link to the shop's Telegram bot for order updates (TASKS P1-17), or null
+// when the bot is not set up (the backend answers 404) or anything fails.
+export const retrieveOrderTelegramLink = async (
+  id: string
+): Promise<string | null> => {
+  return sdk.client
+    .fetch<{ url: string }>(`/store/orders/${id}/telegram-link`, {
+      method: "GET",
+      headers: { ...(await getAuthHeaders()) },
+      cache: "no-store",
+    })
+    .then(({ url }) => url)
+    .catch(() => null)
+}
+
 export const listOrders = async (
   limit: number = 10,
   offset: number = 0,

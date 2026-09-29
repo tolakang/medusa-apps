@@ -9,13 +9,19 @@ import type {
 } from "@medusajs/framework/types"
 import { renderMessage } from "./templates"
 
-// Telegram staff alerts (TASKS D2, P1-04): the bot posts to one chat, e.g. the
-// owner's staff group. Telegram Bot API sendMessage (core.telegram.org/bots/api):
+// Telegram messages. Telegram Bot API sendMessage (core.telegram.org/bots/api):
 // POST https://api.telegram.org/bot<token>/sendMessage { chat_id, text }.
+// Registered twice in medusa-config.ts:
+// - staff alerts (TASKS D2, P1-04): `chat_id` set, always posts to that chat
+//   (e.g. the owner's staff group); the notification's `to` is only a label.
+// - customer updates (P1-17): `per_recipient`, posts to the notification's
+//   `to`, the chat of a customer who started the customer bot.
 export type TelegramOptions = {
   bot_token: string
   // Group chat IDs are negative numbers, e.g. -1001234567890.
-  chat_id: string
+  chat_id?: string
+  // true = send to each notification's `to` (customer bot); chat_id unused.
+  per_recipient?: boolean
 }
 
 type InjectedDependencies = {
@@ -44,10 +50,10 @@ class TelegramNotificationProviderService extends AbstractNotificationProviderSe
         "Option `bot_token` is required in the Telegram provider's options."
       )
     }
-    if (!options.chat_id) {
+    if (!options.per_recipient && !options.chat_id) {
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
-        "Option `chat_id` is required in the Telegram provider's options."
+        "Option `chat_id` is required in the Telegram provider's options (or set `per_recipient`)."
       )
     }
   }
@@ -63,16 +69,20 @@ class TelegramNotificationProviderService extends AbstractNotificationProviderSe
       )
     }
 
+    const chatId = this.options_.per_recipient ? notification.to : this.options_.chat_id
+    if (!/^-?\d+$/.test(chatId ?? "")) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        "No Telegram chat: set the provider's `chat_id` or pass a chat ID as `to`."
+      )
+    }
+
     const response = await fetch(
       `${TELEGRAM_API_URL}/bot${this.options_.bot_token}/sendMessage`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // Always the configured staff chat; `to` only labels the notification.
-        body: JSON.stringify({
-          chat_id: this.options_.chat_id,
-          text: text.slice(0, MAX_TEXT_LENGTH),
-        }),
+        body: JSON.stringify({ chat_id: chatId, text: text.slice(0, MAX_TEXT_LENGTH) }),
       }
     )
 

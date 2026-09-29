@@ -22,6 +22,9 @@ pnpm medusa user -e admin@example.com -p <password>
 # as uploaded, so smaller files load faster for customers.
 # Notifications (TASKS P1-04): order.placed → customer email (Resend) + staff alert (Telegram).
 # Without RESEND_API_KEY / TELEGRAM_BOT_TOKEN both channels only log (notification-local).
+# Customer updates on Telegram (TASKS P1-17): a separate customer bot; the order page links to it,
+# the customer taps Start, the bot confirms the order and reports shipped / delivered / canceled.
+# Env TELEGRAM_CUSTOMER_*, webhook POST /telegram/webhook, setup: src/scripts/telegram-set-webhook.ts.
 pnpm seed                                   # real shop: Cambodia region (USD + KHR), tax region, Phnom Penh delivery (TASKS P1-02)
 pnpm seed:initial                           # optional demo data (EU regions, demo products, publishable key)
 ```

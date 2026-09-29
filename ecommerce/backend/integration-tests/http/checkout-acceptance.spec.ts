@@ -15,6 +15,10 @@ import seed from "../../src/scripts/seed"
 // system provider (`pp_system_default`) until ABA PayWay lands (P1-03).
 // Admin auth as in Medusa's docs "Write Integration Tests for API Routes"
 // (user + auth identity + JWT signed with the default test secret).
+// Customer bot settings for the Telegram steps (P1-17); no bot token, so its
+// channel only logs.
+process.env.TELEGRAM_CUSTOMER_BOT_USERNAME = "nokor24_shop_bot"
+process.env.TELEGRAM_CUSTOMER_WEBHOOK_SECRET = "test_webhook_secret"
 jest.setTimeout(180 * 1000)
 
 medusaIntegrationTestRunner({
@@ -170,6 +174,55 @@ medusaIntegrationTestRunner({
           if (!channels.length) await new Promise((r) => setTimeout(r, 250))
         }
         expect(channels).toEqual(["telegram"])
+
+        // 9. Telegram updates (P1-17): the order page's button links the
+        // customer's chat; the bot confirms, then reports shipping and delivery
+        // when staff fulfil the order in the admin.
+        const { data: link } = await api.get(`/store/orders/${orderId}/telegram-link`, store)
+        const chat = { id: 987654321, type: "private" }
+        await api.post(
+          "/telegram/webhook",
+          { update_id: 1, message: { text: `/start ${new URL(link.url).searchParams.get("start")}`, chat } },
+          { headers: { "x-telegram-bot-api-secret-token": "test_webhook_secret" } }
+        )
+
+        const {
+          data: { order: fulfilled },
+        } = await api.post(
+          `/admin/orders/${orderId}/fulfillments?fields=*fulfillments`,
+          { items: order.items.map((i) => ({ id: i.id, quantity: i.quantity })) },
+          admin
+        )
+        const fulfillmentId = fulfilled.fulfillments[0].id
+        await api.post(
+          `/admin/orders/${orderId}/fulfillments/${fulfillmentId}/shipments`,
+          { items: order.items.map((i) => ({ id: i.id, quantity: i.quantity })) },
+          admin
+        )
+        await api.post(
+          `/admin/orders/${orderId}/fulfillments/${fulfillmentId}/mark-as-delivered`,
+          {},
+          admin
+        )
+
+        const expected = [
+          "order-confirmed-customer",
+          "order-delivered-customer",
+          "order-shipped-customer",
+        ]
+        let customerTemplates: string[] = []
+        for (let i = 0; i < 20 && customerTemplates.length < expected.length; i++) {
+          const { data } = await query.graph({
+            entity: "notification",
+            fields: ["template", "to"],
+            filters: { resource_id: orderId, channel: "telegram_customer" },
+          })
+          customerTemplates = data
+            .filter((n) => n.to === String(chat.id))
+            .map((n) => String(n.template))
+          if (customerTemplates.length < expected.length) await new Promise((r) => setTimeout(r, 250))
+        }
+        expect(customerTemplates.sort()).toEqual(expected)
       })
     })
   },
