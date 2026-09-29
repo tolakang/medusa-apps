@@ -41,6 +41,14 @@ fi
 ENVFILES=$(git ls-files | grep -E '(^|/)\.env(\.[A-Za-z0-9_-]+)?$' | grep -v '\.env\.example$' || true)
 [ -z "$ENVFILES" ] && pass "no .env files tracked" || fail "tracked env files: $ENVFILES"
 
+# 3. No leftover merge conflict markers in tracked files (owner, 2026-09-29,
+#    after PR #41 briefly pushed TASKS.md with markers). Git writes
+#    "<<<<<<< <ref>", "=======", ">>>>>>> <ref>" (and "||||||| <ref>" with
+#    diff3); the "=======" line alone is not checked because Markdown can use it.
+MARKERS=$(git grep -nE '^(<<<<<<<|>>>>>>>|\|\|\|\|\|\|\|)( |$)' -- . 2>/dev/null || true)
+[ -z "$MARKERS" ] && pass "no merge conflict markers" || fail "merge conflict markers:
+$MARKERS"
+
 DEPLOYABLES=$(list_deployables)
 [ -n "$DEPLOYABLES" ] || { echo "no deployables with package.json for '$TARGET'"; exit $FAILED; }
 
@@ -48,37 +56,37 @@ for D in $DEPLOYABLES; do
   echo "== $D"
   SRC="$D/src"
 
-  # 3. Exact @medusajs pins (no ^ ~ latest *).
+  # 4. Exact @medusajs pins (no ^ ~ latest *).
   BAD=$(grep -nE '"@medusajs/[^"]+": *"([\^~]|latest|\*)' "$D/package.json" || true)
   [ -z "$BAD" ] && pass "exact @medusajs pins" || fail "non-exact @medusajs versions: $BAD"
 
-  # 4. packageManager pinned.
+  # 5. packageManager pinned.
   grep -qE '"packageManager": *"pnpm@[0-9]+\.[0-9]+\.[0-9]+"' "$D/package.json" \
     && pass "packageManager pinned" || fail "packageManager must be pnpm@<exact>"
 
-  # 5. No pnpm patches.
+  # 6. No pnpm patches.
   BAD=$(grep -n "patchedDependencies" "$D/package.json" "$D/pnpm-workspace.yaml" 2>/dev/null || true)
   [ -z "$BAD" ] && pass "no pnpm patches" || fail "pnpm patches: $BAD"
 
-  # 6. No dist/ imports from @medusajs.
+  # 7. No dist/ imports from @medusajs.
   BAD=$(grep -rnE "from ['\"]@medusajs/[^'\"]+/dist" "$SRC" 2>/dev/null || true)
   [ -z "$BAD" ] && pass "no @medusajs dist imports" || fail "dist imports: $BAD"
 
   case "$D" in
     */backend)
-      # 7. zod only via @medusajs/framework/zod (MEDUSA_SKILL §7).
+      # 8. zod only via @medusajs/framework/zod (MEDUSA_SKILL §7).
       BAD=$(grep -rnE "from ['\"]zod['\"]" "$SRC" 2>/dev/null || true)
       [ -z "$BAD" ] && pass "zod via @medusajs/framework/zod" || fail "bare zod imports: $BAD"
 
-      # 8. Workflow constructor functions are not async (MEDUSA_SKILL §6).
+      # 9. Workflow constructor functions are not async (MEDUSA_SKILL §6).
       BAD=$(grep -rn -A2 "createWorkflow(" "$SRC" 2>/dev/null | grep -E "async +(function|\()" || true)
       [ -z "$BAD" ] && pass "no async workflow constructors" || fail "async createWorkflow: $BAD"
 
-      # 9. Entrypoint migrates in safe, non-interactive mode (MEDUSA_SKILL §11).
+      # 10. Entrypoint migrates in safe, non-interactive mode (MEDUSA_SKILL §11).
       grep -q -- "--execute-safe-links --execute-safe-search" "$D/docker-entrypoint.sh" \
         && pass "entrypoint uses safe migrate flags" || fail "entrypoint missing safe migrate flags"
 
-      # 10. Nothing in migration-scripts is a demo seed (auto-runs in production).
+      # 11. Nothing in migration-scripts is a demo seed (auto-runs in production).
       if [ -d "$SRC/migration-scripts" ]; then
         BAD=$(grep -rlniE "seed|demo" "$SRC/migration-scripts" 2>/dev/null || true)
         [ -z "$BAD" ] && pass "no seeds in migration-scripts" || fail "review migration-scripts (auto-run in prod): $BAD"
@@ -88,7 +96,7 @@ for D in $DEPLOYABLES; do
       ;;
   esac
 
-  # 11. No NEW type suppressions (DEV_FLOW §6). Starter code keeps its own:
+  # 12. No NEW type suppressions (DEV_FLOW §6). Starter code keeps its own:
   #     <deployable>/.guard-baseline holds the repo commit that imported the
   #     starter; lines are "new" relative to it (else relative to BASE_REF).
   REF="$BASE_REF"
