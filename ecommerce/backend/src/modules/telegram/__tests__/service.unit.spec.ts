@@ -14,7 +14,7 @@ const order = {
     { title: "Medusa T-Shirt", variant_title: "L / White", quantity: 2, total: 30 },
     { title: "Gift card", variant_title: "Default variant", quantity: 1, total: 0 },
   ],
-  shipping_address: { first_name: "Dara", phone: "+855 12 345 678", address_1: "St. 51", city: "Phnom Penh" },
+  shipping_address: { first_name: "Dara", phone: "+855 12 345 678", address_1: "St. 51", city: "Khan Chamkar Mon", province: "Phnom Penh" },
   shipping_methods: [{ name: "Phnom Penh Delivery" }],
 }
 
@@ -49,6 +49,7 @@ describe("Telegram provider", () => {
     expect(body.text).toContain("• 2 × Medusa T-Shirt (L / White)\n")
     expect(body.text).toContain("• 1 × Gift card\n")
     expect(body.text).toContain("Phone: +855 12 345 678")
+    expect(body.text).toContain("Address: St. 51, Khan Chamkar Mon, Phnom Penh")
     expect(body.text).toContain("Delivery: Phnom Penh Delivery")
   })
 

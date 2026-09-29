@@ -19,6 +19,7 @@ export type OrderNotificationData = {
     last_name?: string | null
     address_1?: string | null
     city?: string | null
+    province?: string | null
     phone?: string | null
   } | null
   shipping_methods?: ({ name?: string | null } | null)[] | null
@@ -53,4 +54,9 @@ export function itemLabel(item: { title?: string | null; variant_title?: string 
   return variant && variant.toLowerCase() !== "default variant" && variant !== title
     ? `${title} (${variant})`
     : title
+}
+
+// "#111, St 310, Khan Chamkar Mon, Phnom Penh": street, khan/srok, province.
+export function addressLine(address: OrderNotificationData["shipping_address"]) {
+  return [address?.address_1, address?.city, address?.province].filter(Boolean).join(", ")
 }
