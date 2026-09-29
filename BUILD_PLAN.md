@@ -1,8 +1,10 @@
 # Build Plan — Medusa Apps (Pre-Build)
 
-> **Status: planning only. No application code has been written yet.** Deployment templates are committed: every deployable folder already has its `Dockerfile` and `.env.example`, and every category has a Dokploy guide in `<category>/README.md`.
+> **Status (2026-09-29): building.** Phase 0 (foundation, staging on Dokploy) is complete; Phase 1 (Ecommerce) is in progress. Progress, decisions and evidence live in `TASKS.md`. Every deployable folder has its `Dockerfile` and `.env.example`, and every category has a Dokploy guide in `<category>/README.md`.
 > Baseline checked 2026-09-25: **Medusa 2.21.1**, **pnpm 12.6.0**, **Node 22 LTS**.
 > Re-check these versions on the day Phase 0 starts.
+>
+> **Revision 5 (2026-09-29, owner):** Cambodia localisation for the ecommerce storefront. Cambodian address fields (Province / Capital, Khan / Srok, official postal code), phone number format, and Khmer place names kept for a later Khmer language option. Also records the Phase 1 decisions D1–D4 and delivery, and brings the plan in line with what Phase 0 and Phase 1 proved (TASKS.md findings F-002 to F-028, each cited where it changed the plan): ABA PayWay instead of Stripe, `@medusajs/ui` pinned to the dashboard's version, new env vars, Dokploy form values, seed-based first deploy, weekly update check instead of Dependabot, storefront changes 7–9, admin upload limits. Changed sections: header, 2, 3.2, 4.1, 4.2, 5, 6.1, 8, 10.
 >
 > **Revision 4 (2026-09-25):** full technical review against the Medusa 2.21.1 docs, the CLI source and the official `dtc-starter` / `b2b-starter` repos. Changes: `db:migrate` runs non-interactively (`--execute-safe-links --execute-safe-search`); built-in **Search Module** (default since 2.21.1) replaces the "Later: Meilisearch/Algolia" item; POS cashiers get their own actor type because v2 has no admin roles yet; wholesale starts from `b2b-starter` (backend **and** storefront, quotes in MVP); reseller storefront sends the publishable key per request; booking guards line-item updates; official `db:rollback` added to the release process. Changed sections: 4.1, 4.2, 6.1–6.6, 7, 8, 10.
 >
@@ -47,7 +49,7 @@ medusa-apps/                        <- plain git repo, NOT a workspace
 ├── README.md
 ├── COMPARISON.md                   <- side-by-side comparison (R5)
 ├── BUILD_PLAN.md                   <- this file (R6)
-├── .github/                        <- (Phase 0) CI matrix + dependabot, one entry per deployable
+├── .github/                        <- (Phase 0) CI matrix, one entry per deployable + weekly Medusa update check (§8)
 ├── scripts/                        <- (Phase 0) plain shell scripts, no package.json
 │   ├── update-medusa.sh
 │   └── verify.sh
@@ -111,7 +113,7 @@ Names are lowercase kebab-case because they become Dokploy build paths, image na
 
 ### 3.2 Version policy
 
-- All `@medusajs/*` packages that follow the Medusa release line pinned to the **exact same version** (no `^`/`~`). Exception: **`@medusajs/ui` has its own version line** (4.x while Medusa is 2.21.1); pin it to the exact version the official `dtc-starter` uses for that Medusa release.
+- All `@medusajs/*` packages that follow the Medusa release line pinned to the **exact same version** (no `^`/`~`). Exception: **`@medusajs/ui` has its own version line** (4.x while Medusa is 2.21.1); pin it to the exact version that `@medusajs/dashboard@<medusa version>` depends on, so the lockfile holds one copy (owner decision, F-006: for 2.21.1 the dashboard needs 4.2.5 while `dtc-starter` pins 4.2.4). `update-medusa.sh` reads it from the dashboard and falls back to the starter's pin.
 - `packageManager: "pnpm@<exact>"` in each `package.json`; the Dockerfile installs exactly that version.
 - `pnpm install --frozen-lockfile` everywhere (local CI and Docker). A build never resolves new versions on its own.
 - Only public imports: `@medusajs/framework/*`, `@medusajs/medusa/*`, `@medusajs/medusa/core-flows`, `@medusajs/admin-sdk`, `@medusajs/ui`. Never import from `dist/` paths.
@@ -153,8 +155,8 @@ Two standards: **4.1 backend** (identical in every `*/backend`) and **4.2 web cl
     ├── api/
     ├── admin/
     ├── search/               # Search Module index definitions (starter ships product.ts)
-    ├── migration-scripts/    # data migration scripts (run by db:migrate)
-    └── scripts/              # seed scripts (`medusa exec`)
+    ├── migration-scripts/    # data migration scripts (run by db:migrate on every deploy: never seeds, F-002)
+    └── scripts/              # seed scripts (`medusa exec`, e.g. `pnpm seed`)
 ```
 
 Source of truth for the boilerplate: **`apps/backend`** of the official **`medusajs/dtc-starter`** repository (the older `medusa-starter-default` is deprecated). The DTC starter is a pnpm + Turborepo monorepo; only `apps/backend` is copied, and the workspace-level settings are moved into this app's own `pnpm-workspace.yaml`. Record the starter commit in the backend README. Add a `predeploy` script (`medusa db:migrate`) and a `typecheck` script; the starter ships neither.
@@ -182,12 +184,14 @@ allowBuilds:                 # pnpm blocks install scripts unless allowed
 | Env | Effect |
 |---|---|
 | `DATABASE_URL` | Postgres connection (one database per business project) |
+| `DATABASE_SSL` | `false` / `true` / unset → `projectConfig.databaseDriverOptions`. Medusa turns SSL on for any non-localhost database, which hangs migrations on a Dokploy Postgres without SSL; set `false` there (F-003). |
 | `REDIS_URL` set | Sets `projectConfig.redisUrl` (session store) and enables the modules from the official [deployment guide](https://docs.medusajs.com/learn/deployment/general): `caching` + provider `@medusajs/caching-redis` (separate npm package), `event-bus-redis`, `workflow-engine-redis` (`{ redis: { redisUrl } }`), `locking` + provider `locking-redis`. One Redis URL is used for all of them. Unset = in-memory (dev only). |
 | `MEDUSA_FF_CACHING` | `true`. The Caching Module is still behind this feature flag in 2.21.x but is what the deployment guide configures; the old `cache-redis` module is deprecated since v2.11.0. |
 | `MEDUSA_WORKER_MODE` | `projectConfig.workerMode`: `shared` (default), `server` (HTTP only) or `worker` (jobs/subscribers only) |
 | `DISABLE_MEDUSA_ADMIN` | `admin.disable`; `true` on workers |
 | `MEDUSA_BACKEND_URL` | `admin.backendUrl`; leave empty when admin is served by the same app |
-| `S3_*` set | Enables `file` + `file-s3` provider (S3 / R2 / MinIO). Containers are ephemeral, so uploads must go to S3 in production. |
+| `S3_*` set | Enables `file` + `file-s3` provider (S3 and S3-compatible servers: R2, MinIO, RustFS, SeaweedFS). Containers are ephemeral, so uploads must go to S3 in production. One bucket per shop and environment (no key prefix: F-025). |
+| `S3_ACL` | Empty = Medusa's default per-file ACL; `false` = send no ACL header (needed for AWS buckets with Object Ownership "Bucket owner enforced", F-025). |
 | `STORE_CORS`, `ADMIN_CORS`, `AUTH_CORS`, `JWT_SECRET`, `COOKIE_SECRET` | Standard Medusa settings |
 
 Variable names match the official deployment guide (`MEDUSA_WORKER_MODE`, `DISABLE_MEDUSA_ADMIN`, `MEDUSA_BACKEND_URL`). Migrations run only on the server instance, like the guide's `predeploy` step; the worker never migrates.
@@ -199,10 +203,11 @@ Variable names match the official deployment guide (`MEDUSA_WORKER_MODE`, `DISAB
 3. Copy source; `pnpm build` (`medusa build` → `.medusa/server`, including the compiled admin).
 4. In `.medusa/server`: copy in `pnpm-lock.yaml` + `pnpm-workspace.yaml` (the build does **not** copy the lockfile), then `pnpm install --prod --frozen-lockfile`.
 5. **Runtime stage** — same base image, copy only `.medusa/server`, run as the `node` user, expose `9000`.
-6. Entrypoint: `start` → run `medusa db:migrate --execute-safe-links --execute-safe-search` (only when `MEDUSA_WORKER_MODE` ≠ `worker` and `RUN_MIGRATIONS` ≠ `false`) → `medusa start`. Without the two flags `db:migrate` **prompts** when a link or search index was removed or changed (verified in the 2.21.1 CLI source), and a container has no terminal to answer. Safe mode never drops link tables or indexes; dropping them is a manual release step (§8). `db:migrate` takes no lock, so run **one** server replica while migrating. Any other command is passed through (e.g. `medusa user -e … -p …` to create an admin).
-7. Optional build arg `MEDUSA_BACKEND_URL` (baked into the admin bundle).
+6. Entrypoint: `start` → run `medusa db:migrate --execute-safe-links --execute-safe-search` (only when `MEDUSA_WORKER_MODE` ≠ `worker` and `RUN_MIGRATIONS` ≠ `false`) → `medusa start`. Without the two flags `db:migrate` **prompts** when a link or search index was removed or changed (verified in the 2.21.1 CLI source), and a container has no terminal to answer. Safe mode never drops link tables or indexes; dropping them is a manual release step (§8). `db:migrate` takes only a per-module advisory lock (F-004), so still run **one** server replica while migrating. Any other command is passed through (e.g. `medusa user -e … -p …` to create an admin).
+7. Optional build arg `MEDUSA_BACKEND_URL` (baked into the admin bundle). Scenario build args are listed in §6 (e.g. Ecommerce's upload ceiling).
+8. Production `medusa start` runs inside `.medusa/server` (F-009), and the entrypoint `cd /app` first, because the Dokploy terminal opens in `/` (F-013).
 
-No `HEALTHCHECK` instruction (Podman ignores it in OCI format); health checks are configured in Dokploy against `GET /health`.
+No `HEALTHCHECK` instruction (Podman ignores it in OCI format); health checks are configured in Dokploy against `GET /health` (form values in §5).
 
 #### `.env.example`
 
@@ -212,6 +217,7 @@ Committed per category (`<category>/backend/.env.example`), including CORS entri
 NODE_ENV=production
 PORT=9000
 DATABASE_URL=postgres://user:pass@host:5432/<category>
+DATABASE_SSL=false
 REDIS_URL=redis://host:6379
 JWT_SECRET=
 COOKIE_SECRET=
@@ -229,6 +235,7 @@ S3_REGION=
 S3_BUCKET=
 S3_ENDPOINT=
 S3_FORCE_PATH_STYLE=false
+S3_ACL=
 MEDUSA_FF_CACHING=true
 ```
 
@@ -260,12 +267,15 @@ Scenario-specific variables are listed in each scenario plan in §6.
   4. Image domains: the starter reads `MEDUSA_CLOUD_S3_HOSTNAME` / `MEDUSA_CLOUD_S3_PATHNAME`; change these two reads to `S3_IMAGE_HOSTNAME` / `S3_IMAGE_PATHNAME` so any bucket (S3, R2, MinIO) works.
   5. **Make the build independent of the backend:** the starter's `generateStaticParams` (products, collections, categories) calls the backend during `next build`, and the categories one fails the build if the backend is unreachable. Wrap each in a guard that returns `[]` on error, so pages render on demand instead. The build then only needs the publishable key.
   6. *(Optional)* **Internal backend URL on the server:** the starter's `src/lib/config.ts` uses `NEXT_PUBLIC_MEDUSA_BACKEND_URL` for both browser and server. Change it to prefer a server-only `MEDUSA_BACKEND_URL` when `typeof window === "undefined"`, so server-side calls use the private Dokploy hostname. Without this change the runtime `MEDUSA_BACKEND_URL` is unused.
+  7. **Product pages render dynamically:** `export const dynamic = "force-dynamic"` on `products/[handle]/page.tsx`. The starter's `cookies()` helper swallows Next's `DynamicServerError`, so product pages returned 500 in the production image (F-015).
+  8. **`outputFileTracingRoot: __dirname`** in `next.config.js`, so `server.js` lands at the standalone root on any machine (F-010).
+  9. **Admin changes reach the shop without a redeploy:** the starter caches catalog fetches forever (`force-cache`). Add an on-demand route `/api/revalidate` (secret header, `revalidatePath("/", "layout")`), called by a backend subscriber on catalog events, plus `revalidate: 600` on catalog fetches as a safety net for changes without events, e.g. price lists (Ecommerce P1-10; reuse in every storefront).
 - **Dockerfile design:** same fully-qualified multi-arch base image as the backend; `pnpm install --frozen-lockfile`; `pnpm build`; runtime stage copies only `.next/standalone`, `.next/static`, `public`; runs `node server.js` as `node` user. Storefront port 8000, portals / POS app 3000.
 - **Env split:** `NEXT_PUBLIC_*` (and anything read by `next.config.js`) = **Dokploy Build-time Arguments** (declared as `ARG` in the Dockerfile); secrets and server-side URLs = **runtime variables**. Build-time URLs must be public; runtime `MEDUSA_BACKEND_URL` can be the internal Dokploy hostname (after change 6).
 
 | Client | Build-time args | Runtime vars |
 |---|---|---|
-| storefront | `NEXT_PUBLIC_MEDUSA_BACKEND_URL` (public), `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY`, `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_DEFAULT_REGION`, `NEXT_PUBLIC_STRIPE_KEY`, `S3_IMAGE_HOSTNAME`, `S3_IMAGE_PATHNAME` (+ scenario args) | `MEDUSA_BACKEND_URL` (after change 6), `REVALIDATE_SECRET` (only if you add a revalidation route; the starter has none) (+ scenario vars) |
+| storefront | `NEXT_PUBLIC_MEDUSA_BACKEND_URL` (public), `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY`, `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_DEFAULT_REGION`, `NEXT_PUBLIC_STRIPE_KEY` (starter's Stripe; unused where payments are not Stripe, e.g. Ecommerce D1), `S3_IMAGE_HOSTNAME`, `S3_IMAGE_PATHNAME` (+ scenario args) | `MEDUSA_BACKEND_URL` (after change 6), `REVALIDATE_SECRET` (change 9; equal to the backend's) (+ scenario vars) |
 | vendor-portal / seller-portal / pos-app | `NEXT_PUBLIC_MEDUSA_BACKEND_URL`, `NEXT_PUBLIC_BASE_URL` | `MEDUSA_BACKEND_URL`, `COOKIE_SECRET` |
 
 ### 4.3 Local testing
@@ -279,15 +289,18 @@ Phase 0 adds a `docker-compose.local.yml` per category (Postgres + Redis + backe
 |---|---|
 | **PostgreSQL** | One per project. Never share a database between projects. |
 | **Redis** | One per project. |
-| **backend (server)** | Git provider → `medusa-apps`. **Build Path `/<category>/backend`**. Build Type **Dockerfile**. Env from `backend/.env.example` with `MEDUSA_WORKER_MODE=server`. Domain → 9000. Health check `/health`. |
-| **backend (worker)** | Same Build Path and image. Env adds `MEDUSA_WORKER_MODE=worker`, `DISABLE_MEDUSA_ADMIN=true`, `RUN_MIGRATIONS=false`. No domain. |
-| **storefront** | **Build Path `/<category>/storefront`**. Build-time Arguments + runtime env from `storefront/.env.example`. Domain → 8000. |
-| **portal / pos-app** | **Build Path `/<category>/<client>`**. Env from its `.env.example`. Domain → 3000. |
-| **Watch paths** | Each app watches only `/<category>/<app>/**`. A storefront change never rebuilds the backend, and nothing in `marketplace/` touches `pos/`. |
+| **Build fields** (every app) | Build Type **Dockerfile**. The fields are relative to the repo root (F-011): **Build Path `/`**, **Docker File `<category>/<app>/Dockerfile`**, **Docker Context Path `<category>/<app>`**. |
+| **backend (server)** | Git provider → `medusa-apps`, app `<category>/backend`. Env from `backend/.env.example` with `MEDUSA_WORKER_MODE=server`. Domain → 9000. Health check `/health`. |
+| **backend (worker)** | Same build fields and image. Env adds `MEDUSA_WORKER_MODE=worker`, `DISABLE_MEDUSA_ADMIN=true`, `RUN_MIGRATIONS=false`. No domain, no health check. |
+| **storefront** | App `<category>/storefront`. Build-time Arguments + runtime env from `storefront/.env.example`. Domain → 8000. |
+| **portal / pos-app** | App `<category>/<client>`. Env from its `.env.example`. Domain → 3000. |
+| **Health check** (Swarm Settings form) | **Test Commands** takes one array item per box: exactly two boxes, `CMD-SHELL` and `node -e "fetch('http://localhost:<port><path>').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"` (the images have no `curl`); interval, timeout and start period are in the category runbook. A JSON array pasted into one box never runs and caused a staging outage (F-021). After saving, confirm `(healthy)` with `docker ps` on the server: a zero-downtime redeploy does not prove the check works. |
+| **Update Config** (Swarm Settings form) | Order **Start First**, Failure Action **Rollback**, Parallelism 1, Delay / Monitor 10 s, Max Failure Ratio 0. The dropdowns show blank after saving but are stored (check `docker service inspect … .Spec.UpdateConfig`, F-020). |
+| **Watch paths** | Each app watches only `<category>/<app>/**`; the **worker watches `<category>/backend/**`** too (an empty box redeploys it on every push, F-019). A storefront change never rebuilds the backend, and nothing in `marketplace/` touches `pos/`. |
 
 Small projects may run one `shared` backend instance instead of server + worker.
 
-**First deploy of a project:** Postgres + Redis → backend server (migrations run) → admin user from the Dokploy terminal (`docker-entrypoint.sh medusa user -e … -p …`) → region, sales channel, publishable key in the admin → worker → storefront (key as build arg) → portal / app → final domains into backend CORS → redeploy backend.
+**First deploy of a project:** Postgres + Redis → backend server (migrations run; Medusa creates a default sales channel and publishable key on first boot, F-005) → admin user from the Dokploy terminal (`docker-entrypoint.sh medusa user -e … -p …`) → the category's seed script from the same terminal (`docker-entrypoint.sh medusa exec ./src/scripts/seed.js`: regions, currencies, tax, stock location, shipping; it reuses the first-boot channel and key instead of creating duplicates, F-017) → copy the publishable key from the admin → worker → storefront (key as build arg) → portal / app → final domains into backend CORS → redeploy backend. Check the storefront's key sees products (`/store/products` count > 0, F-017) and the baked backend URL is right (F-016).
 
 **Afterwards** every app is redeployed, rebuilt or rolled back on its own. The only cross-app coupling is configuration: client URLs in backend CORS, and backend URL + publishable key in clients.
 
@@ -298,11 +311,25 @@ Each scenario lists: custom modules (tables are prefixed to avoid collisions), l
 
 ### 6.1 Ecommerce — `ecommerce/`
 
-- **Custom modules:** none. This is the reference app: pure Medusa core plus infrastructure config.
-- **MVP:** regions, currencies, tax, shipping options; payment provider (Stripe: `@medusajs/medusa/payment-stripe` with `apiKey` + `webhookSecret`, Stripe webhook → `https://<api>/hooks/payment/stripe_stripe`); notification provider (email; `notification-local` in dev); S3 files; seed script; `ecommerce/storefront` (from `dtc-starter`, §4.2).
+- **Custom modules:** no data modules or tables. This is the reference app: Medusa core plus infrastructure config, with custom **module providers** only (official extension point, §3.1): `resend` (email) and `telegram` (staff alerts) notification providers, and an ABA PayWay payment provider.
+- **MVP:** Cambodia region (USD checkout, KHR as a second store currency), tax region, Phnom Penh stock location and delivery option, created by the seed script (`pnpm seed`); payment provider **ABA PayWay** (eCommerce Checkout: cards, ABA Pay, KHQR; custom `AbstractPaymentProvider` with its callback route, built against the PayWay sandbox; D1, F-022; Stripe is not available in Cambodia); notifications: order confirmation email through **Resend** and new-order alerts to the owner and staff through **Telegram** (D2; `notification-local` when the keys are empty); S3 files (D3); `ecommerce/storefront` (from `dtc-starter`, §4.2).
+- **Built in Phase 1 beyond the original MVP list (owner requests, details in TASKS.md):**
+  - Storefront shows admin changes without a redeploy (§4.2 change 9; P1-10).
+  - Admin image uploads: SVG refused, size limit (default 0.8 MB) that admins change in **Settings → Store** up to a ceiling (default 5 MB, set by env); the admin's own in-browser check is built with the ceiling; the rules are shown on the product pages (P1-11 to P1-13, F-026, F-027).
+  - Order alerts and emails list each item with its variant (e.g. `Medusa T-Shirt (L / White)`).
+  - Search: the starter's `resolve-product-ids` helper is fixed for shared product options (F-023).
+- **Scenario env (backend):** `UPLOAD_MAX_FILE_SIZE_MB`, `UPLOAD_MAX_FILE_SIZE_CEILING_MB` (also a **build arg**, it sets the admin's check), `RESEND_API_KEY`, `RESEND_FROM`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `STOREFRONT_URL` + `REVALIDATE_SECRET` (change 9); PayWay keys added with P1-03. Storefront: `REVALIDATE_SECRET`.
 - **Search (MVP, built in):** since 2.21.1 the **Search Module** is registered by default with the PostgreSQL provider. The starter already ships `src/search/product.ts` and the storefront's `@medusajs/instantsearch-adapter`, so product search needs no extra service. Move to another provider only if Postgres search is outgrown.
 - **Later:** abandoned cart and restock alerts (Commerce Automation recipe), reviews.
 - **Acceptance:** browse → cart → checkout → order visible in admin; update script and CI gate proven on this app first.
+- **Cambodia localisation (Revision 5, storefront only):** applies when the address country is Cambodia (`kh`); other countries keep the starter form. No custom module, no new columns: Medusa's own address fields are reused.
+  - **Address fields, in this order:** First name, Last name, Address, Province / Capital, Khan / Srok, Postal code, Country, Company. "Province / Capital" is saved in `province`, "Khan / Srok" in `city`, the postal code in `postal_code`.
+  - **Choosing a place:** Province / Capital and Khan / Srok are type-to-match lists (English or Khmer). The form accepts only values from the lists; the Khan / Srok list shows only the chosen province's districts.
+  - **Postal code:** filled in from the chosen Khan / Srok (still editable, optional for Cambodia). Official codes are 6 digits (province 2, district 2, commune 2).
+  - **Place data:** 25 provinces / capital and 210 khan / srok / krong with their postal codes, from the Ministry of Posts and Telecommunications list (Prakas No. 77, 30.12.2025), published by Open Development Cambodia under CC BY-SA 4.0. Kept in the storefront as a generated file (`src/lib/data/kh-locations.ts`, built by `scripts/build-kh-locations.mjs`), with the source credited. Re-generate it when the ministry publishes a new list.
+  - **Khmer names:** every province and khan / srok keeps its Khmer name (`name_km`). Medusa always stores the English name (one stable value for staff, search and reports); a future Khmer storefront shows the Khmer name by looking it up from the English one.
+  - **Phone numbers:** digits only (with `+`, spaces, hyphens, brackets), 8–15 digits, checked in the browser and by a store API middleware. Cambodian numbers are shown as written locally: `012 345 678`, `097 123 4567`, `+855 12 345 678`.
+  - **Where addresses are shown:** checkout summary, order page, staff alert and order email show street, khan / srok and province.
 
 ### 6.2 POS — `pos/`
 
@@ -421,7 +448,7 @@ Release:
 4. Deploy to staging via Dokploy with **one** server replica, smoke test, then production.
 5. Rollback = redeploy the previous commit / image **plus** `db:rollback` of the migrated modules, or restore the backup.
 
-Automation (Phase 0): Dependabot (or Renovate) configured **per deployable folder**, grouping all `@medusajs/*` packages of one category (backend + clients) into one PR; CI runs the verify gate for that category; merging redeploys only the changed deployables (Dokploy watch paths).
+Automation (Phase 0): Dependabot supports pnpm v7–v10 only and this repo pins pnpm 12, so there is no Dependabot/Renovate (owner decision, F-008). Instead the weekly workflow `.github/workflows/medusa-update-check.yml` (Mondays 02:00 UTC, also runnable by hand) fails visibly when any deployable pins an older Medusa than npm `latest`. A human then runs `scripts/update-medusa.sh <category>` on a branch: it moves all `@medusajs/*` packages of that category (backend + clients) to the new version in one change and runs the verify gate; CI checks the PR; merging redeploys only the changed deployables (Dokploy watch paths).
 
 ---
 
@@ -467,6 +494,14 @@ A throwaway prototype was built on Medusa 2.21.1 + pnpm 12.6.0 to test this plan
 | R-c | Duplicated boilerplate drifts between folders → Phase 0 `verify.sh` also diffs the standard files across folders | ongoing |
 | R-d | Client built against an old publishable key or backend URL → keys and URLs are build args; changing them means rebuilding that client (documented in each `.env.example`) | ongoing |
 | R-f | Official starters/recipes change (e.g. the v2.14 move to `dtc-starter`) → re-check docs.medusajs.com and the starter repos at the start of every phase, not only Medusa package versions | every phase |
-| R-g | No admin roles in 2.21.1 → every admin user has full access; cashiers, vendors and sellers never get admin users (custom actor types instead) | Phase 2 |
-| R-h | Two server replicas migrating at once (no migration lock) → scale to 1 during deploys | every deploy |
+| R-g | No admin roles in 2.21.1 → every admin user has full access; cashiers, vendors and sellers never get admin users (custom actor types instead). RBAC code exists behind the undocumented flag `MEDUSA_FF_RBAC`; re-evaluate when Medusa documents it (F-001) | Phase 2 |
+| R-h | Two server replicas migrating at once (only per-module advisory locks, F-004) → scale to 1 during deploys | every deploy |
 | R-e | Worker and server accidentally both run migrations → worker env always has `RUN_MIGRATIONS=false` (in every backend `.env.example`) | every deploy |
+
+**Decided in Phase 1 (owner; details in TASKS.md):**
+- **D1 Payments:** Ecommerce uses ABA PayWay (cards, ABA Pay, KHQR) as a custom payment module provider (6.1; Stripe is not available in Cambodia, F-022). Built against the PayWay sandbox once the owner has the keys. Split payments for vendors / sellers: decide in Phases 5 and 6.
+- **D2 Notifications:** customer email through Resend; new-order alerts to the owner and staff through a Telegram bot.
+- **D3 Files:** S3 or an S3-compatible server; staging uses RustFS (SeaweedFS also tested).
+- **D6 Staging:** a separate Dokploy project `<category>-staging` with its own databases, Redis, bucket and domains (Phase 0).
+- **D4 Storefront design:** keep the starter's look for now; restyle later.
+- **Delivery:** Phnom Penh delivery at launch; more shipping options with their own rates can be added later in the admin.
