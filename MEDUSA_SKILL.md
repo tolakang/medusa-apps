@@ -15,7 +15,7 @@ Every API name, import path, option, command or config key you use must be backe
 | Rank | Source | How to check |
 |---|---|---|
 | 1 | **Installed package types** at the pinned version | `grep -rn "export declare const <name>" node_modules/@medusajs/<pkg>/dist --include='*.d.ts'` |
-| 2 | **Official docs as Markdown** | `curl -sL https://docs.medusajs.com/<path>/index.html.md`. Page index: `curl -sL https://docs.medusajs.com/llms.txt`. Full text: `https://docs.medusajs.com/llms-full.txt` |
+| 2 | **Official docs as Markdown** | `curl -sL https://docs.medusajs.com/<path>/index.html.md`. Page index: `curl -sL https://docs.medusajs.com/llms.txt`. Full text: `https://docs.medusajs.com/llms-full.txt`. Or the official **Medusa Docs MCP** (`MedusaDocs`, `https://docs.medusajs.com/mcp`, project `.mcp.json`; from `medusajs/medusa-agent-skills`): same docs, same rank. The docs describe the **latest** Medusa, so rank 1 still wins for our pinned version. |
 | 3 | **Official starters** at the matching Medusa version | `github.com/medusajs/dtc-starter` (`apps/backend`, `apps/storefront`), `github.com/medusajs/b2b-starter` |
 | 4 | **Release notes** for the version | `github.com/medusajs/medusa/releases/tag/v<version>` |
 | 5 | **Package runtime source** (last resort, to confirm behaviour) | `node_modules/@medusajs/medusa/dist/...` |
