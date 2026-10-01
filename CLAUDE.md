@@ -4,7 +4,7 @@ Six standalone Medusa v2 business projects (ecommerce, pos, booking-services, wh
 
 ## Read before every task (in this order)
 1. `BUILD_PLAN.md`: the requirements. **Frozen. Never edit it.** (Edits are denied in `.claude/settings.json`; `scripts/guard.sh` checks it in CI.)
-2. `MEDUSA_SKILL.md`: the only allowed Medusa reference (verified for 2.21.1), with its evidence ladder in §0.
+2. `MEDUSA_SKILL.md`: the only allowed Medusa reference (verified for 2.21.2), with its evidence ladder in §0.
 3. `DEV_FLOW.md`: the mandatory cycle: research → implement → gates → evidence-based fix cycle → review → record → commit → push.
 4. `TASKS.md`: pick the next task, and tick it with evidence when done.
 5. `COMPARISON.md` and `<category>/README.md`: scenario context and Dokploy setup.

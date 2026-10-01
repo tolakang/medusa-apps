@@ -1,6 +1,6 @@
 # Medusa v2 Skill: Verified Reference for This Project
 
-> **What this is:** the only Medusa knowledge the builder may use without looking it up again. Every rule below was checked on **2026-09-25** against **Medusa 2.21.1** (the official docs at docs.medusajs.com, the published `@medusajs/*` 2.21.1 packages, and the official `dtc-starter` / `b2b-starter` repos). Each section cites its source.
+> **What this is:** the only Medusa knowledge the builder may use without looking it up again. Every rule below was checked on **2026-09-25** against **Medusa 2.21.1** and re-checked on **2026-10-01** against **2.21.2** (the official docs at docs.medusajs.com, the published `@medusajs/*` packages, and the official `dtc-starter` / `b2b-starter` repos). Each section cites its source.
 >
 > **Reading order for the builder:** `CLAUDE.md` → `BUILD_PLAN.md` (frozen) → this file → `DEV_FLOW.md` → `TASKS.md`.
 >
@@ -30,10 +30,10 @@ When the docs and the installed types disagree, **the installed types win** (the
 
 | Item | Value | Source |
 |---|---|---|
-| Medusa | `2.21.1` (npm `latest`) | `npm view @medusajs/medusa version` |
+| Medusa | `2.21.2` (npm `latest`, released 2026-09-28; 2.21.1 before) | `npm view @medusajs/medusa version`; release notes v2.21.2 |
 | Node | `^20.19.0 \|\| >=22.12.0`; docs say "less than v25". Project uses **Node 22** | `npm view @medusajs/medusa engines`; docs `resources/nextjs-starter` |
 | pnpm | `12.6.0`; supported since Medusa v2.13.0 | `npm view pnpm version`; docs `learn/configurations/pnpm` |
-| Versioning | All `@medusajs/*` packages share one version, **except** design-system packages (`@medusajs/ui` = `4.2.x`). This repo pins `@medusajs/ui` to the version `@medusajs/dashboard@<release>` depends on (`4.2.5` for 2.21.1), so the lockfile holds one copy — TASKS.md F-006 | docs `learn/update`; `npm view @medusajs/dashboard@2.21.1 dependencies` |
+| Versioning | All `@medusajs/*` packages share one version, **except** design-system packages (`@medusajs/ui` = `4.2.x`). This repo pins `@medusajs/ui` to the version `@medusajs/dashboard@<release>` depends on (`4.2.6` for 2.21.2; `4.2.5` for 2.21.1), so the lockfile holds one copy — TASKS.md F-006 | docs `learn/update`; `npm view @medusajs/dashboard@2.21.2 dependencies` |
 | Minor releases | **May contain breaking changes.** Always read the release notes | docs `learn/update` |
 | Starters | `medusajs/dtc-starter` (the old `medusa-starter-default` and `nextjs-starter-medusa` are deprecated) | starter READMEs |
 
@@ -91,7 +91,7 @@ The snippet above is the pattern only. The real config makes the Redis modules c
 | Stripe: provider `@medusajs/medusa/payment-stripe` with options `apiKey` and `webhookSecret` (required when deployed). Webhook URL: `{server_url}/hooks/payment/{provider_id}` → `/hooks/payment/stripe_stripe` | `resources/commerce-modules/payment/payment-provider/stripe` |
 | The system payment provider `pp_system_default` is built in (manual payments) | `resources/commerce-modules/payment/payment-provider` |
 | The **Search Module** is registered by default since 2.21.1 (PostgreSQL provider). Indexes live in `src/search/*.ts` (the starter ships `product.ts`) | `resources/infrastructure-modules/search` |
-| Feature flags present in the 2.21.1 package source: `MEDUSA_FF_CACHING`, `MEDUSA_FF_RBAC` (default **off**, **not documented**), `MEDUSA_FF_RBAC_FILTER_FIELDS`, `MEDUSA_FF_INDEX_ENGINE`, `MEDUSA_FF_TRANSLATION`, `MEDUSA_FF_VIEW_CONFIGURATIONS`, `MEDUSA_FF_BACKEND_HMR`. **Only enable a flag the docs document** (currently: caching) | `node_modules/@medusajs/medusa/dist/feature-flags/*.js` |
+| Feature flags present in the 2.21.1 and 2.21.2 package source: `MEDUSA_FF_CACHING`, `MEDUSA_FF_RBAC` (default **off**, **not documented**), `MEDUSA_FF_RBAC_FILTER_FIELDS`, `MEDUSA_FF_INDEX_ENGINE`, `MEDUSA_FF_TRANSLATION`, `MEDUSA_FF_VIEW_CONFIGURATIONS`, `MEDUSA_FF_BACKEND_HMR`. **Only enable a flag the docs document** (currently: caching) | `node_modules/@medusajs/medusa/dist/feature-flags/*.js` |
 | Admin customizations read env vars only with the `VITE_` prefix, via `import.meta.env` | `learn/fundamentals/environment-variables` |
 
 ---
@@ -214,7 +214,7 @@ export const createPostWorkflow = createWorkflow("create-post",
   - `updateLineItemInCartWorkflow.hooks.validate`, `.setPricingContext`
   - `completeCartWorkflow.hooks.validate`: runs **before** the order is created and payment authorized. **Never mutate the cart** in it. Validation must stay idempotent on retry.
 - **Wrapping `completeCartWorkflow`** (e.g. marketplace `complete-vendor`): use `acquireLockStep({ key: cart_id, timeout, ttl })` … `releaseLockStep({ key: cart_id })`, and check existing links through the link's `entryPoint` before creating records. The core workflow is idempotent, so your steps must be too. If completion fails after payment, the payment is reverted automatically.
-- **Core workflows and steps verified in 2.21.1** (`@medusajs/medusa/core-flows`): `acquireLockStep`, `releaseLockStep`, `useQueryGraphStep`, `createRemoteLinkStep`, `dismissRemoteLinkStep`, `emitEventStep`, `setAuthAppMetadataStep`, `createOrderWorkflow`, `completeCartWorkflow`, `addToCartWorkflow`, `updateLineItemInCartWorkflow`, `convertDraftOrderWorkflow`. Before using any other name, check that it exists with ladder step 1.
+- **Core workflows and steps verified in 2.21.1 and 2.21.2** (`@medusajs/medusa/core-flows`): `acquireLockStep`, `releaseLockStep`, `useQueryGraphStep`, `createRemoteLinkStep`, `dismissRemoteLinkStep`, `emitEventStep`, `setAuthAppMetadataStep`, `createOrderWorkflow`, `completeCartWorkflow`, `addToCartWorkflow`, `updateLineItemInCartWorkflow`, `convertDraftOrderWorkflow`. Before using any other name, check that it exists with ladder step 1.
 
 ---
 
@@ -246,7 +246,8 @@ export default defineMiddlewares({ routes: [
 - **Custom actor type** (vendor, seller, cashier): register with `POST /auth/<actor>/emailpass/register`, create the record in a workflow, then call `setAuthAppMetadataStep({ authIdentityId, actorType: "<actor>", value: record.id })`. Log in with `POST /auth/<actor>/emailpass`.
 - **CORS:** `storeCors` and `adminCors` apply **only** to `/store*` and `/admin*`. **Any other prefix** (`/vendors`, `/sellers`, `/pos`) needs its own middleware using `cors` + `parseCorsOrigins(...)` (docs snippet in `learn/fundamentals/api-routes/cors`). The docs snippet imports the `cors` package. pnpm doesn't allow undeclared imports, so add `cors` + `@types/cors` to `package.json` (pnpm rule, not a Medusa doc statement). CORS values may be regex strings (`/.../`) (`learn/configurations/medusa-config`).
 - **Errors:** `throw new MedusaError(MedusaError.Types.INVALID_DATA | NOT_FOUND | NOT_ALLOWED | UNAUTHORIZED | UNEXPECTED_STATE | INVALID_ARGUMENT, "message")` (import from `@medusajs/framework/utils`).
-- **Store routes** need the `x-publishable-api-key` header. The key decides the sales channel (`resources/storefront-development/publishable-api-keys`).
+- **Store routes** need the `x-publishable-api-key` header.
+- **2.21.2 changes that matter here** (release notes v2.21.2): `/store/search` only returns fields **defined on the index** (no more hydration through `query.graph`), so every field a storefront reads must be `.retrievable()` in `src/search/*.ts`; the payment webhook route also accepts the `pp_`-prefixed provider ID (`/hooks/payment/pp_payway_payway`); the new `@medusajs/eslint-plugin` rules warn on `throw new Error(...)` (use `MedusaError`) and on magic container keys such as `"logger"` (use `ContainerRegistrationKeys`). The key decides the sales channel (`resources/storefront-development/publishable-api-keys`).
 
 ---
 
@@ -351,7 +352,7 @@ moduleIntegrationTestRunner<BlogModuleService>({ moduleName: BLOG_MODULE, module
 
 ## 14. Refreshing this skill
 
-This file is pinned to **2.21.1**. When `scripts/update-medusa.sh` moves to a new version:
+This file is pinned to **2.21.2** (refreshed 2026-10-01 from 2.21.1: §1 and §6 checks re-run against `node_modules`). When `scripts/update-medusa.sh` moves to a new version:
 
 1. Read the release notes for every version you skip.
 2. Re-run the checks in §1 and the core-flows export check in §6 against the new `node_modules`.
