@@ -255,6 +255,41 @@ export async function initiatePaymentSession(
     .catch(medusaError)
 }
 
+// ABA PayWay (TASKS P1-03): starts a fresh PayWay session right before the
+// customer leaves for PayWay (new transaction ID and request time), with the
+// delivery contact for PayWay's page. Returns the signed form the browser
+// posts to PayWay; the signature is made on the backend.
+export async function startPaywayPayment(): Promise<{
+  checkout_url: string
+  form: Record<string, string>
+}> {
+  const cart = await retrieveCart()
+  if (!cart) {
+    throw new Error("No existing cart found when starting the payment")
+  }
+  const address = cart.shipping_address
+  const response = await initiatePaymentSession(cart, {
+    provider_id: "pp_payway_payway",
+    data: {
+      country_code: address?.country_code,
+      firstname: address?.first_name,
+      lastname: address?.last_name,
+      phone: address?.phone,
+      email: cart.email,
+    },
+  })
+  const session = response?.payment_collection?.payment_sessions?.find(
+    (s) => s.provider_id === "pp_payway_payway"
+  )
+  const data = session?.data as
+    | { checkout_url?: string; form?: Record<string, string> }
+    | undefined
+  if (!data?.checkout_url || !data.form) {
+    throw new Error("Could not start the PayWay payment. Please try again.")
+  }
+  return { checkout_url: data.checkout_url, form: data.form }
+}
+
 export async function applyPromotions(codes: string[]) {
   const cartId = await getCartId()
 

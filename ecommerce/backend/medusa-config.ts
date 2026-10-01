@@ -162,6 +162,36 @@ const notificationModule = {
   },
 }
 
+// ABA PayWay (TASKS D1, P1-03): registered as pp_payway_payway when the
+// merchant ID and API key are set; the built-in manual provider
+// (pp_system_default) is always there too (@medusajs/payment providers loader).
+// Webhook: https://<api host>/hooks/payment/payway_payway.
+const PAYWAY_MERCHANT_ID = process.env.PAYWAY_MERCHANT_ID
+const PAYWAY_API_KEY = process.env.PAYWAY_API_KEY
+const paymentModules =
+  PAYWAY_MERCHANT_ID && PAYWAY_API_KEY
+    ? [
+        {
+          resolve: "@medusajs/medusa/payment",
+          options: {
+            providers: [
+              {
+                resolve: "./src/modules/payway",
+                id: "payway",
+                options: {
+                  merchant_id: PAYWAY_MERCHANT_ID,
+                  api_key: PAYWAY_API_KEY,
+                  api_url: process.env.PAYWAY_API_URL || undefined,
+                  return_url: process.env.PAYWAY_RETURN_URL,
+                  storefront_url: process.env.STOREFRONT_URL,
+                },
+              },
+            ],
+          },
+        },
+      ]
+    : []
+
 // Must match DEFAULT_UPLOAD_MAX_FILE_SIZE_CEILING_MB in
 // src/lib/upload-limit-setting.ts (checked by a unit test).
 const uploadCeilingMb = Number(process.env.UPLOAD_MAX_FILE_SIZE_CEILING_MB)
@@ -195,6 +225,7 @@ module.exports = defineConfig({
     ...redisModules,
     ...fileModules,
     notificationModule,
+    ...paymentModules,
     // Telegram chats following an order (TASKS P1-17).
     { resolve: "./src/modules/telegram-links" },
   ],

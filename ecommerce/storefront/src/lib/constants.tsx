@@ -33,6 +33,12 @@ export const paymentInfoMap: Record<
     title: "Manual Payment",
     icon: <CreditCard />,
   },
+  // ABA PayWay (TASKS P1-03): the customer picks ABA Pay, KHQR or a card on
+  // PayWay's own page.
+  pp_payway_payway: {
+    title: "ABA PayWay (ABA Pay, KHQR, cards)",
+    icon: <CreditCard />,
+  },
   // Add more payment providers here
 }
 
@@ -45,6 +51,10 @@ export const isStripeLike = (providerId?: string) => {
 
 export const isPaypal = (providerId?: string) => {
   return providerId?.startsWith("pp_paypal")
+}
+export const PAYWAY_PROVIDER_ID = "pp_payway_payway"
+export const isPayway = (providerId?: string) => {
+  return providerId === PAYWAY_PROVIDER_ID
 }
 export const isManual = (providerId?: string) => {
   return providerId?.startsWith("pp_system_default")

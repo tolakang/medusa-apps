@@ -1,7 +1,7 @@
 "use client"
 
-import { isManual, isStripeLike } from "@lib/constants"
-import { placeOrder } from "@lib/data/cart"
+import { isManual, isPayway, isStripeLike } from "@lib/constants"
+import { placeOrder, startPaywayPayment } from "@lib/data/cart"
 import { hasRequiredContact } from "@lib/util/contact"
 import { HttpTypes } from "@medusajs/types"
 import { Button } from "@modules/common/components/ui"
@@ -37,6 +37,10 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
           cart={cart}
           data-testid={dataTestId}
         />
+      )
+    case isPayway(paymentSession?.provider_id):
+      return (
+        <PaywayPaymentButton notReady={notReady} data-testid={dataTestId} />
       )
     case isManual(paymentSession?.provider_id):
       return (
@@ -192,6 +196,62 @@ const ManualTestPaymentButton = ({ notReady }: { notReady: boolean }) => {
       <ErrorMessage
         error={errorMessage}
         data-testid="manual-payment-error-message"
+      />
+    </>
+  )
+}
+
+// ABA PayWay (TASKS P1-03): gets a freshly signed PayWay form from the backend
+// and posts it from the browser (PayWay's "hosted view"). The customer pays on
+// PayWay's page and comes back to /checkout/payway-return, where the order is
+// placed once PayWay confirms the payment.
+const PaywayPaymentButton = ({
+  notReady,
+  "data-testid": dataTestId,
+}: {
+  notReady: boolean
+  "data-testid"?: string
+}) => {
+  const [submitting, setSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  const handlePayment = async () => {
+    setSubmitting(true)
+    setErrorMessage(null)
+    try {
+      const { checkout_url, form } = await startPaywayPayment()
+      const element = document.createElement("form")
+      element.method = "POST"
+      element.action = checkout_url
+      for (const [name, value] of Object.entries(form)) {
+        const input = document.createElement("input")
+        input.type = "hidden"
+        input.name = name
+        input.value = value
+        element.appendChild(input)
+      }
+      document.body.appendChild(element)
+      element.submit()
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : String(err))
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <>
+      <Button
+        disabled={notReady}
+        isLoading={submitting}
+        onClick={handlePayment}
+        size="large"
+        data-testid={dataTestId}
+      >
+        Pay with ABA PayWay
+      </Button>
+      <ErrorMessage
+        error={errorMessage}
+        data-testid="payway-payment-error-message"
       />
     </>
   )
