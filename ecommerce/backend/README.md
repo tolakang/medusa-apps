@@ -1,6 +1,6 @@
 # ecommerce / backend
 
-Medusa **2.21.1** backend for the ecommerce business project. One image, deployed twice (server + worker). Standard: `BUILD_PLAN.md` §4.1. Medusa reference: `MEDUSA_SKILL.md`.
+Medusa **2.21.2** backend for the ecommerce business project. One image, deployed twice (server + worker). Standard: `BUILD_PLAN.md` §4.1. Medusa reference: `MEDUSA_SKILL.md`.
 
 **Starter:** `medusajs/dtc-starter` `apps/backend` at commit **`e3a237c9b877`** (2026-09-22, Medusa 2.21.1). Changes from the starter:
 - pnpm standalone package: `packageManager`, settings-only `pnpm-workspace.yaml` (hoisting, `allowBuilds`, `tsconfig-paths` override).
