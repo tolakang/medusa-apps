@@ -163,3 +163,71 @@ Reply with: **`<api host>`**, **`<shop host>`**, and which Dockerfile path setti
 4. Tell me the result of each step. I tick P0-18 / P0-19 in `TASKS.md` with this evidence, then run the phase exit checklist (P0-20).
 
 **If anything fails:** send the deployment's log lines around the error. Don't retry with changed settings first. Same rule as `DEV_FLOW.md` §6.
+
+---
+
+## 7. Database backups and restore (TASKS P1-09)
+
+Set up and tested on staging 2026-10-03. Backups hold customer names, phones, addresses and orders: treat the bucket and its key like a password.
+
+### 7.1 Storage: a private bucket and its own key
+1. RustFS console: create a bucket for backups only (staging: `dokploy-kt`). **Private**: no anonymous or public-read policy. Never use the shop's public image bucket.
+2. Create an access key that can only reach that bucket: `s3:ListBucket` on `arn:aws:s3:::<bucket>`, and `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject`, `s3:AbortMultipartUpload` on `arn:aws:s3:::<bucket>/*`.
+3. Dokploy → **Settings → S3 Destinations → Create** (staging: `S3-e-commerce`): Provider **Any other S3 compatible provider**, the key, **Bucket** `<bucket>`, **Region** `us-east-1`, **Endpoint** the RustFS **S3 API** address (staging `https://s3-rustfs.ktola.org`), **Additional Flags**:
+   - `--streaming-upload-cutoff=200M`: Dokploy streams the dump into `rclone rcat`, which otherwise uses a multipart upload; RustFS before the scanner fix (rustfs/rustfs#6135, fixed by PR #6624, in 1.0.0+) refuses to complete multipart uploads with `503 Bucket quota check temporarily unavailable`. Below 200 MB the upload is one request. Optional once RustFS is 1.0.0 or newer.
+
+   **Test connection** must succeed. It only checks that the bucket can be listed, not that uploads work: always do a manual run (7.2).
+
+### 7.2 The backup
+**ecommerce-postgres → Backups → Create Backup**:
+
+| Field | Value |
+|---|---|
+| Destination | the destination from 7.1 |
+| Database | the **Database Name** from the Postgres **General** tab (`ecommerce`), not the service name |
+| Schedule | `0 19 * * *` (daily 19:00 UTC = 02:00 Cambodia) |
+| Prefix Destination | `ecommerce-staging` (no leading `/`, no bucket name) |
+| Keep the latest | `14` |
+| Enabled | on |
+
+Files land in `<bucket>/<postgres service name>/<prefix>/<UTC time>.sql.gz`: Dokploy adds the service-name folder itself. Each file is `pg_dump -Fc --no-acl --no-owner … | gzip` (from Dokploy's backup log), i.e. a **gzipped custom-format** dump, restored with `pg_restore`.
+
+**Check every new setup with a manual run** (▶ on the backup row), then on the server:
+```bash
+f=$(ls -t /etc/dokploy/logs/backup-*/*.log | head -1); grep -v -i "secret\|access-key" "$f" | tail -8
+```
+It must end with `✅ Backup uploaded to S3 successfully`, and the file must appear in the bucket. Dokploy's own service log (`docker service logs dokploy`) prints the full upload command **including the S3 keys**: never paste it anywhere without removing that line.
+
+### 7.3 Restore test (proves the backup is usable; do it after setup and before going live)
+Restores into a **throwaway** Postgres container on the server. The live database is not touched.
+
+1. **Get the newest backup onto the server.** RustFS console → the backup folder → download the newest `.sql.gz` to your computer, then copy it to the server:
+   ```bash
+   scp ~/Downloads/<file>.sql.gz root@<server>:/root/restore-test.sql.gz
+   ```
+2. **Start a scratch Postgres with the same major version** (staging runs Postgres 18; `pg_restore` must be at least the version that made the dump):
+   ```bash
+   docker run -d --name restore-test -e POSTGRES_PASSWORD=restore-test postgres:18
+   sleep 8
+   docker exec restore-test createdb -U postgres scratch
+   ```
+3. **Restore:**
+   ```bash
+   gunzip -c /root/restore-test.sql.gz | docker exec -i restore-test pg_restore -U postgres -d scratch --no-owner --no-acl
+   ```
+   No output means it worked. Warnings about extensions or comments are harmless; any `ERROR` line is not: send it.
+4. **Check the data is really there** (compare with the admin):
+   ```bash
+   docker exec restore-test psql -U postgres -d scratch -c 'select count(*) as orders, max(display_id) as last_order from "order";'
+   docker exec restore-test psql -U postgres -d scratch -c 'select count(*) as products from product where deleted_at is null;'
+   ```
+   `last_order` must equal the newest order number in the admin at the time of the backup.
+5. **Clean up** (the file and container hold customer data):
+   ```bash
+   docker rm -f restore-test
+   rm /root/restore-test.sql.gz
+   ```
+   Also delete the downloaded copy on your computer.
+
+### 7.4 Real disaster recovery (only when the live data is lost or broken)
+Dokploy → **ecommerce-postgres → Backups → Restore Backup** restores a chosen file **into the live database, replacing what is there**. Before using it: **Stop** the backend and the worker (no writes during the restore), take note of what will be lost (everything after the backup time), restore, then **Deploy** backend and worker and check `/health` and the latest order in the admin. Practice it on staging, never first on production.
