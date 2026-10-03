@@ -146,7 +146,12 @@ class PaywayProviderService extends AbstractPaymentProvider<PaywayOptions> {
         lifetime: String(this.options_.lifetime_minutes ?? 30),
         skip_success_page: "1",
       },
-      this.options_.api_key
+      this.options_.api_key,
+      // "If your merchant profile also supports the QR Payment API service,
+      // please set this parameter to 0 to use the Checkout service" (PayWay
+      // Purchase API). Without it PayWay answered with raw KHQR JSON instead
+      // of its checkout page on the staging sandbox profile (2026-10-03).
+      { payment_gate: "0" }
     )
     return {
       tran_id: tranId,
