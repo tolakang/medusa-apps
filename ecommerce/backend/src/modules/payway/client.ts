@@ -70,16 +70,19 @@ export function formatAmount(amount: number, currency: string): string {
   return currency.toUpperCase() === "KHR" ? String(Math.round(amount)) : amount.toFixed(2)
 }
 
-// Every posted field goes into the hash; fields not sent count as "".
+// Every posted field in PURCHASE_HASH_ORDER goes into the hash; fields not sent
+// count as "". `unsigned` fields are posted but not hashed: PayWay's hash list
+// leaves out e.g. `payment_gate` and `view_type`.
 export function signPurchase(
   fields: Partial<Record<PurchaseField, string>>,
-  apiKey: string
+  apiKey: string,
+  unsigned: Record<string, string> = {}
 ): Record<string, string> {
   const posted = Object.fromEntries(
     Object.entries(fields).filter(([, v]) => v !== undefined && v !== "")
   ) as Record<string, string>
   const b4hash = PURCHASE_HASH_ORDER.map((key) => posted[key] ?? "").join("")
-  return { ...posted, hash: hmac(b4hash, apiKey) }
+  return { ...posted, ...unsigned, hash: hmac(b4hash, apiKey) }
 }
 
 // Callback body values sorted by key and concatenated (PHP ksort + implode,

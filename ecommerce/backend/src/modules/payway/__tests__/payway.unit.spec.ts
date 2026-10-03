@@ -140,6 +140,10 @@ describe("PayWay provider", () => {
     expect(Buffer.from(data.form.return_url, "base64").toString()).toEqual(options.return_url)
     const { hash, ...fields } = data.form
     expect(signPurchase(fields, API_KEY).hash).toEqual(hash)
+    // Checkout page, not the QR Payment API; payment_gate is not in PayWay's hash list.
+    expect(data.form.payment_gate).toEqual("0")
+    const { payment_gate: _gate, ...signedOnly } = fields
+    expect(signPurchase(signedOnly, API_KEY).hash).toEqual(hash)
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
