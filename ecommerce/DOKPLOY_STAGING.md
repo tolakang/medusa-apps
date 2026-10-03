@@ -1,6 +1,6 @@
 # Runbook: `ecommerce-staging` on Dokploy (tasks P0-18, P0-19)
 
-Follow the steps in order. Field names are Dokploy's own (docs.dokploy.com, checked 2026-09-25). The project layout is decision **D6** (`TASKS.md`). File storage (**D3**, AWS S3) is wired in Phase 1 (P1-05), so staging runs **without S3** for now: leave every `S3_*` value empty.
+Follow the steps in order. Field names are Dokploy's own (docs.dokploy.com, checked 2026-09-25). The project layout is decision **D6** (`TASKS.md`). Sections 1–6 are the Phase 0 base setup. **Phase 1 features** (S3 file storage, upload limits, email and Telegram notifications, ABA PayWay, cache refresh) add the variables in step 2.5 and the go-live steps in **§8**. Backups are **§7**.
 
 **You need:** a Dokploy server with the GitHub provider connected to `tolakang/medusa-apps` (Dokploy → Git → GitHub App), and two hostnames. Either use your DNS (`api.staging.<your-domain>`, `shop.staging.<your-domain>` → the Dokploy server IP), or use Dokploy's **Generated** domains.
 
@@ -44,7 +44,46 @@ openssl rand -base64 32   # COOKIE_SECRET
    MEDUSA_WORKER_MODE=server
    RUN_MIGRATIONS=true
    ```
-   (Generated domains are HTTP. Then use `http://` in the three CORS values.) Leave **Build Time Arguments** empty.
+   (Generated domains are HTTP. Then use `http://` in the three CORS values.)
+
+   **Phase 1 variables** (add below the block above; each group is optional, and an empty group turns that feature off or makes it only log). Meaning of every value: `ecommerce/backend/.env.example`. Secrets go only here, never in chat or git.
+   ```
+   # File storage (P1-05): RustFS / SeaweedFS / AWS S3, one bucket per shop and environment
+   S3_FILE_URL=https://<public storage host>/<bucket>
+   S3_ACCESS_KEY_ID=<key>
+   S3_SECRET_ACCESS_KEY=<secret>
+   S3_REGION=us-east-1
+   S3_BUCKET=<bucket>
+   S3_ENDPOINT=<storage API URL>
+   S3_FORCE_PATH_STYLE=true
+   S3_ACL=false
+   # Admin upload limits (P1-11, P1-12); empty = 0.8 MB default, 5 MB ceiling
+   UPLOAD_MAX_FILE_SIZE_MB=
+   UPLOAD_MAX_FILE_SIZE_CEILING_MB=
+   # Order emails (P1-04)
+   RESEND_API_KEY=<Resend key>
+   RESEND_FROM=My Shop <orders@<verified domain>>
+   # Staff Telegram alerts (P1-04)
+   TELEGRAM_BOT_TOKEN=<staff bot token>
+   TELEGRAM_CHAT_ID=<staff group id, negative>
+   # Customer Telegram updates (P1-17): a separate bot
+   TELEGRAM_CUSTOMER_BOT_TOKEN=<customer bot token>
+   TELEGRAM_CUSTOMER_BOT_USERNAME=<customer bot username, without @>
+   TELEGRAM_CUSTOMER_WEBHOOK_SECRET=<openssl rand -hex 32>
+   # ABA PayWay (P1-03); empty API URL = sandbox
+   PAYWAY_MERCHANT_ID=<merchant id>
+   PAYWAY_API_KEY=<the "Public Key" from ABA's email>
+   PAYWAY_API_URL=
+   PAYWAY_RETURN_URL=https://<api host>/hooks/payment/payway_payway
+   # Storefront cache refresh (P1-10) and PayWay's return to the shop
+   STOREFRONT_URL=https://<shop host>
+   REVALIDATE_SECRET=<openssl rand -hex 32, same on worker and storefront>
+   ```
+   PayWay notes (P1-03, checked on staging 2026-10-03): `PAYWAY_API_KEY` is the **Public Key** (40 characters), on one line with no quotes or spaces. `PAYWAY_API_URL` is only the base (`https://checkout.payway.com.kh` for live), **never** the full purchase URL. The RSA keys are not used. Check the lengths from the backend terminal without printing the values:
+   ```bash
+   node -e 'for (const k of ["PAYWAY_MERCHANT_ID","PAYWAY_API_KEY","PAYWAY_API_URL","PAYWAY_RETURN_URL"]) console.log(k, (process.env[k]||"").length)'
+   ```
+   **Build Time Arguments:** empty, unless you raise the upload ceiling above 5 MB: then also add `UPLOAD_MAX_FILE_SIZE_CEILING_MB=<same value>` here and **Rebuild**, because the admin's own size check is baked in at build time (F-027).
 
    > **Check before saving:** `DATABASE_URL` comes from **`ecommerce-postgres`**, and `REDIS_URL` from **`ecommerce-redis`**. A Redis URL in `DATABASE_URL` makes migrations hang for 60 s with `Knex: Timeout acquiring a connection`, and the domain shows Bad Gateway (seen on staging, finding F-012).
 6. **Domains → Add Domain**: host `<api host>`, path `/`, **container port `9000`**, HTTPS on (Let's Encrypt) if you use your own DNS.
@@ -82,7 +121,7 @@ openssl rand -base64 32   # COOKIE_SECRET
    DISABLE_MEDUSA_ADMIN=true
    RUN_MIGRATIONS=false
    ```
-   Notification keys (`RESEND_API_KEY`, `RESEND_FROM`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, TASKS P1-04) go on **both** apps: the worker runs the `order.placed` subscriber. Empty = that channel only logs. Enter them only in Dokploy, never in chat or git.
+   Copy **all** the Phase 1 variables from step 2.5 to the worker too: it sends the order emails and Telegram messages, handles PayWay's callback and calls the storefront's cache refresh. Only the two `UPLOAD_*` values may be left out (uploads never reach the worker). Enter them only in Dokploy, never in chat or git.
 3. **No domain. No health check.** Medusa still opens its HTTP listener in worker mode (the log shows `Server is ready on port: 9000`), but it is internal only and not routed, so nothing needs to probe it. Swarm **Update Config**:
    ```json
    { "Parallelism": 1, "Delay": 10000000000, "FailureAction": "rollback", "Order": "stop-first" }
@@ -98,12 +137,12 @@ openssl rand -base64 32   # COOKIE_SECRET
    NEXT_PUBLIC_MEDUSA_BACKEND_URL=https://<api host>
    NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=<pk_… from step 2.10>
    NEXT_PUBLIC_BASE_URL=https://<shop host>
-   NEXT_PUBLIC_DEFAULT_REGION=dk
+   NEXT_PUBLIC_DEFAULT_REGION=kh
    NEXT_PUBLIC_STRIPE_KEY=
-   S3_IMAGE_HOSTNAME=
+   S3_IMAGE_HOSTNAME=<host part of the backend's S3_FILE_URL>
    S3_IMAGE_PATHNAME=/**
    ```
-   (`dk` is one of the seeded countries: gb, de, dk, se, fr, es, it.)
+   (`kh` is the Cambodia region from `seed.js`, step 2.10. A database with only the demo seed has no `kh`: use one of its countries, e.g. `dk`, until you run `seed.js`. `NEXT_PUBLIC_STRIPE_KEY` stays empty: payments go through ABA PayWay, F-022.)
 3. **Environment → Environment Variables** (runtime):
    ```
    NODE_ENV=production
@@ -122,7 +161,7 @@ openssl rand -base64 32   # COOKIE_SECRET
      Interval `30000000000`, Timeout `10000000000`, Start Period `60000000000`, Retries `3`, then **Save Health Check**.
      Don't paste a JSON array into one box (Docker gets one invalid item and never runs the check), and don't use `CMD` with the whole command in one box (Docker tries to run the whole line as a program). Both leave the task stuck in "Starting" or unhealthy. Check on the server after a deploy: `docker ps --filter name=<service> --format '{{.Names}} {{.Status}}'` must show `(healthy)`.
    **Update Config:** same as the backend (`start-first`, `rollback`), including the form-field note there.
-6. **Deploy.** Open `https://<shop host>/`: it redirects to `/dk` and shows the store.
+6. **Deploy.** Open `https://<shop host>/`: it redirects to `/kh` (or the region you set) and shows the store.
 
    **Checks that catch the staging mistakes seen so far:**
    - The key must see products (Medusa's own default key sees **0**, finding F-017):
@@ -231,3 +270,25 @@ Restores into a **throwaway** Postgres container on the server. The live databas
 
 ### 7.4 Real disaster recovery (only when the live data is lost or broken)
 Dokploy → **ecommerce-postgres → Backups → Restore Backup** restores a chosen file **into the live database, replacing what is there**. Before using it: **Stop** the backend and the worker (no writes during the restore), take note of what will be lost (everything after the backup time), restore, then **Deploy** backend and worker and check `/health` and the latest order in the admin. Practice it on staging, never first on production.
+
+---
+
+## 8. Phase 1 go-live steps (once per project; repeat for production)
+
+Do these after the backend, worker and storefront are deployed with the step 2.5 variables. Production (TASKS P1-08) uses its own project, hosts, bucket, bots and **live** PayWay credentials.
+
+1. **Cambodia shop data.** If not done in step 2.10: `docker-entrypoint.sh medusa exec ./src/scripts/seed.js` in the backend terminal, and the storefront's `NEXT_PUBLIC_DEFAULT_REGION=kh` (rebuild).
+2. **ABA PayWay.**
+   - Ask ABA to **whitelist** the shop and API hosts and the Dokploy server's public IP (sandbox and live are separate). Without it PayWay answers `6: wrong domain`.
+   - Admin → **Settings → Regions → Cambodia → Payment providers**: add **payway** (`pp_payway_payway`) and save. Without this the checkout shows no ABA PayWay option.
+   - Test: pay one order with the sandbox success card (PayWay Resources page). The order must show as **Paid** (captured), and the backend log a `POST /hooks/payment/payway_payway` with 200. Never scan the sandbox KHQR with a real banking app.
+   - Refunds are not automatic yet: refund in the PayWay merchant portal, then record it in the admin.
+3. **Customer Telegram bot webhook** (once, and again after a host change). In the **backend** terminal (it already has the bot token and secret):
+   ```bash
+   docker-entrypoint.sh medusa exec ./src/scripts/telegram-set-webhook.js https://<api host>/telegram/webhook
+   ```
+   The log must end with `Telegram webhook set to https://<api host>/telegram/webhook`. Test: place an order, tap **Get order updates on Telegram** on the confirmation page, press Start in the bot: the "order confirmed" message arrives.
+4. **Notifications check.** One test order must send the customer email (if an email was given), the staff Telegram alert, and, after fulfil → ship → deliver in the admin, the staff and customer updates.
+5. **Uploads.** Upload a product image of a few MB in the admin: it must be stored in the bucket and show in the shop.
+6. **Cache refresh.** `curl -s -o /dev/null -w '%{http_code}\n' -X POST https://<shop host>/api/revalidate` answers `401`. A product price change shows in the shop within seconds.
+7. **Backups.** Set up §7.1–7.2 and run the §7.3 restore test once before taking real orders.

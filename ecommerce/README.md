@@ -1,8 +1,8 @@
 # Ecommerce — `ecommerce/`
 
-> **Direct-to-consumer online store.** Planned — Phase 1. Scope: [BUILD_PLAN.md §6.1](../BUILD_PLAN.md).
+> **Direct-to-consumer online store for Cambodia.** Phase 1 built and running on staging; production deploy is TASKS P1-08. Scope: [BUILD_PLAN.md §6.1](../BUILD_PLAN.md).
 >
-> The `Dockerfile` and `.env.example` files here are **ready templates**. Application code is added in the build phase; until then a Dokploy build of these folders will fail at `COPY package.json`.
+> Features: ABA PayWay checkout, Cambodian addresses (province/district lists, postal codes), phone-first contact with optional email and Telegram, order emails (Resend), staff and customer Telegram updates, S3 file storage, admin upload limits, storefront cache refresh, daily database backups.
 
 This folder is **one complete business project**. Copy the whole folder's setup into one Dokploy project and every piece deploys on its own.
 
@@ -32,14 +32,18 @@ Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Doc
 
 ## Deploy order (first time)
 
-1. Create `ecommerce-postgres` and `ecommerce-redis`.
-2. Deploy `ecommerce-backend` (server). Migrations run on start. Check `https://api.example.com/health`.
+Full steps with every Dokploy field: [DOKPLOY_STAGING.md](./DOKPLOY_STAGING.md) (the same steps serve production, with production values).
+
+1. Create `ecommerce-postgres` and `ecommerce-redis` (runbook §1).
+2. Deploy `ecommerce-backend` (server) with the core **and Phase 1** variables (runbook §2.5). Migrations run on start. Check `https://api.example.com/health`.
 3. Create the first admin user from the backend's Dokploy terminal:
    `docker-entrypoint.sh medusa user -e you@example.com -p <password>`
-4. In the admin: create a region, a sales channel and a **publishable API key**.
-5. Deploy `ecommerce-worker` (same Build Path, worker overrides).
-6. Put the publishable key and backend URL into the storefront's **Build-time Arguments**, then deploy `ecommerce-storefront`.
+4. Seed the Cambodia shop data: `docker-entrypoint.sh medusa exec ./src/scripts/seed.js` (region, currencies, stock location, delivery option; safe to re-run). It reuses the store, sales channel and **publishable API key** Medusa creates on first boot: copy that key (`pk_…`) from admin → Settings → Publishable API Keys (runbook §2.10).
+5. Deploy `ecommerce-worker` (same image, worker overrides, the same Phase 1 variables; runbook §3).
+6. Put the publishable key, backend URL and `NEXT_PUBLIC_DEFAULT_REGION=kh` into the storefront's **Build-time Arguments**, set `REVALIDATE_SECRET`, then deploy `ecommerce-storefront` (runbook §4).
 7. Set the final domains in the backend CORS variables and redeploy the backend.
+8. Go-live steps (runbook §8): add **payway** to the Cambodia region, ask ABA to whitelist the hosts and server IP, register the customer bot's Telegram webhook, test one order end to end.
+9. Database backups and one restore test (runbook §7).
 
 After the first deploy, every service can be redeployed, rebuilt or rolled back **independently**.
 
@@ -56,11 +60,11 @@ second environment inside the production project:
 | `ecommerce-postgres`, `ecommerce-redis` | its **own** Postgres and Redis (never the production ones) |
 | `api.example.com`, `shop.example.com` | `api.staging.example.com`, `shop.staging.example.com` |
 | production S3 bucket | its own bucket, or a `staging/` prefix (`S3_FILE_URL`, `S3_IMAGE_HOSTNAME` point at it) |
-| real Stripe keys, real email sender | test-mode keys, `notification-local` where possible |
+| live ABA PayWay (`PAYWAY_API_URL=https://checkout.payway.com.kh`), real email sender, real bots | PayWay sandbox (`PAYWAY_API_URL` empty), its own bots and backup prefix |
 
 Same Build Paths, same watch paths, same `Dockerfile`s, same `.env.example`
 keys — only the values differ. Deploy order is the one above, including the
-manual admin user and publishable key (the key differs per project, so the
+manual admin user, the `seed.js` step and the publishable key (the key differs per project, so the
 storefront's build-time arguments differ too).
 
 Use it for the phase exit checklist: deploy the whole category to staging,
