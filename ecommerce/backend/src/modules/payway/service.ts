@@ -58,9 +58,9 @@ export type PaywayOptions = {
   api_key: string
   // https://checkout-sandbox.payway.com.kh (default) or https://checkout.payway.com.kh
   api_url?: string
-  // Public URL of /hooks/payment/payway_payway, e.g. https://e-api.nokor24.com/hooks/payment/payway_payway
+  // Public URL of /hooks/payment/payway_payway, e.g. https://api.example.com/hooks/payment/payway_payway
   return_url: string
-  // Public storefront URL, e.g. https://e-shop.nokor24.com
+  // Public storefront URL, e.g. https://shop.example.com
   storefront_url: string
   // Minutes the customer has to pay (PayWay min 3; default 30).
   lifetime_minutes?: number

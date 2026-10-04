@@ -9,7 +9,7 @@ import { notifyOrderStatusWorkflow } from "../../src/workflows/telegram-customer
 // Customer order updates on Telegram (TASKS P1-17). The route and webhook read
 // these at request time. No TELEGRAM_CUSTOMER_BOT_TOKEN, so the
 // "telegram_customer" channel goes to notification-local (logs only).
-process.env.TELEGRAM_CUSTOMER_BOT_USERNAME = "nokor24_shop_bot"
+process.env.TELEGRAM_CUSTOMER_BOT_USERNAME = "example_shop_bot"
 process.env.TELEGRAM_CUSTOMER_WEBHOOK_SECRET = "test_webhook_secret"
 jest.setTimeout(120 * 1000)
 
@@ -34,12 +34,12 @@ medusaIntegrationTestRunner({
             currency_code: "usd",
             items: [{ title: "Medusa Shorts", variant_title: "L", quantity: 1, unit_price: 15 }],
             shipping_address: {
-              first_name: "Tola",
+              first_name: "Test",
               address_1: "Sihanouk Blvd",
               city: "Lvea Aem District",
               province: "Kandal",
               country_code: "kh",
-              phone: "010 622 335",
+              phone: "012 345 678",
             },
           },
         ])
@@ -70,7 +70,7 @@ medusaIntegrationTestRunner({
         const { query, order, store } = await setup()
 
         const { data } = await api.get(`/store/orders/${order.id}/telegram-link`, store)
-        expect(data.url).toMatch(/^https:\/\/t\.me\/nokor24_shop_bot\?start=[A-Za-z0-9_-]{1,64}$/)
+        expect(data.url).toMatch(/^https:\/\/t\.me\/example_shop_bot\?start=[A-Za-z0-9_-]{1,64}$/)
         const payload = new URL(data.url).searchParams.get("start")!
 
         // Wrong secret: refused, nothing linked.

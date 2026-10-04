@@ -2,9 +2,9 @@
 
 Follow the steps in order. Field names are Dokploy's own (docs.dokploy.com, checked 2026-09-25). The project layout is decision **D6** (`TASKS.md`). Sections 1–6 are the Phase 0 base setup. **Phase 1 features** (S3 file storage, upload limits, email and Telegram notifications, ABA PayWay, cache refresh) add the variables in step 2.5 and the go-live steps in **§8**. Backups are **§7**.
 
-**You need:** a Dokploy server with the GitHub provider connected to `tolakang/medusa-apps` (Dokploy → Git → GitHub App), and two hostnames. Either use your DNS (`api.staging.<your-domain>`, `shop.staging.<your-domain>` → the Dokploy server IP), or use Dokploy's **Generated** domains.
+**You need:** a Dokploy server with the GitHub provider connected to `<github-owner>/medusa-apps` (Dokploy → Git → GitHub App), and two hostnames. Either use your DNS (`api.staging.<your-domain>`, `shop.staging.<your-domain>` → the Dokploy server IP), or use Dokploy's **Generated** domains.
 
-**Hosts in use (owner, 2026-09-29):** `<api host>` = `e-api.nokor24.com`, `<shop host>` = `e-shop.nokor24.com` (earlier `api2.nokor24.com` / `shop2.nokor24.com`). Changing hosts means: backend `STORE_CORS`, `ADMIN_CORS`, `AUTH_CORS`, `STOREFRONT_URL` (and `MEDUSA_BACKEND_URL` if set); worker `STOREFRONT_URL`; storefront build args `NEXT_PUBLIC_MEDUSA_BACKEND_URL` and `NEXT_PUBLIC_BASE_URL` (rebuild); the Domains tab of both apps; and the customer bot's webhook (`telegram-set-webhook.js https://<api host>/telegram/webhook`, TASKS P1-17).
+**Placeholders:** `<api host>` and `<shop host>` are your backend and storefront hostnames; the examples in this repo use `api.staging.example.com` / `shop.staging.example.com` for staging and `api.example.com` / `shop.example.com` for production. Changing hosts means: backend `STORE_CORS`, `ADMIN_CORS`, `AUTH_CORS`, `STOREFRONT_URL` (and `MEDUSA_BACKEND_URL` if set); worker `STOREFRONT_URL`; storefront build args `NEXT_PUBLIC_MEDUSA_BACKEND_URL` and `NEXT_PUBLIC_BASE_URL` (rebuild); the Domains tab of both apps; and the customer bot's webhook (`telegram-set-webhook.js https://<api host>/telegram/webhook`, TASKS P1-17).
 
 **Values to generate** (on your own machine, never commit them):
 ```bash
@@ -210,9 +210,9 @@ Reply with: **`<api host>`**, **`<shop host>`**, and which Dockerfile path setti
 Set up and tested on staging 2026-10-03. Backups hold customer names, phones, addresses and orders: treat the bucket and its key like a password.
 
 ### 7.1 Storage: a private bucket and its own key
-1. RustFS console: create a bucket for backups only (staging: `dokploy-kt`). **Private**: no anonymous or public-read policy. Never use the shop's public image bucket.
+1. RustFS console: create a bucket for backups only (staging: `ecommerce-backups`). **Private**: no anonymous or public-read policy. Never use the shop's public image bucket.
 2. Create an access key that can only reach that bucket: `s3:ListBucket` on `arn:aws:s3:::<bucket>`, and `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject`, `s3:AbortMultipartUpload` on `arn:aws:s3:::<bucket>/*`.
-3. Dokploy → **Settings → S3 Destinations → Create** (staging: `S3-e-commerce`): Provider **Any other S3 compatible provider**, the key, **Bucket** `<bucket>`, **Region** `us-east-1`, **Endpoint** the RustFS **S3 API** address (staging `https://s3-rustfs.ktola.org`), **Additional Flags**:
+3. Dokploy → **Settings → S3 Destinations → Create** (staging: `ecommerce-backups-s3`): Provider **Any other S3 compatible provider**, the key, **Bucket** `<bucket>`, **Region** `us-east-1`, **Endpoint** the RustFS **S3 API** address (staging `https://s3.storage.example.com`), **Additional Flags**:
    - `--streaming-upload-cutoff=200M`: Dokploy streams the dump into `rclone rcat`, which otherwise uses a multipart upload; RustFS before the scanner fix (rustfs/rustfs#6135, fixed by PR #6624, in 1.0.0+) refuses to complete multipart uploads with `503 Bucket quota check temporarily unavailable`. Below 200 MB the upload is one request. Optional once RustFS is 1.0.0 or newer.
 
    **Test connection** must succeed. It only checks that the bucket can be listed, not that uploads work: always do a manual run (7.2).

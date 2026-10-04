@@ -11,7 +11,7 @@ import { isValidPhone } from "./phone"
 export const TELEGRAM_CONTACT_KEY = "telegram_contact"
 
 export const TELEGRAM_CONTACT_MESSAGE =
-  "Telegram: enter a username like @nokor24 (5–32 letters, digits or _) or a phone number."
+  "Telegram: enter a username like @your_username (5–32 letters, digits or _) or a phone number."
 
 const USERNAME = /^@?[A-Za-z][A-Za-z0-9_]{4,31}$/
 

@@ -17,8 +17,8 @@ const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn() } as unknown
 const options = {
   merchant_id: "ec000002",
   api_key: API_KEY,
-  return_url: "https://e-api.nokor24.com/hooks/payment/payway_payway",
-  storefront_url: "https://e-shop.nokor24.com",
+  return_url: "https://api.example.com/hooks/payment/payway_payway",
+  storefront_url: "https://shop.example.com",
 }
 
 describe("PayWay signing", () => {
@@ -29,12 +29,12 @@ describe("PayWay signing", () => {
         merchant_id: "ec000002",
         tran_id: "17593200000001234",
         amount: "63.00",
-        firstname: "Tola",
-        lastname: "Kang",
-        phone: "010622335",
+        firstname: "Test",
+        lastname: "Customer",
+        phone: "012345678",
         return_url: Buffer.from(options.return_url).toString("base64"),
-        cancel_url: "https://e-shop.nokor24.com/kh/checkout?step=review",
-        continue_success_url: "https://e-shop.nokor24.com/kh/checkout/payway-return",
+        cancel_url: "https://shop.example.com/kh/checkout?step=review",
+        continue_success_url: "https://shop.example.com/kh/checkout/payway-return",
         currency: "USD",
         return_params: '{"session_id":"payses_123"}',
         lifetime: "30",
@@ -44,7 +44,7 @@ describe("PayWay signing", () => {
       API_KEY
     )
     expect(form.hash).toEqual(
-      "Eegejpz2bhseZ6VtRCDRN1AYbVGbeZUcVs4N0QHUUWeIBUtqjB2kfDs/vZxPXlsjA+/2JxilVJmTFnI99fbkzQ=="
+      "NvI1j5w+VuaKX6gLtRoCwVm6SeQQQKp6svoYhTGre8eVjMlh5rRoufRppJXXdSNpk7aAINAbfe2vwbjAtXuHhA=="
     )
     // Empty fields are not posted.
     expect(form).not.toHaveProperty("email")
@@ -116,9 +116,9 @@ describe("PayWay provider", () => {
       data: {
         session_id: "payses_123",
         country_code: "kh",
-        firstname: "Tola",
-        lastname: "Kang",
-        phone: "010 622 335",
+        firstname: "Test",
+        lastname: "Customer",
+        phone: "012 345 678",
       },
     })
     const data = result.data as Record<string, any>
@@ -132,10 +132,10 @@ describe("PayWay provider", () => {
       tran_id: data.tran_id,
       amount: "63.00",
       currency: "USD",
-      phone: "010622335",
+      phone: "012345678",
       return_params: '{"session_id":"payses_123"}',
-      continue_success_url: "https://e-shop.nokor24.com/kh/checkout/payway-return",
-      cancel_url: "https://e-shop.nokor24.com/kh/checkout?step=review",
+      continue_success_url: "https://shop.example.com/kh/checkout/payway-return",
+      cancel_url: "https://shop.example.com/kh/checkout?step=review",
     })
     expect(Buffer.from(data.form.return_url, "base64").toString()).toEqual(options.return_url)
     const { hash, ...fields } = data.form

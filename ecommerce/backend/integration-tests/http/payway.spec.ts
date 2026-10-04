@@ -15,8 +15,8 @@ import { callbackSignature, signPurchase } from "../../src/modules/payway/client
 // Fake credentials: medusa-config registers pp_payway_payway when these are set.
 process.env.PAYWAY_MERCHANT_ID = "ec000002"
 process.env.PAYWAY_API_KEY = "test-api-key"
-process.env.PAYWAY_RETURN_URL = "https://e-api.nokor24.com/hooks/payment/payway_payway"
-process.env.STOREFRONT_URL = "https://e-shop.nokor24.com"
+process.env.PAYWAY_RETURN_URL = "https://api.example.com/hooks/payment/payway_payway"
+process.env.STOREFRONT_URL = "https://shop.example.com"
 jest.setTimeout(180 * 1000)
 
 const PAYWAY = "https://checkout-sandbox.payway.com.kh"
@@ -93,8 +93,8 @@ medusaIntegrationTestRunner({
         const cartId = data.cart.id
         await api.post(`/store/carts/${cartId}/line-items`, { variant_id: variant.id, quantity: 1 }, store)
         const address = {
-          first_name: "Tola",
-          last_name: "Kang",
+          first_name: "Test",
+          last_name: "Customer",
           address_1: "#111",
           province: "Phnom Penh",
           city: "Khan Chamkar Mon",
@@ -117,7 +117,7 @@ medusaIntegrationTestRunner({
           `/store/payment-collections/${payment_collection.id}/payment-sessions`,
           {
             provider_id: "pp_payway_payway",
-            data: { country_code: "kh", firstname: "Tola", lastname: "Kang", phone: "012 345 678" },
+            data: { country_code: "kh", firstname: "Test", lastname: "Customer", phone: "012 345 678" },
           },
           store
         )
