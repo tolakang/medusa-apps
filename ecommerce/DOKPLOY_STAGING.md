@@ -238,7 +238,19 @@ f=$(ls -t /etc/dokploy/logs/backup-*/*.log | head -1); grep -v -i "secret\|acces
 It must end with `✅ Backup uploaded to S3 successfully`, and the file must appear in the bucket. Dokploy's own service log (`docker service logs dokploy`) prints the full upload command **including the S3 keys**: never paste it anywhere without removing that line.
 
 ### 7.3 Restore test (proves the backup is usable; do it after setup and before going live)
-Restores into a **throwaway** Postgres container on the server. The live database is not touched.
+Restores into a **throwaway** database. The live database is not touched. Use **A** (done on staging 2026-10-04); **B** needs the file copied to the server over SSH.
+
+**A. With Dokploy (no file copy)**
+1. **Create Service → Database → PostgreSQL**: name `ecommerce-restore-test`, Database Name `ecommerce`, Docker image `postgres:18` (type it; grey text is only a placeholder). **Create**, then **Deploy**, and check `docker service ls | grep -i restore` shows `1/1` (Dokploy's restore fails with "no such service" on a service that was never deployed).
+2. Open **`ecommerce-restore-test`** (check the name at the top of the page; never the live service) → **Backups → Restore Backup**: the destination, the newest file (type `<postgres service name>/` in the search box), Database Name `ecommerce`, **Restore**. The log must end with `Restore completed successfully!`. The file list keeps "Loading…" while the storage server is unreachable.
+3. Check, on the server:
+   ```bash
+   c=$(docker ps --format '{{.Names}}' | grep restoretest | head -1); echo "$c"; docker exec "$c" sh -c 'psql -U "$POSTGRES_USER" -d ecommerce -c "select count(*) as orders, max(display_id) as last_order from \"order\";" -c "select count(*) as products from product where deleted_at is null;"'
+   ```
+   `last_order` must equal the newest order in the admin at the backup time.
+4. Delete the `ecommerce-restore-test` service (it holds customer data).
+
+**B. In the terminal**
 
 1. **Get the newest backup onto the server.** RustFS console → the backup folder → download the newest `.sql.gz` to your computer, then copy it to the server:
    ```bash
