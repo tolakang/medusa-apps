@@ -4,12 +4,12 @@ import { renderMessage } from "../../modules/telegram/templates"
 import { ORDER_PLACED_STAFF_TEMPLATE } from "../../lib/order-notification"
 
 describe("isValidTelegramContact", () => {
-  it.each(["@nokor24", "nokor24", "Tola_Kang", "012 345 678", "+855 12 345 678", "", null, undefined])(
+  it.each(["@example_shop", "example_shop", "Test_Customer", "012 345 678", "+855 12 345 678", "", null, undefined])(
     "accepts %p",
     (value) => expect(isValidTelegramContact(value)).toBe(true)
   )
 
-  it.each(["@abc", "1abcdef", "tola kang", "@tola-kang", "https://t.me/nokor24", "12345", 42])(
+  it.each(["@abc", "1abcdef", "test customer", "@test-customer", "https://t.me/example_shop", "12345", 42])(
     "refuses %p",
     (value) => expect(isValidTelegramContact(value)).toBe(false)
   )
@@ -17,9 +17,9 @@ describe("isValidTelegramContact", () => {
 
 describe("telegramContactLabel", () => {
   it("links usernames and adds the @", () => {
-    expect(telegramContactLabel("nokor24")).toEqual({
-      text: "@nokor24",
-      url: "https://t.me/nokor24",
+    expect(telegramContactLabel("example_shop")).toEqual({
+      text: "@example_shop",
+      url: "https://t.me/example_shop",
     })
   })
 
@@ -35,11 +35,11 @@ describe("telegramContactLabel", () => {
 
 describe("phoneProblem with the Telegram contact", () => {
   it("refuses an invalid Telegram contact in the cart metadata", () => {
-    expect(phoneProblem({ metadata: { telegram_contact: "tola kang" } })).toMatch(/^Telegram: /)
+    expect(phoneProblem({ metadata: { telegram_contact: "test customer" } })).toMatch(/^Telegram: /)
   })
 
   it("passes a valid or empty one", () => {
-    expect(phoneProblem({ metadata: { telegram_contact: "@nokor24" } })).toBeNull()
+    expect(phoneProblem({ metadata: { telegram_contact: "@example_shop" } })).toBeNull()
     expect(phoneProblem({ metadata: { telegram_contact: "" } })).toBeNull()
     expect(phoneProblem({ metadata: { other: "x" } })).toBeNull()
   })
@@ -48,9 +48,9 @@ describe("phoneProblem with the Telegram contact", () => {
 describe("staff alert", () => {
   it("shows the customer's Telegram link when given", () => {
     const text = renderMessage(ORDER_PLACED_STAFF_TEMPLATE, {
-      order: { display_id: 7, total: 15, metadata: { telegram_contact: "nokor24" } },
+      order: { display_id: 7, total: 15, metadata: { telegram_contact: "example_shop" } },
     })
-    expect(text).toContain("Telegram: https://t.me/nokor24")
+    expect(text).toContain("Telegram: https://t.me/example_shop")
   })
 
   it("leaves the line out when there is none", () => {

@@ -15,7 +15,7 @@ export const telegramInputProps = {
   spellCheck: false,
   pattern: `${USERNAME_PATTERN}|${PHONE_PATTERN}`,
   title:
-    "A Telegram username like @nokor24, or the phone number you use on Telegram.",
+    "A Telegram username like @your_username, or the phone number you use on Telegram.",
 } as const
 
 // "@user" with a t.me link for usernames; the number as typed otherwise.

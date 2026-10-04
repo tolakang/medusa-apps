@@ -38,8 +38,8 @@ medusaIntegrationTestRunner({
         const { data } = await api.post("/store/carts", { region_id: region.id }, { headers })
         const cartId = data.cart.id
         const address = {
-          first_name: "Tola",
-          last_name: "Kang",
+          first_name: "Test",
+          last_name: "Customer",
           address_1: "Sihanouk Blvd",
           city: "Phnom Penh",
           country_code: "kh",
@@ -87,8 +87,8 @@ medusaIntegrationTestRunner({
         const { data } = await api.post("/store/carts", { region_id: region.id }, { headers })
         const cartId = data.cart.id
         const address = {
-          first_name: "Tola",
-          last_name: "Kang",
+          first_name: "Test",
+          last_name: "Customer",
           address_1: "St 310",
           city: "Khan Chamkar Mon",
           province: "Phnom Penh",

@@ -18,7 +18,7 @@ import { renderMessage } from "../../src/modules/telegram/templates"
 // (user + auth identity + JWT signed with the default test secret).
 // Customer bot settings for the Telegram steps (P1-17); no bot token, so its
 // channel only logs.
-process.env.TELEGRAM_CUSTOMER_BOT_USERNAME = "nokor24_shop_bot"
+process.env.TELEGRAM_CUSTOMER_BOT_USERNAME = "example_shop_bot"
 process.env.TELEGRAM_CUSTOMER_WEBHOOK_SECRET = "test_webhook_secret"
 jest.setTimeout(180 * 1000)
 
@@ -77,8 +77,8 @@ medusaIntegrationTestRunner({
         // 3. Address and contact, as the Cambodian checkout sends them:
         // phone required, no email, optional Telegram contact (P1-14–P1-16).
         const address = {
-          first_name: "Tola",
-          last_name: "Kang",
+          first_name: "Test",
+          last_name: "Customer",
           address_1: "#111, St 310",
           province: "Phnom Penh",
           city: "Khan Chamkar Mon",
@@ -92,7 +92,7 @@ medusaIntegrationTestRunner({
             shipping_address: address,
             billing_address: address,
             email: null,
-            metadata: { telegram_contact: "@tola_kang" },
+            metadata: { telegram_contact: "@test_customer" },
           },
           store
         )
@@ -159,7 +159,7 @@ medusaIntegrationTestRunner({
           phone: "012 345 678",
         })
         expect(order.shipping_methods.map((m) => m.name)).toEqual(["Phnom Penh Delivery"])
-        expect(order.metadata).toMatchObject({ telegram_contact: "@tola_kang" })
+        expect(order.metadata).toMatchObject({ telegram_contact: "@test_customer" })
         expect(order.total).toBeGreaterThan(unitPrice)
 
         // 8. Staff get the Telegram alert (local provider in tests); no

@@ -32,12 +32,12 @@ describe("signed order links", () => {
 
   it("builds the t.me deep link from the env", () => {
     const config = telegramCustomerConfig({
-      TELEGRAM_CUSTOMER_BOT_USERNAME: "@nokor24_shop_bot",
+      TELEGRAM_CUSTOMER_BOT_USERNAME: "@example_shop_bot",
       TELEGRAM_CUSTOMER_WEBHOOK_SECRET: SECRET,
     })
-    expect(config).toEqual({ botUsername: "nokor24_shop_bot", secret: SECRET })
+    expect(config).toEqual({ botUsername: "example_shop_bot", secret: SECRET })
     expect(telegramStartUrl(ORDER_ID, config!)).toEqual(
-      `https://t.me/nokor24_shop_bot?start=${orderLinkPayload(ORDER_ID, SECRET)}`
+      `https://t.me/example_shop_bot?start=${orderLinkPayload(ORDER_ID, SECRET)}`
     )
     expect(telegramCustomerConfig({ TELEGRAM_CUSTOMER_BOT_USERNAME: "x" })).toBeNull()
   })
@@ -45,7 +45,7 @@ describe("signed order links", () => {
   it("reads /start commands", () => {
     expect(startPayload("/start abc_DEF-1")).toEqual("abc_DEF-1")
     expect(startPayload("/start")).toEqual("")
-    expect(startPayload("/start@nokor24_shop_bot abc")).toEqual("abc")
+    expect(startPayload("/start@example_shop_bot abc")).toEqual("abc")
     expect(startPayload("hello")).toBeNull()
     expect(startPayload(undefined)).toBeNull()
   })
@@ -111,9 +111,9 @@ describe("staff status alerts", () => {
     currency_code: "usd",
     total: 63,
     shipping_address: {
-      first_name: "Tola",
-      last_name: "Kang",
-      phone: "010 622 335",
+      first_name: "Test",
+      last_name: "Customer",
+      phone: "012 345 678",
       address_1: "#111",
       city: "Thma Koul District",
       province: "Battambang",
@@ -124,8 +124,8 @@ describe("staff status alerts", () => {
     expect(renderMessage("order-shipped-staff", { order })).toEqual(
       [
         "🚚 Order #6 shipped — $63.00",
-        "Customer: Tola Kang",
-        "Phone: 010 622 335",
+        "Customer: Test Customer",
+        "Phone: 012 345 678",
         "Address: #111, Thma Koul District, Battambang",
       ].join("\n")
     )
