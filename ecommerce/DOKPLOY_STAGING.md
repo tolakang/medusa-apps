@@ -307,9 +307,16 @@ Do these after the backend, worker and storefront are deployed with the step 2.5
 
 ---
 
-## 9. Smoke test after every deploy (about 5–10 minutes)
+## 9. Smoke test after every deploy
 
 CI proves the code (tests, image build, `/health` on an empty database). This checks the **deployed** shop with its real settings. Run it on staging after every deploy, before promoting to production, and on production right after its deploy (BUILD_PLAN §8 "smoke test, then production"). Stop at the first ❌ and send the output; don't change settings first (DEV_FLOW §6).
+
+This adds no delay to the deploy itself: it is what you check once Dokploy shows the deploy as done, while the shop keeps running. Pick the size:
+
+| Check | Takes you | When |
+|---|---|---|
+| **Quick** | about 1 minute | small changes (texts, styling, docs-only deploys): the four `curl` lines below and a look at the shop |
+| **Full** | about 5–10 minutes | before promoting to production, every production deploy, and any backend change touching payments, notifications, migrations or env values: everything below |
 
 **From your computer** (replace the hosts; nothing secret in these):
 ```bash
