@@ -152,6 +152,44 @@ medusaIntegrationTestRunner({
         ])
       })
 
+      it("tells staff and customers about each parcel of an order, once each", async () => {
+        const { query, order, store } = await setup()
+        const { data } = await api.get(`/store/orders/${order.id}/telegram-link`, store)
+        await webhook(`/start ${new URL(data.url).searchParams.get("start")}`)
+        const shipped = (fulfillment_id: string) =>
+          notifyOrderStatusWorkflow(getContainer()).run({
+            input: { order_id: order.id, status: "shipped", notify_customer: true, fulfillment_id },
+          })
+        await shipped("ful_parcel_1")
+        await shipped("ful_parcel_1") // the same event again: no second message
+        await shipped("ful_parcel_2")
+
+        const { data: sent } = await query.graph({
+          entity: "notification",
+          fields: ["channel", "template"],
+          filters: { resource_id: order.id },
+        })
+        const count = (key: string) =>
+          sent.filter((n) => `${n.channel}:${n.template}` === key).length
+        expect(count("telegram:order-shipped-staff")).toEqual(2)
+        expect(count("telegram_customer:order-shipped-customer")).toEqual(2)
+      })
+
+      it("keeps one link when Start is tapped twice at the same moment", async () => {
+        const { query, order, store } = await setup()
+        const { data } = await api.get(`/store/orders/${order.id}/telegram-link`, store)
+        const start = `/start ${new URL(data.url).searchParams.get("start")}`
+        const replies = await Promise.all([webhook(start), webhook(start), webhook(start)])
+        expect(replies.map((r) => r.status)).toEqual([200, 200, 200])
+
+        const { data: chats } = await query.graph({ entity: "telegram_order_chat", fields: ["id"] })
+        expect(chats).toHaveLength(1)
+        // Every tap is answered: one confirmation, the rest "already linked".
+        const templates = (await customerMessages(query, order.id)).map(([, t]) => t)
+        expect(templates.filter((t) => t === "order-confirmed-customer")).toHaveLength(1)
+        expect(templates).toHaveLength(3)
+      })
+
       it("does nothing for an unknown fulfillment", async () => {
         const { query } = await setup()
         await telegramCustomerUpdates({

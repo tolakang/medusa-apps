@@ -27,7 +27,8 @@ import type TelegramLinksModuleService from "../modules/telegram-links/service"
 type ChatInput = { order_id: string; chat_id: string }
 
 // Saves the chat for the order once; a second /start for the same order and
-// chat reuses the row.
+// chat reuses the row. Two taps at the same moment: the unique index on
+// (order_id, chat_id) refuses the second row, which then counts as existing.
 const linkTelegramChatStep = createStep(
   "link-telegram-chat",
   async (input: ChatInput, { container }) => {
@@ -36,8 +37,16 @@ const linkTelegramChatStep = createStep(
     if (existing) {
       return new StepResponse({ created: false }, null)
     }
-    const created = await service.createTelegramOrderChats(input)
-    return new StepResponse({ created: true }, created.id)
+    try {
+      const created = await service.createTelegramOrderChats(input)
+      return new StepResponse({ created: true }, created.id)
+    } catch (e) {
+      const [saved] = await service.listTelegramOrderChats(input)
+      if (saved) {
+        return new StepResponse({ created: false }, null)
+      }
+      throw e
+    }
   },
   async (createdId: string | null, { container }) => {
     if (!createdId) {
@@ -83,10 +92,16 @@ export const linkTelegramChatWorkflow = createWorkflow(
 // Order shipped / delivered / canceled → an alert to the staff group (channel
 // "telegram", owner 2026-09-29) and, unless the event says no_notification, a
 // message to every customer chat following the order (P1-17). Retry-safe: one
-// idempotency key per template, order and recipient.
+// idempotency key per template, order, fulfillment (an order sent in two
+// parcels gets two shipped and two delivered messages) and recipient.
 export const notifyOrderStatusWorkflow = createWorkflow(
   "notify-order-status",
-  function (input: { order_id: string; status: OrderStatusUpdate; notify_customer: boolean }) {
+  function (input: {
+    order_id: string
+    status: OrderStatusUpdate
+    notify_customer: boolean
+    fulfillment_id?: string
+  }) {
     const { data: orders } = useQueryGraphStep({
       entity: "order",
       fields: ORDER_NOTIFICATION_FIELDS,
@@ -102,6 +117,7 @@ export const notifyOrderStatusWorkflow = createWorkflow(
     const notifications = transform({ orders, chats, input }, ({ orders, chats, input }) => {
       const order = orders[0]
       const templates = ORDER_STATUS_TEMPLATES[input.status]
+      const event = input.fulfillment_id ? `${order.id}:${input.fulfillment_id}` : order.id
       const common = {
         data: { order },
         trigger_type: `order.${input.status}`,
@@ -115,14 +131,14 @@ export const notifyOrderStatusWorkflow = createWorkflow(
           to: "staff",
           channel: "telegram",
           template: templates.staff,
-          idempotency_key: `${templates.staff}:${order.id}`,
+          idempotency_key: `${templates.staff}:${event}`,
         },
         ...(input.notify_customer ? chats : []).map((chat) => ({
           ...common,
           to: chat.chat_id,
           channel: TELEGRAM_CUSTOMER_CHANNEL,
           template: templates.customer,
-          idempotency_key: `${templates.customer}:${order.id}:${chat.chat_id}`,
+          idempotency_key: `${templates.customer}:${event}:${chat.chat_id}`,
         })),
       ]
     })

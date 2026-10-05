@@ -125,6 +125,15 @@
           "expression": "CREATE INDEX IF NOT EXISTS \"IDX_telegram_order_chat_deleted_at\" ON \"telegram_order_chat\" (\"deleted_at\") WHERE deleted_at IS NULL"
         },
         {
+          "keyName": "IDX_telegram_order_chat_order_id_chat_id_unique",
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "primary": false,
+          "unique": false,
+          "expression": "CREATE UNIQUE INDEX IF NOT EXISTS \"IDX_telegram_order_chat_order_id_chat_id_unique\" ON \"telegram_order_chat\" (\"order_id\", \"chat_id\") WHERE deleted_at IS NULL"
+        },
+        {
           "keyName": "telegram_order_chat_pkey",
           "columnNames": [
             "id"

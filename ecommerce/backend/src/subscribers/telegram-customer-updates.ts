@@ -38,7 +38,13 @@ export default async function orderStatusUpdates({
   }
 
   await notifyOrderStatusWorkflow(container).run({
-    input: { order_id: orderId, status, notify_customer: !data.no_notification },
+    input: {
+      order_id: orderId,
+      status,
+      notify_customer: !data.no_notification,
+      // Shipped and delivered come per fulfillment (parcel); canceled per order.
+      fulfillment_id: name === "order.canceled" ? undefined : data.id,
+    },
   })
 }
 
