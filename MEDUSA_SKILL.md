@@ -1,6 +1,6 @@
 # Medusa v2 Skill: Verified Reference for This Project
 
-> **What this is:** the only Medusa knowledge the builder may use without looking it up again. Every rule below was checked on **2026-09-25** against **Medusa 2.21.1** and re-checked on **2026-10-01** against **2.21.2** (the official docs at docs.medusajs.com, the published `@medusajs/*` packages, and the official `dtc-starter` / `b2b-starter` repos). Each section cites its source.
+> **What this is:** the only Medusa knowledge the builder may use without looking it up again. Every rule below was checked on **2026-09-25** against **Medusa 2.21.1** and re-checked on **2026-10-01** against **2.21.2** and on **2026-10-05** against the current docs (2.21.2 is still npm `latest`) (the official docs at docs.medusajs.com, the published `@medusajs/*` packages, and the official `dtc-starter` / `b2b-starter` repos). Each section cites its source.
 >
 > **Reading order for the builder:** `CLAUDE.md` → `BUILD_PLAN.md` (frozen) → this file → `DEV_FLOW.md` → `TASKS.md`.
 >
@@ -15,7 +15,7 @@ Every API name, import path, option, command or config key you use must be backe
 | Rank | Source | How to check |
 |---|---|---|
 | 1 | **Installed package types** at the pinned version | `grep -rn "export declare const <name>" node_modules/@medusajs/<pkg>/dist --include='*.d.ts'` |
-| 2 | **Official docs as Markdown** | `curl -sL https://docs.medusajs.com/<path>/index.html.md`. Page index: `curl -sL https://docs.medusajs.com/llms.txt`. Full text: `https://docs.medusajs.com/llms-full.txt`. Or the official **Medusa Docs MCP** (`MedusaDocs`, `https://docs.medusajs.com/mcp`, project `.mcp.json`; from `medusajs/medusa-agent-skills`): same docs, same rank. The docs describe the **latest** Medusa, so rank 1 still wins for our pinned version. |
+| 2 | **Official docs as Markdown** | `curl -sL https://docs.medusajs.com/<path>/index.html.md`. Page index: `curl -sL https://docs.medusajs.com/llms.txt`. Full text: `https://docs.medusajs.com/llms-full.txt`. Or the official **Medusa Docs MCP** (`MedusaDocs`, `https://docs.medusajs.com/mcp`, project `.mcp.json`; from `medusajs/medusa-agent-skills`): same docs, same rank. The MCP needs a one-time authorization (`/mcp` in an interactive `claude` terminal); until then use the `curl` form. The docs describe the **latest** Medusa, so rank 1 still wins for our pinned version. |
 | 3 | **Official starters** at the matching Medusa version | `github.com/medusajs/dtc-starter` (`apps/backend`, `apps/storefront`), `github.com/medusajs/b2b-starter` |
 | 4 | **Release notes** for the version | `github.com/medusajs/medusa/releases/tag/v<version>` |
 | 5 | **Package runtime source** (last resort, to confirm behaviour) | `node_modules/@medusajs/medusa/dist/...` |
@@ -31,11 +31,11 @@ When the docs and the installed types disagree, **the installed types win** (the
 | Item | Value | Source |
 |---|---|---|
 | Medusa | `2.21.2` (npm `latest`, released 2026-09-28; 2.21.1 before) | `npm view @medusajs/medusa version`; release notes v2.21.2 |
-| Node | `^20.19.0 \|\| >=22.12.0`; docs say "less than v25". Project uses **Node 22** | `npm view @medusajs/medusa engines`; docs `resources/nextjs-starter` |
+| Node | `^20.19.0 \|\| >=22.12.0` (docs: "v20.19.0+ or v22.12.0+, LTS versions only"; with the Next.js storefront "v24 LTS or lower"). Project uses **Node 22** (Docker `node:22-bookworm-slim` = newest 22.x; CI `node-version: 22`). **Coming in 2.22** (preview only on 2026-10-05): Node 20 dropped, **Node ≥ 22.22.0** required (medusajs/medusa#17107); `dtc-starter` already sets `engines.node` `>=22.22.0` (commit `15ef93d`) | `npm view @medusajs/medusa engines`; docs `learn/installation`; `dtc-starter` commits |
 | pnpm | `12.6.0`; supported since Medusa v2.13.0 | `npm view pnpm version`; docs `learn/configurations/pnpm` |
 | Versioning | All `@medusajs/*` packages share one version, **except** design-system packages (`@medusajs/ui` = `4.2.x`). This repo pins `@medusajs/ui` to the version `@medusajs/dashboard@<release>` depends on (`4.2.6` for 2.21.2; `4.2.5` for 2.21.1), so the lockfile holds one copy — TASKS.md F-006 | docs `learn/update`; `npm view @medusajs/dashboard@2.21.2 dependencies` |
 | Minor releases | **May contain breaking changes.** Always read the release notes | docs `learn/update` |
-| Starters | `medusajs/dtc-starter` (the old `medusa-starter-default` and `nextjs-starter-medusa` are deprecated) | starter READMEs |
+| Starters | `medusajs/dtc-starter` (the old `medusa-starter-default` and `nextjs-starter-medusa` are deprecated). Latest commit checked: `15ef93d` (2026-10-02): Medusa 2.21.2 pins + `engines.node` only | starter READMEs; `gh api repos/medusajs/dtc-starter/commits` |
 
 ---
 
@@ -88,7 +88,7 @@ The snippet above is the pattern only. The real config makes the Redis modules c
 | **Postgres SSL default:** if `DATABASE_URL` matches `localhost\|127.0.0.1\|ssl_mode=(disable\|false)\|sslmode=disable`, SSL is off; **otherwise SSL is ON** (`{ rejectUnauthorized: false }`). An internal Postgres without SSL (Dokploy `<project>-postgres`, compose `postgres`) therefore hangs migrations. This project sets `projectConfig.databaseDriverOptions = { connection: { ssl: false } }` when `DATABASE_SSL=false`. Verified: reproduced with a non-localhost URL, fixed by this option. A `?ssl_mode=disable` URL param alone did **not** fix the migration connection | `@medusajs/utils/dist/modules-sdk/load-module-database-config.js` (`getDefaultDriverOptions`); docs `learn/configurations/medusa-config#databasedriveroptions` |
 | `loadEnv` only supports `NODE_ENV` values `development`, `production`, `staging`, `test` | `learn/fundamentals/environment-variables` |
 | S3 provider: `resolve: "@medusajs/medusa/file"` with provider `@medusajs/medusa/file-s3`. Options: `file_url`, `access_key_id`, `secret_access_key`, `region`, `bucket`, `endpoint`, `additional_client_config` (e.g. `forcePathStyle` for MinIO) | `resources/infrastructure-modules/file/s3` |
-| Stripe: provider `@medusajs/medusa/payment-stripe` with options `apiKey` and `webhookSecret` (required when deployed). Webhook URL: `{server_url}/hooks/payment/{provider_id}` → `/hooks/payment/stripe_stripe` | `resources/commerce-modules/payment/payment-provider/stripe` |
+| Stripe: provider `@medusajs/medusa/payment-stripe` with options `apiKey` and `webhookSecret` (required when deployed). Webhook URL: `{server_url}/hooks/payment/{provider_id}` → `/hooks/payment/stripe_stripe`. **Not used by ecommerce** (Stripe is not available in Cambodia, TASKS F-022); custom providers: §15 | `resources/commerce-modules/payment/payment-provider/stripe` |
 | The system payment provider `pp_system_default` is built in (manual payments) | `resources/commerce-modules/payment/payment-provider` |
 | The **Search Module** is registered by default since 2.21.1 (PostgreSQL provider). Indexes live in `src/search/*.ts` (the starter ships `product.ts`) | `resources/infrastructure-modules/search` |
 | Feature flags present in the 2.21.1 and 2.21.2 package source: `MEDUSA_FF_CACHING`, `MEDUSA_FF_RBAC` (default **off**, **not documented**), `MEDUSA_FF_RBAC_FILTER_FIELDS`, `MEDUSA_FF_INDEX_ENGINE`, `MEDUSA_FF_TRANSLATION`, `MEDUSA_FF_VIEW_CONFIGURATIONS`, `MEDUSA_FF_BACKEND_HMR`. **Only enable a flag the docs document** (currently: caching) | `node_modules/@medusajs/medusa/dist/feature-flags/*.js` |
@@ -123,6 +123,7 @@ export default Module(BLOG_MODULE, { service: BlogModuleService })
 - Register the module in `medusa-config.ts`: `modules: [{ resolve: "./src/modules/blog" }]`.
 - **Property types:** `id`, `text`, `number`, `float`, `bigNumber` (use for money; it also stores `raw_<name>`), `boolean`, `enum([...])`, `dateTime`, `json` (typed `json<T>()` since v2.19), `array` (`text[]`).
 - **Modifiers:** `.primaryKey()`, `.default(v)`, `.nullable()`, `.unique()`, `.index()`, `.searchable()`, `.checks([...])`.
+- **Composite / unique indexes:** `model.define(...).indexes([{ on: ["a", "b"], unique: true, where: {...} }])` (docs `learn/fundamentals/data-models/indexes`; `@medusajs/types` `EntityIndex`). The generated SQL ignores soft-deleted rows (`WHERE deleted_at IS NULL`). Adding a unique index to a table that already has data: make the generated migration clean up existing duplicates first, or the deploy fails (project rule, `telegram_links` `Migration20261005110738`).
 - `created_at`, `updated_at` and `deleted_at` are added automatically. Don't declare them.
 - **Generated service methods** come from the keys of the object passed to `MedusaService({...})`: `createPosts`, `retrievePost`, `listPosts`, `updatePosts`, `deletePosts`, `softDeletePosts`, … (reference: `resources/service-factory-reference`). *Plan spike (§9):* the method name comes from the object key, not the table name.
 - **Migrations:** `npx medusa db:generate <module>` creates `src/modules/<name>/migrations/Migration*.ts`. It needs a reachable database. **Commit the migration and its `.snapshot-*.json`.** Migration imports come from `@medusajs/framework/mikro-orm/migrations` (since v2.11.0).
@@ -151,6 +152,7 @@ export default defineLink(
 - **Create links** outside workflows: `const link = container.resolve(ContainerRegistrationKeys.LINK); await link.create({ [Modules.PRODUCT]: { product_id }, blog: { post_id } })`.
 - **Create links in workflows:** `createRemoteLinkStep(linkData)`. Remove them with `dismissRemoteLinkStep` (both from `@medusajs/medusa/core-flows`).
 - `db:migrate` syncs link tables. Removing or changing a link is an **unsafe** change (§11).
+- **Core link field aliases used in this repo** (verified in `@medusajs/link-modules/dist/definitions`): `payment_collection.cart` and `cart.payment_collection` (cart ↔ payment collection); `fulfillment.order` (order ↔ fulfillment). Query them like normal fields, e.g. `fields: ["cart.email"]` on `payment_collection`.
 
 ## 5. Query (reading across modules)
 
@@ -214,7 +216,7 @@ export const createPostWorkflow = createWorkflow("create-post",
   - `updateLineItemInCartWorkflow.hooks.validate`, `.setPricingContext`
   - `completeCartWorkflow.hooks.validate`: runs **before** the order is created and payment authorized. **Never mutate the cart** in it. Validation must stay idempotent on retry.
 - **Wrapping `completeCartWorkflow`** (e.g. marketplace `complete-vendor`): use `acquireLockStep({ key: cart_id, timeout, ttl })` … `releaseLockStep({ key: cart_id })`, and check existing links through the link's `entryPoint` before creating records. The core workflow is idempotent, so your steps must be too. If completion fails after payment, the payment is reverted automatically.
-- **Core workflows and steps verified in 2.21.1 and 2.21.2** (`@medusajs/medusa/core-flows`): `acquireLockStep`, `releaseLockStep`, `useQueryGraphStep`, `createRemoteLinkStep`, `dismissRemoteLinkStep`, `emitEventStep`, `setAuthAppMetadataStep`, `createOrderWorkflow`, `completeCartWorkflow`, `addToCartWorkflow`, `updateLineItemInCartWorkflow`, `convertDraftOrderWorkflow`. Before using any other name, check that it exists with ladder step 1.
+- **Core workflows and steps verified in 2.21.1 and 2.21.2** (`@medusajs/medusa/core-flows`): `acquireLockStep`, `releaseLockStep`, `useQueryGraphStep`, `createRemoteLinkStep`, `dismissRemoteLinkStep`, `emitEventStep`, `setAuthAppMetadataStep`, `createOrderWorkflow`, `completeCartWorkflow`, `addToCartWorkflow`, `updateLineItemInCartWorkflow`, `convertDraftOrderWorkflow`; also used and verified in 2.21.2: `sendNotificationsStep`, `updateRegionsWorkflow`, `createShippingProfilesWorkflow`, `createDefaultsWorkflow`, `createPaymentSessionsWorkflow`, `deletePaymentSessionsWorkflow`, `refreshPaymentCollectionForCartWorkflow`, `processPaymentWorkflow`. Before using any other name, check that it exists with ladder step 1.
 
 ---
 
@@ -241,6 +243,7 @@ export default defineMiddlewares({ routes: [
 // route: req.validatedBody (body), req.validatedQuery (validateAndTransformQuery)
 ```
 
+- **Order:** global middlewares run first (core, then plugins, then this app), then route middlewares (core, then plugins, then this app), then the route handler; within each group, matchers sort as wildcard → regex → static → static with params (docs `learn/fundamentals/api-routes/middlewares`, "How Are Middlewares Ordered and Applied?"). So a project middleware on a core route runs **after** the core's own middlewares, e.g. after the multer parsing on `POST /admin/uploads` (`req.files` is set, nothing is stored yet).
 - **Built-in protection:** `/admin/*` requires an admin user and `/store/customers/me*` requires a customer. To opt out, export `AUTHENTICATE = false` from the route file.
 - **Custom auth:** `authenticate("customer" | "user" | "<actor>", ["session", "bearer", "api-key"], { allowUnauthenticated? })`. Use `AuthenticatedMedusaRequest` and read `req.auth_context.actor_id`.
 - **Custom actor type** (vendor, seller, cashier): register with `POST /auth/<actor>/emailpass/register`, create the record in a workflow, then call `setAuthAppMetadataStep({ authIdentityId, actorType: "<actor>", value: record.id })`. Log in with `POST /auth/<actor>/emailpass`.
@@ -269,6 +272,7 @@ export default async function job(container: MedusaContainer) { await wf(contain
 export const config = { name: "release-expired-holds", schedule: "* * * * *" }
 ```
 
+- **Payloads used in this repo** (docs `resources/references/events`): `order.placed` and `order.canceled` `{ id }` (order ID); `shipment.created` `{ id, no_notification }` and `delivery.created` `{ id }`, where `id` is the **fulfillment** ID (reach the order through `fulfillment.order`, §4).
 - Subscribers and jobs run on the **worker** instance (docs: "a worker instance that processes background tasks. This includes scheduled jobs and subscribers").
 - **Project rule** (BUILD_PLAN §6.5 acceptance, not a documented Medusa guarantee): handlers must be **idempotent**. Guard with a unique key (e.g. `order_id` unique) so a repeated event or a retried job never creates duplicates.
 
@@ -311,7 +315,7 @@ moduleIntegrationTestRunner<BlogModuleService>({ moduleName: BLOG_MODULE, module
 - **Scripts** (from `dtc-starter`): `test:integration:http`, `test:integration:modules`, `test:unit`. They run jest with `TEST_TYPE=…` and `NODE_OPTIONS=--experimental-vm-modules --runInBand --forceExit`.
 - **Test database:** `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD` (defaults: `localhost`, `5432`, `postgres`, empty). `medusaIntegrationTestRunner` creates `medusa-{random-id}-integration-{worker-id}` and drops it after the tests. Clean up records you create in `afterAll`.
 
-## 11. CLI (verified in the 2.21.1 CLI source and the CLI reference)
+## 11. CLI (verified in the 2.21.1 and 2.21.2 CLI source and the CLI reference)
 
 | Command | Use |
 |---|---|
@@ -352,7 +356,7 @@ moduleIntegrationTestRunner<BlogModuleService>({ moduleName: BLOG_MODULE, module
 
 ## 14. Refreshing this skill
 
-This file is pinned to **2.21.2** (refreshed 2026-10-01 from 2.21.1: §1 and §6 checks re-run against `node_modules`). When `scripts/update-medusa.sh` moves to a new version:
+This file is pinned to **2.21.2** (refreshed 2026-10-01 from 2.21.1: §1 and §6 checks re-run against `node_modules`; re-checked 2026-10-05 against the current docs: §1 Node and starter, §3 indexes, §4 link aliases, §6 core-flows (20 names), §7 middleware order, §8 event payloads, §11 CLI flags, new §15 providers). When `scripts/update-medusa.sh` moves to a new version:
 
 1. Read the release notes for every version you skip.
 2. Re-run the checks in §1 and the core-flows export check in §6 against the new `node_modules`.
@@ -360,3 +364,19 @@ This file is pinned to **2.21.2** (refreshed 2026-10-01 from 2.21.1: §1 and §6
 4. Commit as `docs(skill): refresh Medusa skill for v<version>`.
 
 `BUILD_PLAN.md` is **not** edited during a refresh (see `CLAUDE.md`).
+
+## 15. Module providers (payment, notification)
+
+Source: `resources/references/payment/provider`, `resources/references/notification-provider-module`, `resources/infrastructure-modules/notification`; behaviour notes from the installed 2.21.2 runtime (ladder rank 5).
+
+**Payment provider** (`src/modules/<name>/service.ts` + `index.ts`):
+- `class X extends AbstractPaymentProvider<Options>` (`@medusajs/framework/utils`), `static identifier = "<id>"`, optional `static validateOptions(options)`; export with `ModuleProvider(Modules.PAYMENT, { services: [X] })`; register under the `@medusajs/medusa/payment` module's `providers` with an `id`.
+- The provider ID is **`pp_{identifier}_{id}`**; the webhook route is `/hooks/payment/{identifier}_{id}` (2.21.2 also accepts the `pp_` form). `pp_system_default` is always registered.
+- `getWebhookActionAndData` returns `{ action: PaymentActions.SUCCESSFUL | AUTHORIZED | FAILED | NOT_SUPPORTED …, data: { session_id, amount } }`; returning **captured/successful** lets Medusa complete the cart from the webhook alone. Verify the request (signature) inside this method.
+- `authorizePayment` returning status `captured` means the money is already taken (no separate capture step).
+- **`deletePayment` runs before a session is replaced.** Creating a new session deletes the collection's active one first (core-flows `create-payment-session.js`: "deleting an existing active session before creating a new one"), and so does a cart change (`refreshPaymentCollectionForCartWorkflow`). The payment module calls the provider's `deletePayment` **before** deleting the row, and an error thrown there stops the replacement (`deletePaymentSessionsStep` + `validateDeletedPaymentSessionsStep` → "Could not delete all payment sessions"). Use it to protect a payment that may still complete on the provider's side (this repo: ABA PayWay refuses if paid, closes the transaction if not).
+
+**Notification provider:**
+- `class X extends AbstractNotificationProviderService` (`@medusajs/framework/utils`), `static identifier`, `async send(notification)` returning `{ id }`; register under `@medusajs/medusa/notification` `providers` with `id` and `options.channels: ["email"]` (one provider per channel; this repo also uses custom channels `telegram` and `telegram_customer`).
+- Send from workflows with `sendNotificationsStep([{ to, channel, template, data, idempotency_key?, provider_data? }])` (core-flows). A notification whose `idempotency_key` already succeeded is skipped, a failed one is retried (`@medusajs/notification` `createNotifications`). Sent messages can't be undone, so there is no compensation.
+- Throwing a `MedusaError` in `send` marks the notification as failed. Give outgoing `fetch` calls a timeout (`AbortSignal.timeout(...)`) so a hung provider can't hold the job (project rule).
