@@ -2,7 +2,7 @@ import {
   contactProblem,
   EMAIL_REQUIRED_MESSAGE,
   SHIPPING_PHONE_REQUIRED_MESSAGE,
-} from "../phone-validation"
+} from "../contact-validation"
 
 describe("contactProblem (required contact by delivery country)", () => {
   it("Cambodia: needs the delivery phone, email optional", () => {

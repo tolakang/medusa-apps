@@ -31,6 +31,7 @@ type InjectedDependencies = {
 export const TELEGRAM_API_URL = "https://api.telegram.org"
 // Telegram rejects messages longer than 4096 characters.
 const MAX_TEXT_LENGTH = 4096
+const REQUEST_TIMEOUT_MS = 10_000
 
 class TelegramNotificationProviderService extends AbstractNotificationProviderService {
   static identifier = "notification-telegram"
@@ -83,6 +84,8 @@ class TelegramNotificationProviderService extends AbstractNotificationProviderSe
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ chat_id: chatId, text: text.slice(0, MAX_TEXT_LENGTH) }),
+        // A hung request would hold the job (and the bot webhook's reply).
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       }
     )
 

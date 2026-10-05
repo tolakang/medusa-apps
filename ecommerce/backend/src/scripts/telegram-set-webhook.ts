@@ -1,5 +1,6 @@
 import type { ExecArgs } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
+import { TELEGRAM_API_URL } from "../modules/telegram/service"
 
 // One-time setup of the customer bot's webhook (TASKS P1-17), Telegram Bot API
 // setWebhook (core.telegram.org/bots/api): url, secret_token (sent back in
@@ -19,7 +20,7 @@ export default async function telegramSetWebhook({ container, args }: ExecArgs) 
     )
   }
 
-  const response = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
+  const response = await fetch(`${TELEGRAM_API_URL}/bot${token}/setWebhook`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ url, secret_token: secret, allowed_updates: ["message"] }),
