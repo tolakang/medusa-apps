@@ -10,6 +10,10 @@ import { createHmac, randomInt, timingSafeEqual } from "node:crypto"
 // - Check transaction: POST {base}/api/payment-gateway/v1/payments/check-transaction-2
 //   (JSON), hash over req_time + merchant_id + tran_id; payment_status_code
 //   0 APPROVED/PRE-AUTH, 2 PENDING, 3 DECLINED, 4 REFUNDED, 7 CANCELLED.
+// - Close transaction: POST {base}/api/payment-gateway/v1/payments/close-transaction
+//   (JSON), hash over req_time + merchant_id + tran_id; status.code 00 success,
+//   5 not found. A closed transaction no longer accepts payment and sends no
+//   callback (developer.payway.com.kh, read 2026-10-05).
 // - Callback (return_url): JSON POST; header X-PayWay-HMAC-SHA512 =
 //   base64(HMAC-SHA512(values sorted by key, arrays JSON-encoded, key)).
 // - Base URLs: sandbox https://checkout-sandbox.payway.com.kh/, production
@@ -19,6 +23,7 @@ import { createHmac, randomInt, timingSafeEqual } from "node:crypto"
 export const PAYWAY_SANDBOX_URL = "https://checkout-sandbox.payway.com.kh"
 export const PURCHASE_PATH = "/api/payment-gateway/v1/payments/purchase"
 export const CHECK_TRANSACTION_PATH = "/api/payment-gateway/v1/payments/check-transaction-2"
+export const CLOSE_TRANSACTION_PATH = "/api/payment-gateway/v1/payments/close-transaction"
 export const CALLBACK_SIGNATURE_HEADER = "x-payway-hmac-sha512"
 
 // Purchase fields in the order PayWay concatenates them for the hash.
@@ -149,4 +154,26 @@ export async function checkTransaction(
     paymentCurrency: typeof data.payment_currency === "string" ? data.payment_currency : undefined,
     apv: typeof data.apv === "string" ? data.apv : undefined,
   }
+}
+
+// Returns PayWay's status.code ("00" closed, "5" not found, …).
+export async function closeTransaction(
+  opts: { baseUrl: string; merchantId: string; apiKey: string },
+  tranId: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<string> {
+  const time = reqTime()
+  const response = await fetchImpl(`${opts.baseUrl}${CLOSE_TRANSACTION_PATH}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      req_time: time,
+      merchant_id: opts.merchantId,
+      tran_id: tranId,
+      hash: hmac(`${time}${opts.merchantId}${tranId}`, opts.apiKey),
+    }),
+    signal: AbortSignal.timeout(10_000),
+  })
+  const body = (await response.json().catch(() => ({}))) as { status?: { code?: unknown } }
+  return String(body.status?.code ?? response.status)
 }

@@ -200,6 +200,51 @@ describe("PayWay provider", () => {
     expect(declined.action).toEqual("failed")
   })
 
+  describe("replacing a session (deletePayment)", () => {
+    const notFound = { status: { code: "6", message: "Transaction not found" } }
+    const closed = { status: { code: "00", message: "Success!", tran_id: "1" } }
+    const replies = (...bodies: object[]) => {
+      for (const body of bodies) {
+        fetchMock.mockResolvedValueOnce({ ok: true, status: 200, json: async () => body })
+      }
+    }
+    const urls = () => fetchMock.mock.calls.map(([url]) => String(url))
+
+    it("closes an unpaid transaction so the old PayWay page can't take money", async () => {
+      replies(notFound, closed, notFound)
+      await expect(service().deletePayment({ data: { tran_id: "1" } })).resolves.toEqual({
+        data: { tran_id: "1" },
+      })
+      expect(urls()).toEqual([
+        expect.stringContaining("/check-transaction-2"),
+        expect.stringContaining("/close-transaction"),
+        expect.stringContaining("/check-transaction-2"),
+      ])
+      const close = JSON.parse(fetchMock.mock.calls[1][1].body)
+      expect(close).toMatchObject({ merchant_id: "ec000002", tran_id: "1" })
+    })
+
+    it("refuses to delete a paid transaction", async () => {
+      replies(approved(63))
+      await expect(service().deletePayment({ data: { tran_id: "1" } })).rejects.toThrow(
+        "already paid"
+      )
+      expect(urls()).toHaveLength(1)
+    })
+
+    it("refuses when the payment lands while the transaction is being closed", async () => {
+      replies(approved(63, 2), closed, approved(63))
+      await expect(service().deletePayment({ data: { tran_id: "1" } })).rejects.toThrow(
+        "already paid"
+      )
+    })
+
+    it("does nothing for a session without a PayWay transaction", async () => {
+      await service().deletePayment({ data: {} })
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+  })
+
   it("points refunds to the PayWay portal", async () => {
     await expect(service().refundPayment({ amount: 5, data: {} })).rejects.toThrow(
       "PayWay merchant portal"

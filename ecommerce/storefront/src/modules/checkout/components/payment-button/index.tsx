@@ -233,6 +233,17 @@ const PaywayPaymentButton = ({
       document.body.appendChild(element)
       element.submit()
     } catch (err) {
+      // The backend refuses a new payment while the previous PayWay
+      // transaction is paid (e.g. paid on a PayWay page left open). Then the
+      // order is placed from that payment: placeOrder redirects to the
+      // confirmation page. Otherwise show why the payment could not start.
+      try {
+        await placeOrder()
+      } catch (placeErr) {
+        if (placeErr instanceof Error && placeErr.message === "NEXT_REDIRECT") {
+          throw placeErr
+        }
+      }
       setErrorMessage(err instanceof Error ? err.message : String(err))
       setSubmitting(false)
     }
