@@ -1,6 +1,6 @@
 # Runbook: `ecommerce-staging` on Dokploy (tasks P0-18, P0-19)
 
-Follow the steps in order. Field names are Dokploy's own (docs.dokploy.com, checked 2026-09-25). The project layout is decision **D6** (`TASKS.md`). Sections 1–6 are the Phase 0 base setup. **Phase 1 features** (S3 file storage, upload limits, email and Telegram notifications, ABA PayWay, cache refresh) add the variables in step 2.5 and the go-live steps in **§8**. Backups are **§7**.
+Follow the steps in order. Field names are Dokploy's own (docs.dokploy.com, checked 2026-09-25). The project layout is decision **D6** (`TASKS.md`). Sections 1–6 are the Phase 0 base setup. **Phase 1 features** (S3 file storage, upload limits, email and Telegram notifications, ABA PayWay, cache refresh) add the variables in step 2.5 and the go-live steps in **§8**. Backups are **§7**; the smoke test after every deploy is **§9**.
 
 **You need:** a Dokploy server with the GitHub provider connected to `<github-owner>/medusa-apps` (Dokploy → Git → GitHub App), and two hostnames. Either use your DNS (`api.staging.<your-domain>`, `shop.staging.<your-domain>` → the Dokploy server IP), or use Dokploy's **Generated** domains.
 
@@ -304,3 +304,39 @@ Do these after the backend, worker and storefront are deployed with the step 2.5
 5. **Uploads.** Upload a product image of a few MB in the admin: it must be stored in the bucket and show in the shop.
 6. **Cache refresh.** `curl -s -o /dev/null -w '%{http_code}\n' -X POST https://<shop host>/api/revalidate` answers `401`. A product price change shows in the shop within seconds.
 7. **Backups.** Set up §7.1–7.2 and run the §7.3 restore test once before taking real orders.
+
+---
+
+## 9. Smoke test after every deploy (about 5–10 minutes)
+
+CI proves the code (tests, image build, `/health` on an empty database). This checks the **deployed** shop with its real settings. Run it on staging after every deploy, before promoting to production, and on production right after its deploy (BUILD_PLAN §8 "smoke test, then production"). Stop at the first ❌ and send the output; don't change settings first (DEV_FLOW §6).
+
+**From your computer** (replace the hosts; nothing secret in these):
+```bash
+curl -s -o /dev/null -w 'health %{http_code}\n' https://<api host>/health
+curl -s -o /dev/null -w 'admin %{http_code}\n' https://<api host>/app/
+curl -s -o /dev/null -w 'shop %{http_code}\n' -L https://<shop host>/
+curl -s -o /dev/null -w 'revalidate %{http_code}\n' -X POST https://<shop host>/api/revalidate
+```
+✅ `health 200`, `admin 200`, `shop 200`, `revalidate 401` (the route is there and wants the secret).
+
+**On the server** (prove the new version really runs: the Dokploy Deployments tab can show "Done" for a rolled-back deploy, P0-19):
+```bash
+for s in $(docker service ls --format '{{.Name}}' | grep ecommerce); do echo "$s $(docker service inspect $s --format '{{if .UpdateStatus}}{{.UpdateStatus.State}}{{else}}no-update{{end}}')"; done
+docker ps --filter name=ecommerce --format '{{.Names}} {{.Status}}'
+```
+✅ Each deployed service shows `completed` (not `rollback_completed`), and backend and storefront show `(healthy)`. Then each app's **Logs** in Dokploy, since the deploy:
+- backend: `Server is ready on port: 9000`, migrations `Completed successfully` or `up-to-date`, no `error` lines;
+- worker: `Starting Medusa (worker mode: worker)`, the three Redis connections, no `error` lines.
+
+When sharing a log, filter it first: `grep -v -i "secret\|access-key\|api_key"`.
+
+**In the browser:**
+1. **Admin** `https://<api host>/app`: log in; Orders and Products open.
+2. **Shop** `https://<shop host>/kh`: the home page and one product page show images and prices; search finds a product (e.g. "shirt").
+3. **Checkout** with a Cambodian address and phone, up to **Pay with ABA PayWay**: PayWay's own checkout page opens (not raw JSON, not "wrong domain"; that proves the keys, signing and whitelisting).
+   - **Staging:** pay with the sandbox success card. ✅ The confirmation page shows the order, the admin shows it as **Captured**, and the staff Telegram group gets the new-order alert (plus the email, if one was given).
+   - **Production:** press **Cancel** on the PayWay page instead; you return to checkout, no order. Pay for real only when you mean to (a test purchase must be refunded in the PayWay merchant portal, refunds aren't automatic yet).
+4. **Only after a backend deploy that touched notifications, Telegram or PayWay:** on that staging order, tap **Get order updates on Telegram** → the bot confirms; fulfil and ship it in the admin → staff and customer get "shipped".
+
+Record the result (date, commit, ✅ per line) in `TASKS.md` for releases that matter (phase exit, production).

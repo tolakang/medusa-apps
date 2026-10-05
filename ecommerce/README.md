@@ -44,6 +44,7 @@ Full steps with every Dokploy field: [DOKPLOY_STAGING.md](./DOKPLOY_STAGING.md) 
 7. Set the final domains in the backend CORS variables and redeploy the backend.
 8. Go-live steps (runbook §8): add **payway** to the Cambodia region, ask ABA to whitelist the hosts and server IP, register the customer bot's Telegram webhook, test one order end to end.
 9. Database backups and one restore test (runbook §7).
+10. Smoke test (runbook §9), and again after every later deploy, staging first.
 
 After the first deploy, every service can be redeployed, rebuilt or rolled back **independently**.
 
