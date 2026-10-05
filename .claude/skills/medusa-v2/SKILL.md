@@ -1,6 +1,6 @@
 ---
 name: medusa-v2
-description: Verified Medusa v2 (2.21.2) reference and build rules for this repo. Use before writing, reviewing or fixing any Medusa backend code (modules, links, workflows, hooks, API routes, middlewares, auth/actor types, subscribers, jobs, admin widgets, tests, plugins, medusa-config, migrations) or any storefront/portal code that calls Medusa.
+description: Verified Medusa v2 (2.21.2) reference and build rules for this repo. Use before writing, reviewing or fixing any Medusa backend code (modules, links, workflows, hooks, API routes, middlewares, auth/actor types, subscribers, jobs, admin widgets, tests, plugins, payment and notification providers, medusa-config, migrations) or any storefront/portal code that calls Medusa.
 ---
 
 # Medusa v2: project skill loader
