@@ -29,8 +29,9 @@ beforeAll(() => {
     const url = String(input)
     if (!url.startsWith(PAYWAY)) return realFetch(input, init)
     paywayCalls.push({ url, body: JSON.parse(String(init?.body ?? "{}")) })
-    const body =
-      paywayStatus.code === "00"
+    const body = url.endsWith("/close-transaction")
+      ? { status: { code: "00", message: "Success!" } }
+      : paywayStatus.code === "00"
         ? {
             data: {
               payment_status_code: paywayStatus.status,
@@ -56,7 +57,7 @@ afterAll(() => {
 medusaIntegrationTestRunner({
   testSuite: ({ api, getContainer }) => {
     describe("ABA PayWay checkout (TASKS P1-03)", () => {
-      const setup = async () => {
+      const setup = async ({ phone = "012 345 678" }: { phone?: string } = {}) => {
         const container = getContainer()
         const query = container.resolve(ContainerRegistrationKeys.QUERY)
         await createShippingProfilesWorkflow(container).run({
@@ -99,7 +100,7 @@ medusaIntegrationTestRunner({
           province: "Phnom Penh",
           city: "Khan Chamkar Mon",
           country_code: "kh",
-          phone: "012 345 678",
+          phone,
         }
         await api.post(`/store/carts/${cartId}`, { shipping_address: address, billing_address: address }, store)
         const {
@@ -107,24 +108,30 @@ medusaIntegrationTestRunner({
         } = await api.get(`/store/shipping-options?cart_id=${cartId}`, store)
         await api.post(`/store/carts/${cartId}/shipping-methods`, { option_id: shipping_options[0].id }, store)
 
-        // What the storefront's "Pay with ABA PayWay" button does.
+        // What the storefront's "Pay with ABA PayWay" button does, every
+        // time it is pressed.
         const {
           data: { payment_collection },
         } = await api.post("/store/payment-collections", { cart_id: cartId }, store)
+        const pay = () =>
+          api.post(
+            `/store/payment-collections/${payment_collection.id}/payment-sessions`,
+            {
+              provider_id: "pp_payway_payway",
+              data: { country_code: "kh", firstname: "Test", lastname: "Customer", phone },
+            },
+            store
+          )
+        if (!phone) {
+          return { query, store, cartId, pay, session: null }
+        }
         const {
           data: { payment_collection: withSession },
-        } = await api.post(
-          `/store/payment-collections/${payment_collection.id}/payment-sessions`,
-          {
-            provider_id: "pp_payway_payway",
-            data: { country_code: "kh", firstname: "Test", lastname: "Customer", phone: "012 345 678" },
-          },
-          store
-        )
+        } = await pay()
         const session = withSession.payment_sessions.find(
           (s) => s.provider_id === "pp_payway_payway"
         )
-        return { query, store, cartId, session }
+        return { query, store, cartId, pay, session }
       }
 
       it("offers PayWay in the Cambodia region and signs the checkout form", async () => {
@@ -221,6 +228,44 @@ medusaIntegrationTestRunner({
         // The customer coming back afterwards still lands on the order.
         const again = await api.post(`/store/carts/${cartId}/complete`, {}, store)
         expect(again.data.type).toEqual("order")
+      })
+
+      it("closes the old PayWay transaction when the customer presses Pay again", async () => {
+        const { session, pay } = await setup()
+        paywayStatus = { code: "6" }
+        paywayCalls.length = 0
+
+        const {
+          data: { payment_collection },
+        } = await pay()
+        const next = payment_collection.payment_sessions.find(
+          (s) => s.provider_id === "pp_payway_payway"
+        )
+        expect(next.id).not.toEqual(session.id)
+        expect(next.data.tran_id).not.toEqual(session.data.tran_id)
+        const close = paywayCalls.find((c) => c.url.endsWith("/close-transaction"))
+        expect(close?.body.tran_id).toEqual(session.data.tran_id)
+      })
+
+      it("keeps a paid PayWay session and places the order from it", async () => {
+        const { session, pay, cartId, store } = await setup()
+        // Paid on the first PayWay page, then Pay pressed again.
+        paywayStatus = { code: "00", status: 0, total: Number(session.data.amount) }
+        const again = await pay().catch((e) => e.response)
+        expect(again.status).toBeGreaterThanOrEqual(400)
+
+        // The storefront then places the order: it comes from the paid session.
+        const placed = await api.post(`/store/carts/${cartId}/complete`, {}, store)
+        expect(placed.data.type).toEqual("order")
+        const last = paywayCalls[paywayCalls.length - 1]
+        expect(last.body.tran_id).toEqual(session.data.tran_id)
+      })
+
+      it("needs the delivery phone before a Cambodian cart can pay", async () => {
+        const { pay } = await setup({ phone: "" })
+        const refused = await pay().catch((e) => e.response)
+        expect(refused.status).toEqual(400)
+        expect(refused.data.message).toMatch(/phone number to the delivery address/)
       })
     })
   },

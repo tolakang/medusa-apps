@@ -87,3 +87,28 @@ export async function requireContact(
   }
   next()
 }
+
+// The same rule when a payment starts: a PayWay callback completes the cart
+// inside Medusa without passing through /store/carts/:id/complete, so the
+// contact is checked before the customer can pay. The cart comes from the core
+// cart ↔ payment collection link (field alias `cart` on payment_collection).
+export async function requireContactBeforePayment(
+  req: MedusaRequest,
+  _res: MedusaResponse,
+  next: MedusaNextFunction
+) {
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+  const {
+    data: [collection],
+  } = await query.graph({
+    entity: "payment_collection",
+    fields: ["cart.email", "cart.shipping_address.country_code", "cart.shipping_address.phone"],
+    filters: { id: req.params.id },
+  })
+  const cart = (collection as { cart?: Parameters<typeof contactProblem>[0] } | undefined)?.cart
+  const problem = cart?.shipping_address ? contactProblem(cart) : null
+  if (problem) {
+    return next(new MedusaError(MedusaError.Types.INVALID_DATA, problem))
+  }
+  next()
+}

@@ -32,6 +32,7 @@ import {
   CALLBACK_SIGNATURE_HEADER,
   callbackSignature,
   checkTransaction,
+  closeTransaction,
   formatAmount,
   newTranId,
   PAYWAY_SANDBOX_URL,
@@ -67,6 +68,9 @@ export type PaywayOptions = {
 }
 
 type InjectedDependencies = { logger: Logger }
+
+export const PAYWAY_ALREADY_PAID_MESSAGE =
+  "This cart is already paid with ABA PayWay. Place the order instead of paying again."
 
 // What the storefront may send when it starts the session (display only).
 type CustomerData = {
@@ -249,7 +253,32 @@ class PaywayProviderService extends AbstractPaymentProvider<PaywayOptions> {
     return { data: input.data }
   }
 
+  // Medusa deletes the cart's session before it creates a new one (the
+  // customer pressed Pay again, changed the cart or chose another provider;
+  // core-flows createPaymentSessionsWorkflow, refreshPaymentCollectionForCart).
+  // The old PayWay page may still be open, so: a paid transaction stops the
+  // delete (the order must be placed from it; deleting it would leave paid
+  // money without an order), and an unpaid one is closed so it can no longer
+  // be paid. Checked again after closing in case the payment landed meanwhile.
   async deletePayment(input: DeletePaymentInput): Promise<DeletePaymentOutput> {
+    const tranId = String(input.data?.tran_id ?? "")
+    if (!tranId) {
+      return { data: input.data }
+    }
+    const isPaid = async () => {
+      const result = await checkTransaction(this.credentials, tranId)
+      return result.code === "00" && result.paymentStatusCode === 0
+    }
+    if (await isPaid()) {
+      throw new MedusaError(MedusaError.Types.NOT_ALLOWED, PAYWAY_ALREADY_PAID_MESSAGE)
+    }
+    const closed = await closeTransaction(this.credentials, tranId)
+    if (closed !== "00" && closed !== "5") {
+      this.logger_.warn(`PayWay close-transaction ${tranId} answered ${closed}.`)
+    }
+    if (await isPaid()) {
+      throw new MedusaError(MedusaError.Types.NOT_ALLOWED, PAYWAY_ALREADY_PAID_MESSAGE)
+    }
     return { data: input.data }
   }
 

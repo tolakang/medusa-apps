@@ -4,7 +4,11 @@ import {
   validateAndTransformBody,
 } from '@medusajs/framework/http'
 import { PostAdminUploadLimit } from './admin/upload-limit/validators'
-import { requireContact, validatePhoneFields } from './phone-validation'
+import {
+  requireContact,
+  requireContactBeforePayment,
+  validatePhoneFields,
+} from './phone-validation'
 import { enforceUploadLimits } from './upload-limits'
 
 // The product index declares filterable `status` and `sales_channel_ids`, so
@@ -46,6 +50,13 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/store/carts/:id/complete',
       middlewares: [requireContact],
+    },
+    {
+      // The same check before a payment starts (PayWay can complete the
+      // cart from its callback).
+      method: ['POST'],
+      matcher: '/store/payment-collections/:id/payment-sessions',
+      middlewares: [requireContactBeforePayment],
     },
     {
       method: ['POST'],
