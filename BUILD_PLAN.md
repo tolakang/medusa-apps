@@ -1,8 +1,10 @@
 # Build Plan — Medusa Apps (Pre-Build)
 
-> **Status (2026-09-29): building.** Phase 0 (foundation, staging on Dokploy) is complete; Phase 1 (Ecommerce) is in progress. Progress, decisions and evidence live in `TASKS.md`. Every deployable folder has its `Dockerfile` and `.env.example`, and every category has a Dokploy guide in `<category>/README.md`.
-> Baseline checked 2026-09-25: **Medusa 2.21.1**, **pnpm 12.6.0**, **Node 22 LTS**.
+> **Status (2026-10-04): building.** Phase 0 (foundation, staging on Dokploy) is complete. Phase 1 (Ecommerce) is built and running on staging; the production deploy (P1-08) is next. Progress, decisions and evidence live in `TASKS.md`. Every deployable folder has its `Dockerfile` and `.env.example`, and every category has a Dokploy guide in `<category>/README.md`.
+> Baseline checked 2026-09-25: **Medusa 2.21.1**, **pnpm 12.6.0**, **Node 22 LTS**. **Current pin: Medusa 2.21.2** (updated 2026-10-01 with `scripts/update-medusa.sh`).
 > Re-check these versions on the day Phase 0 starts.
+>
+> **Revision 6 (2026-10-04, owner):** brings the plan in line with Phase 1 work done after Revision 5: Medusa 2.21.2; Cambodia contact rules (phone required, email optional, optional Telegram contact); order updates to customers on Telegram, with one small data module (`telegram_links`) for the order-to-chat link; ABA PayWay as built (checkout flow, manual refunds for now, domain and IP whitelisting); daily database backups with a restore test before go-live; server hardening before production. Changed sections: header, 3.2, 5, 6.1, 8, 10.
 >
 > **Revision 5 (2026-09-29, owner):** Cambodia localisation for the ecommerce storefront. Cambodian address fields (Province / Capital, Khan / Srok, official postal code), phone number format, and Khmer place names kept for a later Khmer language option. Also records the Phase 1 decisions D1–D4 and delivery, and brings the plan in line with what Phase 0 and Phase 1 proved (TASKS.md findings F-002 to F-028, each cited where it changed the plan): ABA PayWay instead of Stripe, `@medusajs/ui` pinned to the dashboard's version, new env vars, Dokploy form values, seed-based first deploy, weekly update check instead of Dependabot, storefront changes 7–9, admin upload limits. Changed sections: header, 2, 3.2, 4.1, 4.2, 5, 6.1, 8, 10.
 >
@@ -113,7 +115,7 @@ Names are lowercase kebab-case because they become Dokploy build paths, image na
 
 ### 3.2 Version policy
 
-- All `@medusajs/*` packages that follow the Medusa release line pinned to the **exact same version** (no `^`/`~`). Exception: **`@medusajs/ui` has its own version line** (4.x while Medusa is 2.21.1); pin it to the exact version that `@medusajs/dashboard@<medusa version>` depends on, so the lockfile holds one copy (owner decision, F-006: for 2.21.1 the dashboard needs 4.2.5 while `dtc-starter` pins 4.2.4). `update-medusa.sh` reads it from the dashboard and falls back to the starter's pin.
+- All `@medusajs/*` packages that follow the Medusa release line pinned to the **exact same version** (no `^`/`~`). Exception: **`@medusajs/ui` has its own version line** (4.x while Medusa is 2.21.1); pin it to the exact version that `@medusajs/dashboard@<medusa version>` depends on, so the lockfile holds one copy (owner decision, F-006: for 2.21.1 the dashboard needs 4.2.5 while `dtc-starter` pins 4.2.4). `update-medusa.sh` reads it from the dashboard and falls back to the starter's pin. For 2.21.2 the dashboard needs 4.2.6.
 - `packageManager: "pnpm@<exact>"` in each `package.json`; the Dockerfile installs exactly that version.
 - `pnpm install --frozen-lockfile` everywhere (local CI and Docker). A build never resolves new versions on its own.
 - Only public imports: `@medusajs/framework/*`, `@medusajs/medusa/*`, `@medusajs/medusa/core-flows`, `@medusajs/admin-sdk`, `@medusajs/ui`. Never import from `dist/` paths.
@@ -297,6 +299,8 @@ Phase 0 adds a `docker-compose.local.yml` per category (Postgres + Redis + backe
 | **Health check** (Swarm Settings form) | **Test Commands** takes one array item per box: exactly two boxes, `CMD-SHELL` and `node -e "fetch('http://localhost:<port><path>').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"` (the images have no `curl`); interval, timeout and start period are in the category runbook. A JSON array pasted into one box never runs and caused a staging outage (F-021). After saving, confirm `(healthy)` with `docker ps` on the server: a zero-downtime redeploy does not prove the check works. |
 | **Update Config** (Swarm Settings form) | Order **Start First**, Failure Action **Rollback**, Parallelism 1, Delay / Monitor 10 s, Max Failure Ratio 0. The dropdowns show blank after saving but are stored (check `docker service inspect … .Spec.UpdateConfig`, F-020). |
 | **Watch paths** | Each app watches only `<category>/<app>/**`; the **worker watches `<category>/backend/**`** too (an empty box redeploys it on every push, F-019). A storefront change never rebuilds the backend, and nothing in `marketplace/` touches `pos/`. |
+| **Database backups** | Postgres → **Backups**: daily (`0 19 * * *` = 02:00 Cambodia), keep 14, to a **private** S3 bucket used only for backups, with its own access key; one prefix per project. Before go-live, restore the newest backup into a throwaway Postgres service and check that orders and products match (runbook §7). RustFS older than 1.0.0 needs the destination flag `--streaming-upload-cutoff=200M` (rustfs/rustfs#6135). |
+| **Server access** | Before production: SSH-key login only, no password login for root or any uid-0 account; no public Postgres port; OS updates applied and restarted at a quiet time. |
 
 Small projects may run one `shared` backend instance instead of server + worker.
 
@@ -311,14 +315,19 @@ Each scenario lists: custom modules (tables are prefixed to avoid collisions), l
 
 ### 6.1 Ecommerce — `ecommerce/`
 
-- **Custom modules:** no data modules or tables. This is the reference app: Medusa core plus infrastructure config, with custom **module providers** only (official extension point, §3.1): `resend` (email) and `telegram` (staff alerts) notification providers, and an ABA PayWay payment provider.
-- **MVP:** Cambodia region (USD checkout, KHR as a second store currency), tax region, Phnom Penh stock location and delivery option, created by the seed script (`pnpm seed`); payment provider **ABA PayWay** (eCommerce Checkout: cards, ABA Pay, KHQR; custom `AbstractPaymentProvider` with its callback route, built against the PayWay sandbox; D1, F-022; Stripe is not available in Cambodia); notifications: order confirmation email through **Resend** and new-order alerts to the owner and staff through **Telegram** (D2; `notification-local` when the keys are empty); S3 files (D3); `ecommerce/storefront` (from `dtc-starter`, §4.2).
+- **Custom modules:** one small data module, `telegram_links`. Its table `telegram_order_chat` links an order ID to a Telegram chat ID, so the customer bot knows where to send updates. It has its own table and migration, with no columns on core tables (§3.1). Everything else is Medusa core plus infrastructure config and custom **module providers** (official extension point, §3.1): the `resend` (email) and `telegram` (staff alerts and customer updates) notification providers, and an ABA PayWay payment provider.
+- **MVP:** Cambodia region (USD checkout, KHR as a second store currency), tax region, Phnom Penh stock location and delivery option, created by the seed script (`pnpm seed`); payment provider **ABA PayWay** (eCommerce Checkout: cards, ABA Pay, KHQR; custom `AbstractPaymentProvider`, provider ID `pp_payway_payway`; D1, F-022; Stripe is not available in Cambodia); notifications: order confirmation email through **Resend** and new-order alerts to the owner and staff through **Telegram** (D2; `notification-local` when the keys are empty); S3 files (D3); `ecommerce/storefront` (from `dtc-starter`, §4.2).
+  - **PayWay flow:** the customer pays on PayWay's checkout page. PayWay's callback (`/hooks/payment/payway_payway`) and the customer's return to the storefront can each complete the order. The payment status is always confirmed with PayWay's Check Transaction API, never taken from the browser. A paid order is captured at once.
+  - **PayWay refunds:** made in the PayWay merchant portal for now. Automatic refunds (PayWay Refund API, which needs ABA's RSA key) come later.
+  - **PayWay whitelisting:** ABA must whitelist the shop and API domains and the server IP, separately for sandbox and live.
 - **Built in Phase 1 beyond the original MVP list (owner requests, details in TASKS.md):**
   - Storefront shows admin changes without a redeploy (§4.2 change 9; P1-10).
   - Admin image uploads: SVG refused, size limit (default 0.8 MB) that admins change in **Settings → Store** up to a ceiling (default 5 MB, set by env); the admin's own in-browser check is built with the ceiling; the rules are shown on the product pages (P1-11 to P1-13, F-026, F-027).
   - Order alerts and emails list each item with its variant (e.g. `Medusa T-Shirt (L / White)`).
   - Search: the starter's `resolve-product-ids` helper is fixed for shared product options (F-023).
-- **Scenario env (backend):** `UPLOAD_MAX_FILE_SIZE_MB`, `UPLOAD_MAX_FILE_SIZE_CEILING_MB` (also a **build arg**, it sets the admin's check), `RESEND_API_KEY`, `RESEND_FROM`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `STOREFRONT_URL` + `REVALIDATE_SECRET` (change 9); PayWay keys added with P1-03. Storefront: `REVALIDATE_SECRET`.
+  - **Contact rules (P1-14, P1-16):** Cambodia (`kh`): shipping phone required, email optional. Other countries: email required, as before. Optional Telegram contact (`@username` or phone), saved in the order's metadata (`telegram_contact`) and shown to staff. Checked in the browser and by store API middlewares, including when the cart is completed.
+  - **Order updates on Telegram (P1-17):** a second, customer-facing bot. The order confirmation page offers "Get order updates on Telegram" through a signed deep link, because a bot can't message first. After the customer presses Start, the bot sends confirmed, shipped, delivered and canceled updates. Staff alerts also cover shipped, delivered and canceled.
+- **Scenario env (backend):** `UPLOAD_MAX_FILE_SIZE_MB`, `UPLOAD_MAX_FILE_SIZE_CEILING_MB` (also a **build arg**, it sets the admin's check), `RESEND_API_KEY`, `RESEND_FROM`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `STOREFRONT_URL` + `REVALIDATE_SECRET` (change 9); `TELEGRAM_CUSTOMER_BOT_TOKEN`, `TELEGRAM_CUSTOMER_BOT_USERNAME`, `TELEGRAM_CUSTOMER_WEBHOOK_SECRET`, `PAYWAY_MERCHANT_ID`, `PAYWAY_API_KEY`, `PAYWAY_API_URL` (empty = sandbox), `PAYWAY_RETURN_URL`; `STOREFRONT_URL` also sends PayWay customers back to the shop. Storefront: `REVALIDATE_SECRET`.
 - **Search (MVP, built in):** since 2.21.1 the **Search Module** is registered by default with the PostgreSQL provider. The starter already ships `src/search/product.ts` and the storefront's `@medusajs/instantsearch-adapter`, so product search needs no extra service. Move to another provider only if Postgres search is outgrown.
 - **Later:** abandoned cart and restock alerts (Commerce Automation recipe), reviews.
 - **Acceptance:** browse → cart → checkout → order visible in admin; update script and CI gate proven on this app first.
@@ -443,7 +452,7 @@ Per deployable, the script will:
 Release:
 
 1. Read the Medusa release notes for every version skipped (breaking changes are called out there) and run any codemod they list (e.g. `replace-zod-imports` for v2.13).
-2. **Back up the app's database.** The docs' official revert is `medusa db:rollback <module…>` for each module that migrated, then reinstall the old versions; the backup is the fallback when a rollback isn't clean.
+2. **Back up the app's database.** The docs' official revert is `medusa db:rollback <module…>` for each module that migrated, then reinstall the old versions; the backup is the fallback when a rollback isn't clean. The daily backups (§5) run regardless; this is an extra backup taken right before the release.
 3. If the release removes or changes links or search indexes, run `medusa db:sync-links --execute-all` / `medusa db:migrate:search --execute-all-search` by hand from the Dokploy terminal after reviewing the plan they print (the entrypoint only applies safe changes).
 4. Deploy to staging via Dokploy with **one** server replica, smoke test, then production.
 5. Rollback = redeploy the previous commit / image **plus** `db:rollback` of the migrated modules, or restore the backup.
@@ -500,8 +509,10 @@ A throwaway prototype was built on Medusa 2.21.1 + pnpm 12.6.0 to test this plan
 
 **Decided in Phase 1 (owner; details in TASKS.md):**
 - **D1 Payments:** Ecommerce uses ABA PayWay (cards, ABA Pay, KHQR) as a custom payment module provider (6.1; Stripe is not available in Cambodia, F-022). Built against the PayWay sandbox once the owner has the keys. Split payments for vendors / sellers: decide in Phases 5 and 6.
-- **D2 Notifications:** customer email through Resend; new-order alerts to the owner and staff through a Telegram bot.
+- **D2 Notifications:** customer email through Resend; new-order, shipped, delivered and canceled alerts to the owner and staff through a Telegram bot; order updates through a second Telegram bot to customers who opt in (P1-17).
 - **D3 Files:** S3 or an S3-compatible server; staging uses RustFS (SeaweedFS also tested).
 - **D6 Staging:** a separate Dokploy project `<category>-staging` with its own databases, Redis, bucket and domains (Phase 0).
 - **D4 Storefront design:** keep the starter's look for now; restyle later.
 - **Delivery:** Phnom Penh delivery at launch; more shipping options with their own rates can be added later in the admin.
+- **Contact (Cambodia):** phone first; email and Telegram optional (P1-16).
+- **Backups:** daily Dokploy database backups to a private bucket; restore test before go-live (P1-09).
