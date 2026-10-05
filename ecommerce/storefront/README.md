@@ -2,7 +2,7 @@
 
 Next.js customer storefront for the ecommerce business project. Standard: `BUILD_PLAN.md` §4.2.
 
-**Starter:** `medusajs/dtc-starter` `apps/storefront` at commit **`e3a237c9b877`** (2026-09-22, Medusa 2.21.1). Starter changes applied (plan §4.2):
+**Starter:** `medusajs/dtc-starter` `apps/storefront` at commit **`15ef93d`** (2026-10-02, Medusa 2.21.2; synced from `e3a237c9b877`: only the 2.21.2 package bump changed the storefront). Next.js is **15.5.27**, ahead of the starter's 15.5.24, for the 2026-09-30 security fixes (TASKS F-030). Starter changes applied (plan §4.2):
 1. Standalone pnpm package: `packageManager: pnpm@12.6.0`, own lockfile, settings-only `pnpm-workspace.yaml` (starter root `pnpm.overrides`; `unrs-resolver` build declined, as in the starter).
 2. Package renamed `@dtc/storefront` → `ecommerce-storefront`. A `typecheck` script was added, because the starter sets `typescript.ignoreBuildErrors`.
 3. `output: "standalone"` + `outputFileTracingRoot: __dirname` in `next.config.js`.

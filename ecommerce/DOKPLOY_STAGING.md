@@ -235,7 +235,7 @@ Files land in `<bucket>/<postgres service name>/<prefix>/<UTC time>.sql.gz`: Dok
 ```bash
 f=$(ls -t /etc/dokploy/logs/backup-*/*.log | head -1); grep -v -i "secret\|access-key" "$f" | tail -8
 ```
-It must end with `✅ Backup uploaded to S3 successfully`, and the file must appear in the bucket. Dokploy's own service log (`docker service logs dokploy`) prints the full upload command **including the S3 keys**: never paste it anywhere without removing that line.
+It must end with `✅ Backup uploaded to S3 successfully`, and the file must appear in the bucket. Dokploy **before v0.29.9** prints the full upload command **including the S3 keys** in its own service log (`docker service logs dokploy`; Dokploy/dokploy#4621, fixed by PR #4648). Staging still did on 2026-10-03, so its Dokploy is older: **update Dokploy (Settings → Web Server → Update) before production**, then rotate the backup key once more. Even after the update, never paste a log anywhere without filtering it.
 
 ### 7.3 Restore test (proves the backup is usable; do it after setup and before going live)
 Restores into a **throwaway** database. The live database is not touched. Use **A** (done on staging 2026-10-04); **B** needs the file copied to the server over SSH.
