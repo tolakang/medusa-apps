@@ -80,6 +80,9 @@ class ResendNotificationProviderService extends AbstractNotificationProviderServ
         subject: email.subject,
         html: email.html,
       }),
+      // A hung request would hold the job; the Notification Module marks the
+      // notification as failed instead.
+      signal: AbortSignal.timeout(10_000),
     })
 
     const body = (await response.json().catch(() => ({}))) as {

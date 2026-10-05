@@ -1,6 +1,6 @@
-import { timingSafeEqual } from "node:crypto"
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import { safeEqual } from "../../../lib/safe-equal"
 import {
   parseOrderLinkPayload,
   startPayload,
@@ -22,21 +22,12 @@ type TelegramUpdate = {
   message?: { text?: string; chat?: { id?: number; type?: string } }
 }
 
-function sameSecret(given: unknown, expected: string) {
-  if (typeof given !== "string") {
-    return false
-  }
-  const a = Buffer.from(given)
-  const b = Buffer.from(expected)
-  return a.length === b.length && timingSafeEqual(a, b)
-}
-
 export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
   const config = telegramCustomerConfig()
   if (!config) {
     return res.status(404).json({ message: "Telegram order updates are not set up." })
   }
-  if (!sameSecret(req.headers[TELEGRAM_WEBHOOK_SECRET_HEADER], config.secret)) {
+  if (!safeEqual(req.headers[TELEGRAM_WEBHOOK_SECRET_HEADER], config.secret)) {
     return res.status(401).json({ message: "Unauthorized" })
   }
 

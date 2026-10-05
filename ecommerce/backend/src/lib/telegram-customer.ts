@@ -1,4 +1,5 @@
-import { createHmac, timingSafeEqual } from "node:crypto"
+import { createHmac } from "node:crypto"
+import { safeEqual } from "./safe-equal"
 
 // Order updates to customers on Telegram (TASKS P1-17). Telegram bots cannot
 // message a person first ("Bots can't start conversations with users. A user
@@ -54,9 +55,7 @@ export function parseOrderLinkPayload(payload: string, secret: string): string |
     return null
   }
   const orderId = `${ORDER_PREFIX}${id}`
-  const expected = Buffer.from(sign(orderId, secret))
-  const given = Buffer.from(sig)
-  return given.length === expected.length && timingSafeEqual(given, expected) ? orderId : null
+  return safeEqual(sig, sign(orderId, secret)) ? orderId : null
 }
 
 export function telegramStartUrl(orderId: string, config: TelegramCustomerConfig): string {

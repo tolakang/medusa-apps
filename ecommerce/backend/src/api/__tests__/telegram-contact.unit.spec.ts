@@ -1,5 +1,5 @@
 import { isValidTelegramContact, telegramContactLabel } from "../../lib/telegram-contact"
-import { phoneProblem } from "../phone-validation"
+import { phoneProblem } from "../contact-validation"
 import { renderMessage } from "../../modules/telegram/templates"
 import { ORDER_PLACED_STAFF_TEMPLATE } from "../../lib/order-notification"
 

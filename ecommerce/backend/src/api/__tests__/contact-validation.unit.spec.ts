@@ -1,5 +1,5 @@
 import { isValidPhone } from "../../lib/phone"
-import { phoneProblem, validatePhoneFields } from "../phone-validation"
+import { phoneProblem, validatePhoneFields } from "../contact-validation"
 
 describe("isValidPhone", () => {
   it.each(["012 345 678", "+855 12 345 678", "(023) 999-888", "0969999999", "", null, undefined])(

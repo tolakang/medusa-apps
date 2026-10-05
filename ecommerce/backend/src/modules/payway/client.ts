@@ -1,4 +1,4 @@
-import { createHmac, randomInt, timingSafeEqual } from "node:crypto"
+import { createHmac, randomInt } from "node:crypto"
 
 // ABA PayWay eCommerce Checkout (TASKS D1, P1-03). Everything below follows
 // PayWay's Developer Suite (developer.payway.com.kh, read 2026-10-01):
@@ -104,12 +104,6 @@ export function callbackSignature(body: Record<string, unknown>, apiKey: string)
   return hmac(b4hash, apiKey)
 }
 
-export function sameSignature(given: unknown, expected: string): boolean {
-  if (typeof given !== "string") return false
-  const a = Buffer.from(given)
-  const b = Buffer.from(expected)
-  return a.length === b.length && timingSafeEqual(a, b)
-}
 
 export type CheckTransactionResult = {
   code: string

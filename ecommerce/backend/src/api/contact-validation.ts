@@ -7,6 +7,8 @@ import {
   TELEGRAM_CONTACT_MESSAGE,
 } from "../lib/telegram-contact"
 
+// Contact rules for the store API (TASKS P1-14, P1-16).
+//
 // Refuses store requests whose phone fields contain letters or too few/many
 // digits, before Medusa saves them. Covers the cart's shipping and billing
 // addresses, the customer's own phone and saved addresses.
@@ -65,9 +67,19 @@ export function contactProblem(cart: {
   return cart.email ? null : EMAIL_REQUIRED_MESSAGE
 }
 
+type ContactCart = Parameters<typeof contactProblem>[0]
+
+// A cart without a shipping address is left to Medusa's own checks.
+function checkContact(cart: ContactCart | undefined, next: MedusaNextFunction) {
+  const problem = cart?.shipping_address ? contactProblem(cart) : null
+  if (problem) {
+    return next(new MedusaError(MedusaError.Types.INVALID_DATA, problem))
+  }
+  next()
+}
+
 // Checked on cart completion, not on every cart update, because the
-// storefront saves the address in steps. A cart without a shipping address is
-// left to Medusa's own completion checks.
+// storefront saves the address in steps.
 export async function requireContact(
   req: MedusaRequest,
   _res: MedusaResponse,
@@ -81,11 +93,7 @@ export async function requireContact(
     fields: ["id", "email", "shipping_address.country_code", "shipping_address.phone"],
     filters: { id: req.params.id },
   })
-  const problem = cart?.shipping_address ? contactProblem(cart) : null
-  if (problem) {
-    return next(new MedusaError(MedusaError.Types.INVALID_DATA, problem))
-  }
-  next()
+  checkContact(cart, next)
 }
 
 // The same rule when a payment starts: a PayWay callback completes the cart
@@ -105,10 +113,5 @@ export async function requireContactBeforePayment(
     fields: ["cart.email", "cart.shipping_address.country_code", "cart.shipping_address.phone"],
     filters: { id: req.params.id },
   })
-  const cart = (collection as { cart?: Parameters<typeof contactProblem>[0] } | undefined)?.cart
-  const problem = cart?.shipping_address ? contactProblem(cart) : null
-  if (problem) {
-    return next(new MedusaError(MedusaError.Types.INVALID_DATA, problem))
-  }
-  next()
+  checkContact((collection as { cart?: ContactCart } | undefined)?.cart, next)
 }

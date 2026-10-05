@@ -38,10 +38,10 @@ import {
   PAYWAY_SANDBOX_URL,
   PURCHASE_PATH,
   reqTime,
-  sameSignature,
   signPurchase,
   type CheckTransactionResult,
 } from "./client"
+import { safeEqual } from "../../lib/safe-equal"
 
 // ABA PayWay payment provider (TASKS D1, P1-03; Medusa docs "Create a Payment
 // Module Provider", @medusajs/utils 2.21.1 AbstractPaymentProvider).
@@ -303,7 +303,7 @@ class PaywayProviderService extends AbstractPaymentProvider<PaywayOptions> {
     const ignore: WebhookActionResult = { action: PaymentActions.NOT_SUPPORTED }
     const body = (payload.data ?? {}) as Record<string, unknown>
     const signature = payload.headers?.[CALLBACK_SIGNATURE_HEADER]
-    if (!sameSignature(signature, callbackSignature(body, this.options_.api_key))) {
+    if (!safeEqual(signature, callbackSignature(body, this.options_.api_key))) {
       this.logger_.warn("PayWay callback ignored: signature does not match.")
       return ignore
     }

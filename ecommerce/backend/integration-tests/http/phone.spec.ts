@@ -5,9 +5,9 @@ import {
   createShippingProfilesWorkflow,
 } from "@medusajs/medusa/core-flows"
 import seed from "../../src/scripts/seed"
-import { SHIPPING_PHONE_REQUIRED_MESSAGE } from "../../src/api/phone-validation"
+import { SHIPPING_PHONE_REQUIRED_MESSAGE } from "../../src/api/contact-validation"
 
-// Store phone numbers must be digits (src/api/phone-validation.ts). Same
+// Store phone numbers must be digits (src/api/contact-validation.ts). Same
 // preconditions as seed.spec.ts; the cart is created through the store API.
 jest.setTimeout(120 * 1000)
 

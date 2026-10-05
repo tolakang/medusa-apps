@@ -8,7 +8,7 @@ import {
   requireContact,
   requireContactBeforePayment,
   validatePhoneFields,
-} from './phone-validation'
+} from './contact-validation'
 import { enforceUploadLimits } from './upload-limits'
 
 // The product index declares filterable `status` and `sales_channel_ids`, so
