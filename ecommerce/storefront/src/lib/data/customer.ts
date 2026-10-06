@@ -376,10 +376,15 @@ async function sendPasswordResetLink(
       body: { identifier: email },
     })
     return { state: "success" }
-  } catch {
+  } catch (error) {
+    // Too many attempts (429) and the security check say what to do.
+    const status = (error as FetchError)?.status
     return {
       state: "error",
-      error: "We couldn't send the link right now. Please try again.",
+      error:
+        status === 429 || status === 400
+          ? friendlyAuthError(error)
+          : "We couldn't send the link right now. Please try again.",
     }
   }
 }

@@ -1,6 +1,7 @@
 import type { MedusaNextFunction, MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys, MedusaError, Modules } from "@medusajs/framework/utils"
 import { captchaConfig, verifyCaptcha, type CaptchaAction } from "../lib/captcha"
+import { FixedWindowLimiter } from "../lib/rate-limit"
 import { MIN_PASSWORD_LENGTH } from "./store/customers/me/password/validators"
 
 // Checks in front of Medusa's own auth routes (owner, 2026-10-06; registered
@@ -92,3 +93,46 @@ export function requireCaptcha(action: CaptchaAction) {
     next()
   }
 }
+
+// Per-IP limits on customer auth (TASKS P1-21): slows password guessing,
+// mass sign-ups and email bombing. The client IP is `req.ip` (Medusa sets
+// Express `trust proxy` to 1, so behind Traefik this is the visitor), or the
+// header named in CLIENT_IP_HEADER when another proxy sits in front (e.g.
+// `cf-connecting-ip` behind Cloudflare). 429 with Retry-After.
+const limiter = new FixedWindowLimiter()
+
+export const TOO_MANY_ATTEMPTS_MESSAGE = (seconds: number) =>
+  `Too many attempts. Please wait ${seconds >= 60 ? `${Math.ceil(seconds / 60)} minute${seconds >= 120 ? "s" : ""}` : `${seconds} seconds`} and try again.`
+
+export function clientIp(req: MedusaRequest, env: NodeJS.ProcessEnv = process.env): string {
+  const headerName = env.CLIENT_IP_HEADER?.trim().toLowerCase()
+  const header = headerName ? req.headers[headerName] : undefined
+  const fromHeader = (Array.isArray(header) ? header[0] : header)?.split(",")[0]?.trim()
+  return fromHeader || req.ip || req.socket?.remoteAddress || "unknown"
+}
+
+export function limitPerIp(name: string, limit: number, windowSeconds: number) {
+  return function perIpLimit(req: MedusaRequest, res: MedusaResponse, next: MedusaNextFunction) {
+    const { allowed, retryAfterSeconds } = limiter.hit(
+      `${name}:${clientIp(req)}`,
+      limit,
+      windowSeconds * 1000
+    )
+    if (!allowed) {
+      res.setHeader("Retry-After", String(retryAfterSeconds))
+      return res
+        .status(429)
+        .json({ type: "too_many_requests", message: TOO_MANY_ATTEMPTS_MESSAGE(retryAfterSeconds) })
+    }
+    next()
+  }
+}
+
+// Requests per IP per minute (generous for people, slow for scripts).
+export const AUTH_LIMITS = {
+  login: 20,
+  signup: 10,
+  password_reset: 10,
+  verification: 10,
+  password_change: 10,
+} as const

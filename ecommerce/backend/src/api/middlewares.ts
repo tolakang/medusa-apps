@@ -12,7 +12,13 @@ import {
   validatePhoneFields,
 } from './contact-validation'
 import { enforceUploadLimits } from './upload-limits'
-import { limitVerificationEmails, requireCaptcha, requireStrongPassword } from './auth-guards'
+import {
+  AUTH_LIMITS,
+  limitPerIp,
+  limitVerificationEmails,
+  requireCaptcha,
+  requireStrongPassword,
+} from './auth-guards'
 
 // The product index declares filterable `status` and `sales_channel_ids`, so
 // the route narrows it to published products in the key's sales channels.
@@ -65,7 +71,10 @@ export default defineMiddlewares({
       // Change password while signed in (current + new, at least 8).
       method: ['POST'],
       matcher: '/store/customers/me/password',
-      middlewares: [validateAndTransformBody(PostCustomerPassword)],
+      middlewares: [
+        limitPerIp('password_change', AUTH_LIMITS.password_change, 60),
+        validateAndTransformBody(PostCustomerPassword),
+      ],
     },
     {
       // Wishlist item body (TASKS P1-19).
@@ -77,7 +86,7 @@ export default defineMiddlewares({
       // Customer passwords: at least 8 characters at sign-up and reset.
       method: ['POST'],
       matcher: '/auth/customer/emailpass/register',
-      middlewares: [requireCaptcha('signup'), requireStrongPassword],
+      middlewares: [limitPerIp('signup', AUTH_LIMITS.signup, 60), requireCaptcha('signup'), requireStrongPassword],
     },
     {
       method: ['POST'],
@@ -88,18 +97,21 @@ export default defineMiddlewares({
       // CAPTCHA on customer sign-in and forgot password (sign-up above).
       method: ['POST'],
       matcher: '/auth/customer/emailpass',
-      middlewares: [requireCaptcha('login')],
+      middlewares: [limitPerIp('login', AUTH_LIMITS.login, 60), requireCaptcha('login')],
     },
     {
       method: ['POST'],
       matcher: '/auth/customer/emailpass/reset-password',
-      middlewares: [requireCaptcha('password_reset')],
+      middlewares: [
+        limitPerIp('password_reset', AUTH_LIMITS.password_reset, 60),
+        requireCaptcha('password_reset'),
+      ],
     },
     {
       // One verification email per address every 2 minutes.
       method: ['POST'],
       matcher: '/auth/verification/request',
-      middlewares: [limitVerificationEmails],
+      middlewares: [limitPerIp('verification', AUTH_LIMITS.verification, 60), limitVerificationEmails],
     },
     {
       method: ['POST'],
