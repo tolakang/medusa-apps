@@ -70,6 +70,10 @@ openssl rand -base64 32   # COOKIE_SECRET
    RECAPTCHA_PROJECT_ID=             # recaptcha: Google Cloud project ID
    RECAPTCHA_API_KEY=                # recaptcha: API key (reCAPTCHA Enterprise API)
    RECAPTCHA_SITE_KEY=               # recaptcha: key ID (score-based)
+   # Anti-abuse (P1-21): per-IP limits on customer auth are built in; set this
+   # only behind another proxy (e.g. Cloudflare orange cloud: cf-connecting-ip)
+   CLIENT_IP_HEADER=
+   UNVERIFIED_ACCOUNT_RETENTION_DAYS=   # worker: delete never-verified sign-ups after N days (default 28)
    # Staff Telegram alerts (P1-04)
    TELEGRAM_BOT_TOKEN=<staff bot token>
    TELEGRAM_CHAT_ID=<staff group id, negative>
