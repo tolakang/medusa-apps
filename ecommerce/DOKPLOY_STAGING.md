@@ -63,6 +63,7 @@ openssl rand -base64 32   # COOKIE_SECRET
    # Order emails (P1-04)
    RESEND_API_KEY=<Resend key>
    RESEND_FROM=My Shop <orders@<verified domain>>
+   RESEND_FROM_ACCOUNT=My Shop <verify@<verified domain>>   # account emails (P1-18); empty = RESEND_FROM
    # Staff Telegram alerts (P1-04)
    TELEGRAM_BOT_TOKEN=<staff bot token>
    TELEGRAM_CHAT_ID=<staff group id, negative>
