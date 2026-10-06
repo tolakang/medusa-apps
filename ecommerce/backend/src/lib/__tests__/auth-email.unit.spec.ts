@@ -1,5 +1,6 @@
 import type { ConfigModule } from "@medusajs/framework/types"
 import {
+  accountEmailFrom,
   adminLink,
   authEmailKey,
   PASSWORD_RESET_TEMPLATE,
@@ -29,6 +30,14 @@ describe("account email links (TASKS P1-18)", () => {
       "https://api.example.com/app/reset-password?token=t"
     )
     expect(adminLink(config({}), { token: "t" }, "")).toBeNull()
+  })
+
+  it("sends account emails from RESEND_FROM_ACCOUNT, else the default sender", () => {
+    expect(accountEmailFrom({ RESEND_FROM_ACCOUNT: " Shop <verify@example.com> " })).toEqual(
+      "Shop <verify@example.com>"
+    )
+    expect(accountEmailFrom({ RESEND_FROM_ACCOUNT: "" })).toBeUndefined()
+    expect(accountEmailFrom({})).toBeUndefined()
   })
 
   it("keeps the token out of the idempotency key", () => {

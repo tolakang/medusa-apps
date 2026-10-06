@@ -8,6 +8,7 @@ import { PASSWORD_RESET_TEMPLATE, VERIFY_EMAIL_TEMPLATE } from "../../src/lib/au
 // key in tests); the links are read from the stored notifications.
 process.env.STOREFRONT_URL = "https://shop.example.com"
 process.env.ADMIN_CORS = "https://api.example.com"
+process.env.RESEND_FROM_ACCOUNT = "Example Shop <verify@example.com>"
 jest.setTimeout(120 * 1000)
 
 const PASSWORD = "first-Password-1"
@@ -22,12 +23,16 @@ medusaIntegrationTestRunner({
         for (let i = 0; i < 40; i++) {
           const { data } = await query.graph({
             entity: "notification",
-            fields: ["to", "template", "data", "created_at"],
+            fields: ["to", "from", "template", "data", "created_at"],
             filters: { to, template },
           })
           const latest = data.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))[0]
           const url = (latest?.data as { url?: string } | undefined)?.url
-          if (url) return new URL(url)
+          if (url) {
+            // Account emails come from the account sender (RESEND_FROM_ACCOUNT).
+            expect(latest.from).toEqual("Example Shop <verify@example.com>")
+            return new URL(url)
+          }
           await new Promise((r) => setTimeout(r, 250))
         }
         return null

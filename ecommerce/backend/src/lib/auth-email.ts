@@ -46,6 +46,13 @@ export function adminLink(
   return `${origin.replace(/\/+$/, "")}${path}/reset-password?${new URLSearchParams(params)}`
 }
 
+// Sender of account emails, e.g. "My Shop <verify@example.com>" (owner,
+// 2026-10-06); empty = the order sender RESEND_FROM. Must be on a domain
+// verified in Resend.
+export function accountEmailFrom(env: NodeJS.ProcessEnv = process.env): string | undefined {
+  return env.RESEND_FROM_ACCOUNT?.trim() || undefined
+}
+
 // Idempotency key without the secret itself: a retried event sends one email,
 // and the token never appears in the key.
 export function authEmailKey(kind: string, secret: string): string {
