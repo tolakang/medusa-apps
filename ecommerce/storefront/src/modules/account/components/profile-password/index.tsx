@@ -1,70 +1,56 @@
 "use client"
 
-import React from "react"
-import Input from "@modules/common/components/input"
-import AccountInfo from "../account-info"
-import { HttpTypes } from "@medusajs/types"
-// TODO: Re-add toast notifications when Toaster component is implemented
+import { requestOwnPasswordReset } from "@lib/data/customer"
+import { Button } from "@modules/common/components/ui"
+import { useState } from "react"
 
-type MyInformationProps = {
-  customer: HttpTypes.StoreCustomer
-}
+// Account → Profile → Password (TASKS P1-18). Medusa's store API has no route
+// that changes a password with the old one, so a signed-in customer gets the
+// same emailed link as "Forgot password?" (docs "Reset Customer Password in
+// Storefront"). Replaces the starter's unfinished form.
+const ProfilePassword = () => {
+  const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle")
+  const [error, setError] = useState<string | null>(null)
 
-const ProfilePassword: React.FC<MyInformationProps> = ({ customer: _customer }) => {
-  const [successState, setSuccessState] = React.useState(false)
-
-  // TODO: Add support for password updates
-  const updatePassword = async () => {
-    // TODO: Re-add toast notification when Toaster component is implemented
-    console.info("Password update is not implemented")
-  }
-
-  const clearState = () => {
-    setSuccessState(false)
+  const send = async () => {
+    setState("sending")
+    const result = await requestOwnPasswordReset()
+    if (result?.state === "success") {
+      setState("sent")
+    } else {
+      setState("error")
+      setError(result?.state === "error" ? result.error : "Please try again.")
+    }
   }
 
   return (
-    <form
-      action={updatePassword}
-      onReset={() => clearState()}
-      className="w-full"
-    >
-      <AccountInfo
-        label="Password"
-        currentInfo={
-          <span>The password is not shown for security reasons</span>
-        }
-        isSuccess={successState}
-        isError={false}
-        errorMessage={undefined}
-        clearState={clearState}
-        data-testid="account-password-editor"
-      >
-        <div className="grid grid-cols-2 gap-4">
-          <Input
-            label="Old password"
-            name="old_password"
-            required
-            type="password"
-            data-testid="old-password-input"
-          />
-          <Input
-            label="New password"
-            type="password"
-            name="new_password"
-            required
-            data-testid="new-password-input"
-          />
-          <Input
-            label="Confirm password"
-            type="password"
-            name="confirm_password"
-            required
-            data-testid="confirm-password-input"
-          />
+    <div className="text-small-regular" data-testid="account-password-editor">
+      <div className="flex items-end justify-between">
+        <div className="flex flex-col">
+          <span className="uppercase text-ui-fg-base">Password</span>
+          <span className="text-ui-fg-subtle mt-2">
+            {state === "sent"
+              ? "We emailed you a link to choose a new password. It expires in 15 minutes."
+              : "To change it, we email you a link to choose a new one."}
+          </span>
+          {state === "error" && (
+            <span className="text-rose-500 mt-2" data-testid="password-reset-error">
+              {error}
+            </span>
+          )}
         </div>
-      </AccountInfo>
-    </form>
+        <Button
+          variant="secondary"
+          className="w-[100px] min-h-[25px] py-1"
+          onClick={send}
+          isLoading={state === "sending"}
+          disabled={state === "sent"}
+          data-testid="password-reset-button"
+        >
+          {state === "sent" ? "Sent" : "Send link"}
+        </Button>
+      </div>
+    </div>
   )
 }
 

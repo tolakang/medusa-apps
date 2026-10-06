@@ -8,6 +8,11 @@ import {
   ORDER_PLACED_TEMPLATE,
   type OrderNotificationData,
 } from "../../lib/order-notification"
+import {
+  type AuthEmailData,
+  PASSWORD_RESET_TEMPLATE,
+  VERIFY_EMAIL_TEMPLATE,
+} from "../../lib/auth-email"
 
 function orderPlaced(order: OrderNotificationData) {
   const rows = (order.items ?? [])
@@ -45,12 +50,48 @@ ${address?.address_1 ? `<p>Ship to: ${escapeHtml(addressLine(address))}</p>` : "
   }
 }
 
+// Account emails (TASKS P1-18): one button with the link, the link as text
+// for mail apps that hide buttons, and when it expires.
+function accountEmail(subject: string, intro: string, action: string, data: AuthEmailData) {
+  const url = escapeHtml(data.url)
+  const expires = data.expires_minutes
+    ? `<p>This link works once and expires in ${escapeHtml(data.expires_minutes)} minutes.</p>`
+    : `<p>This link works once.</p>`
+  const html = `<!doctype html>
+<html><body style="font-family:Arial,sans-serif;color:#111">
+<h2>${escapeHtml(subject)}</h2>
+<p>${escapeHtml(intro)}</p>
+<p><a href="${url}" style="display:inline-block;background:#111;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">${escapeHtml(action)}</a></p>
+<p style="font-size:13px;color:#555">Or open this link: <a href="${url}">${url}</a></p>
+${expires}
+<p style="font-size:13px;color:#555">If you didn't ask for this, ignore this email. Nothing changes.</p>
+</body></html>`
+  return { subject, html }
+}
+
 export function renderEmail(
   template: string | null | undefined,
   data: Record<string, unknown> | null | undefined
 ): { subject: string; html: string } | null {
   if (template === ORDER_PLACED_TEMPLATE) {
     return orderPlaced((data?.order ?? {}) as OrderNotificationData)
+  }
+  const auth = data as AuthEmailData | null | undefined
+  if (template === VERIFY_EMAIL_TEMPLATE && auth?.url) {
+    return accountEmail(
+      "Confirm your email",
+      "Thanks for creating an account. Confirm your email address to activate it.",
+      "Confirm email",
+      auth
+    )
+  }
+  if (template === PASSWORD_RESET_TEMPLATE && auth?.url) {
+    return accountEmail(
+      "Reset your password",
+      "We received a request to reset the password of your account.",
+      "Choose a new password",
+      auth
+    )
   }
   return null
 }
