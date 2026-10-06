@@ -11,6 +11,7 @@ import { useParams, usePathname, useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 import ProductPrice from "../product-price"
 import MobileActions from "./mobile-actions"
+import WishlistButton from "@modules/wishlist/components/wishlist-button"
 import { useRouter } from "next/navigation"
 
 type ProductActionsProps = {
@@ -182,6 +183,7 @@ export default function ProductActions({
             ? "Out of stock"
             : "Add to cart"}
         </Button>
+        <WishlistButton variantId={selectedVariant?.id} />
         <MobileActions
           product={product}
           variant={selectedVariant}

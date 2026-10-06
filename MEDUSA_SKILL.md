@@ -152,6 +152,7 @@ export default defineLink(
 - **Create links** outside workflows: `const link = container.resolve(ContainerRegistrationKeys.LINK); await link.create({ [Modules.PRODUCT]: { product_id }, blog: { post_id } })`.
 - **Create links in workflows:** `createRemoteLinkStep(linkData)`. Remove them with `dismissRemoteLinkStep` (both from `@medusajs/medusa/core-flows`).
 - `db:migrate` syncs link tables. Removing or changing a link is an **unsafe** change (§11).
+- **Read-only links:** `defineLink({ linkable: Mod.linkable.x.id, field: "<id column>" }, Other.linkable.y, { readOnly: true })` creates **no link table**; it only lets Query follow the stored ID (docs wishlist guide, Step 5). This repo: `src/links/wishlist-*.ts`.
 - **Core link field aliases used in this repo** (verified in `@medusajs/link-modules/dist/definitions`): `payment_collection.cart` and `cart.payment_collection` (cart ↔ payment collection); `fulfillment.order` (order ↔ fulfillment). Query them like normal fields, e.g. `fields: ["cart.email"]` on `payment_collection`.
 
 ## 5. Query (reading across modules)

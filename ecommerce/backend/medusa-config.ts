@@ -236,5 +236,7 @@ module.exports = defineConfig({
     ...paymentModules,
     // Telegram chats following an order (TASKS P1-17).
     { resolve: "./src/modules/telegram-links" },
+    // Customer wishlists (TASKS P1-19).
+    { resolve: "./src/modules/wishlist" },
   ],
 })
