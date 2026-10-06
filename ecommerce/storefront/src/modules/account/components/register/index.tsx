@@ -8,6 +8,7 @@ import { SubmitButton } from "@modules/checkout/components/submit-button"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { signup } from "@lib/data/customer"
 import { phoneInputProps } from "@lib/util/phone"
+import { Button } from "@modules/common/components/ui"
 
 type Props = {
   setCurrentView: (view: LOGIN_VIEW) => void
@@ -15,6 +16,34 @@ type Props = {
 
 const Register = ({ setCurrentView }: Props) => {
   const [message, formAction] = useActionState(signup, null)
+
+  // Account created: only the next step is shown (owner, 2026-10-06).
+  if (message?.state === "verification_required") {
+    return (
+      <div
+        className="max-w-sm w-full flex flex-col items-center"
+        data-testid="register-done"
+      >
+        <h1 className="text-large-semi uppercase mb-6">Check your email</h1>
+        <p
+          className="text-center text-base-regular text-ui-fg-base mb-8"
+          data-testid="register-verification-message"
+        >
+          We sent a verification link to <strong>{message.email}</strong>.
+          Open it to activate your account, then sign in. Can&apos;t find it?
+          Check your spam folder.
+        </p>
+        <Button
+          className="w-full"
+          size="large"
+          onClick={() => setCurrentView(LOGIN_VIEW.SIGN_IN)}
+          data-testid="register-done-sign-in"
+        >
+          Sign in
+        </Button>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -28,15 +57,6 @@ const Register = ({ setCurrentView }: Props) => {
         Create your Medusa Store Member profile, and get access to an enhanced
         shopping experience.
       </p>
-      {message?.state === "verification_required" && (
-        <div
-          className="w-full mb-4 text-center text-base-regular text-ui-fg-base bg-ui-bg-subtle border border-ui-border-base rounded-rounded p-4"
-          data-testid="register-verification-message"
-        >
-          We sent a verification link to <strong>{message.email}</strong>.
-          Please check your inbox to verify your email, then sign in.
-        </div>
-      )}
       <form className="w-full flex flex-col" action={formAction}>
         <div className="flex flex-col w-full gap-y-2">
           <Input
