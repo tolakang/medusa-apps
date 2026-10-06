@@ -210,6 +210,12 @@ module.exports = defineConfig({
       authCors: process.env.AUTH_CORS!,
       jwtSecret: process.env.JWT_SECRET,
       cookieSecret: process.env.COOKIE_SECRET,
+      // Customers confirm their email before they can sign in (TASKS P1-18;
+      // docs "Email Verification", since v2.16). The email is sent by
+      // src/subscribers/auth-email-verification.ts.
+      authVerificationsPerActor: {
+        customer: [{ entity_type: "email", auth_provider: "emailpass" }],
+      },
     },
   },
   admin: {
@@ -220,6 +226,8 @@ module.exports = defineConfig({
     // allows; the server enforces the live limit (TASKS P1-12, F-027).
     maxUploadFileSize: uploadCeilingBytes,
     backendUrl: process.env.MEDUSA_BACKEND_URL || undefined,
+    // Links in account emails (verification, password reset) point here.
+    storefrontUrl: process.env.STOREFRONT_URL || undefined,
   },
   modules: [
     ...redisModules,

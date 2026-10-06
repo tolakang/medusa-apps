@@ -75,7 +75,8 @@ openssl rand -base64 32   # COOKIE_SECRET
    PAYWAY_API_KEY=<the "Public Key" from ABA's email>
    PAYWAY_API_URL=
    PAYWAY_RETURN_URL=https://<api host>/hooks/payment/payway_payway
-   # Storefront cache refresh (P1-10) and PayWay's return to the shop
+   # Storefront cache refresh (P1-10), PayWay's return to the shop, and the
+   # links in verification / password reset emails (P1-18)
    STOREFRONT_URL=https://<shop host>
    REVALIDATE_SECRET=<openssl rand -hex 32, same on worker and storefront>
    ```

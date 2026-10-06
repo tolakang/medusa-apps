@@ -4,6 +4,7 @@ import { sdk } from "@lib/config"
 import medusaError from "@lib/util/medusa-error"
 import { HttpTypes } from "@medusajs/types"
 import { FetchError } from "@medusajs/js-sdk"
+import { MIN_PASSWORD_LENGTH } from "@lib/util/password"
 import { revalidateTag } from "next/cache"
 import { redirect } from "next/navigation"
 import {
@@ -244,6 +245,83 @@ export async function confirmEmailVerification(
     return { success: true }
   } catch (error) {
     return { success: false, error: String(error) }
+  }
+}
+
+// Password reset (TASKS P1-18), docs "Reset Customer Password in Storefront".
+// The backend answers the same whether or not the email has an account, so
+// the page never reveals which emails are registered; the email itself is sent
+// by the backend's auth.password_reset subscriber.
+export type PasswordFormState =
+  | { state: "error"; error: string }
+  | { state: "success" }
+  | null
+
+async function sendPasswordResetLink(email: string): Promise<PasswordFormState> {
+  try {
+    await sdk.auth.resetPassword("customer", "emailpass", { identifier: email })
+    return { state: "success" }
+  } catch {
+    return {
+      state: "error",
+      error: "We couldn't send the link right now. Please try again.",
+    }
+  }
+}
+
+export async function requestPasswordReset(
+  _currentState: unknown,
+  formData: FormData
+): Promise<PasswordFormState> {
+  const email = String(formData.get("email") ?? "").trim()
+  if (!email) {
+    return { state: "error", error: "Enter your email address." }
+  }
+  return sendPasswordResetLink(email)
+}
+
+// Account → Profile: a signed-in customer changes their password through the
+// same emailed link (Medusa has no store route that changes a password with
+// the old one).
+export async function requestOwnPasswordReset(): Promise<PasswordFormState> {
+  const customer = await retrieveCustomer().catch(() => null)
+  if (!customer?.email) {
+    return { state: "error", error: "Sign in again, then try once more." }
+  }
+  return sendPasswordResetLink(customer.email)
+}
+
+// The reset link's token goes in the Authorization header (since v2.6; the
+// JS SDK's updateProvider does this). It works once and expires after 15
+// minutes.
+export async function resetPassword(
+  _currentState: unknown,
+  formData: FormData
+): Promise<PasswordFormState> {
+  const token = String(formData.get("token") ?? "")
+  const email = String(formData.get("email") ?? "")
+  const password = String(formData.get("password") ?? "")
+  const confirm = String(formData.get("confirm_password") ?? "")
+  if (!token || !email) {
+    return { state: "error", error: "This link is incomplete. Request a new one." }
+  }
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return {
+      state: "error",
+      error: `Use at least ${MIN_PASSWORD_LENGTH} characters.`,
+    }
+  }
+  if (password !== confirm) {
+    return { state: "error", error: "The two passwords don't match." }
+  }
+  try {
+    await sdk.auth.updateProvider("customer", "emailpass", { email, password }, token)
+    return { state: "success" }
+  } catch {
+    return {
+      state: "error",
+      error: "This link is invalid or has expired. Request a new one.",
+    }
   }
 }
 
