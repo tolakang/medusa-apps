@@ -1,6 +1,7 @@
 "use client"
 
-import { useActionState } from "react"
+import { startTransition, useActionState } from "react"
+import { useCaptcha } from "@modules/common/components/captcha"
 import Input from "@modules/common/components/input"
 import { LOGIN_VIEW } from "@modules/account/templates/login-template"
 import ErrorMessage from "@modules/checkout/components/error-message"
@@ -18,6 +19,11 @@ type Props = {
 
 const Register = ({ setCurrentView }: Props) => {
   const [message, formAction] = useActionState(signup, null)
+  const captcha = useCaptcha("signup")
+  const submit = async (formData: FormData) => {
+    formData.set("captcha_token", await captcha.getToken().catch(() => ""))
+    startTransition(() => formAction(formData))
+  }
 
   // Account created: only the next step is shown (owner, 2026-10-06).
   if (message?.state === "verification_required") {
@@ -50,7 +56,7 @@ const Register = ({ setCurrentView }: Props) => {
         Create your Medusa Store Member profile, and get access to an enhanced
         shopping experience.
       </p>
-      <form className="w-full flex flex-col" action={formAction}>
+      <form className="w-full flex flex-col" action={submit}>
         <div className="flex flex-col w-full gap-y-2">
           <Input
             label="First name"
@@ -114,6 +120,7 @@ const Register = ({ setCurrentView }: Props) => {
             .
           </div>
         )}
+        {captcha.widget}
         <ErrorMessage
           error={message?.state === "error" ? message.error : null}
           data-testid="register-error"

@@ -6,7 +6,8 @@ import ErrorMessage from "@modules/checkout/components/error-message"
 import { SubmitButton } from "@modules/checkout/components/submit-button"
 import Input from "@modules/common/components/input"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { useActionState, useState } from "react"
+import { useCaptcha } from "@modules/common/components/captcha"
+import { startTransition, useActionState, useState } from "react"
 
 type Props = {
   setCurrentView: (view: LOGIN_VIEW) => void
@@ -16,9 +17,12 @@ const Login = ({ setCurrentView }: Props) => {
   const [message, formAction] = useActionState(login, null)
   // "Back to sign in" from the verification screen shows the form again.
   const [dismissed, setDismissed] = useState(false)
-  const submit = (formData: FormData) => {
+  const captcha = useCaptcha("login")
+  const submit = async (formData: FormData) => {
     setDismissed(false)
-    formAction(formData)
+    // A fresh CAPTCHA token for this submit (checked by the backend).
+    formData.set("captcha_token", await captcha.getToken().catch(() => ""))
+    startTransition(() => formAction(formData))
   }
 
   if (message?.state === "verification_required" && !dismissed) {
@@ -80,6 +84,7 @@ const Login = ({ setCurrentView }: Props) => {
         >
           Forgot password?
         </LocalizedClientLink>
+        {captcha.widget}
         <ErrorMessage
           error={message?.state === "error" ? message.error : null}
           data-testid="login-error-message"
