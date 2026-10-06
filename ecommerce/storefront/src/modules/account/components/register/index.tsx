@@ -8,7 +8,9 @@ import { SubmitButton } from "@modules/checkout/components/submit-button"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { signup } from "@lib/data/customer"
 import { phoneInputProps } from "@lib/util/phone"
-import { Button } from "@modules/common/components/ui"
+import CompleteProfile from "@modules/account/components/complete-profile"
+import VerifyEmailNotice from "@modules/account/components/verify-email-notice"
+import { MIN_PASSWORD_LENGTH } from "@lib/util/password"
 
 type Props = {
   setCurrentView: (view: LOGIN_VIEW) => void
@@ -20,30 +22,21 @@ const Register = ({ setCurrentView }: Props) => {
   // Account created: only the next step is shown (owner, 2026-10-06).
   if (message?.state === "verification_required") {
     return (
-      <div
-        className="max-w-sm w-full flex flex-col items-center"
-        data-testid="register-done"
-      >
-        <h1 className="text-large-semi uppercase mb-6">Check your email</h1>
-        <p
-          className="text-center text-base-regular text-ui-fg-base mb-8"
-          data-testid="register-verification-message"
-        >
-          We sent a verification link to <strong>{message.email}</strong>.
-          Open it to activate your account, then sign in. Can&apos;t find it?
-          Check your spam folder.
-        </p>
-        <Button
-          className="w-full"
-          size="large"
-          onClick={() => setCurrentView(LOGIN_VIEW.SIGN_IN)}
-          data-testid="register-done-sign-in"
-        >
-          Sign in
-        </Button>
-      </div>
+      <VerifyEmailNotice
+        title="Check your email"
+        email={message.email}
+        sent={message.sent}
+        onBack={() => setCurrentView(LOGIN_VIEW.SIGN_IN)}
+      />
     )
   }
+  if (message?.state === "complete_profile") {
+    return <CompleteProfile email={message.email} />
+  }
+
+  // The typed values stay after an error (React resets the form fields).
+  const values =
+    message?.state === "error" || message?.state === "exists" ? message.values : undefined
 
   return (
     <div
@@ -63,6 +56,7 @@ const Register = ({ setCurrentView }: Props) => {
             label="First name"
             name="first_name"
             required
+            defaultValue={values?.first_name}
             autoComplete="given-name"
             data-testid="first-name-input"
           />
@@ -70,6 +64,7 @@ const Register = ({ setCurrentView }: Props) => {
             label="Last name"
             name="last_name"
             required
+            defaultValue={values?.last_name}
             autoComplete="family-name"
             data-testid="last-name-input"
           />
@@ -79,23 +74,46 @@ const Register = ({ setCurrentView }: Props) => {
             required
             type="email"
             autoComplete="email"
+            defaultValue={values?.email}
             data-testid="email-input"
           />
           <Input
             label="Phone"
             name="phone"
+            defaultValue={values?.phone}
             {...phoneInputProps}
             data-testid="phone-input"
           />
           <Input
-            label="Password"
+            label={`Password (at least ${MIN_PASSWORD_LENGTH} characters)`}
             name="password"
             required
             type="password"
             autoComplete="new-password"
+            minLength={MIN_PASSWORD_LENGTH}
             data-testid="password-input"
           />
         </div>
+        {message?.state === "exists" && (
+          <div
+            className="w-full mt-4 text-small-regular text-ui-fg-base bg-ui-bg-subtle border border-ui-border-base rounded-rounded p-3"
+            data-testid="register-exists"
+          >
+            An account with <strong>{message.email}</strong> already exists.{" "}
+            <button
+              type="button"
+              className="underline"
+              onClick={() => setCurrentView(LOGIN_VIEW.SIGN_IN)}
+            >
+              Sign in
+            </button>{" "}
+            or{" "}
+            <LocalizedClientLink href="/forgot-password" className="underline">
+              reset your password
+            </LocalizedClientLink>
+            .
+          </div>
+        )}
         <ErrorMessage
           error={message?.state === "error" ? message.error : null}
           data-testid="register-error"

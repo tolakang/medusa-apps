@@ -115,6 +115,41 @@ export const removePendingCustomer = async () => {
   })
 }
 
+// A sign-in that isn't finished yet (owner, 2026-10-06): the token Medusa
+// returned for an unverified account (to resend the verification email) or
+// for a verified account without a customer record yet (to complete the
+// profile). Server-only (httpOnly), 30 minutes, never the password.
+export type PendingAuth = { email: string; token: string }
+
+export const setPendingAuth = async (pending: PendingAuth) => {
+  const cookies = await nextCookies()
+  cookies.set("_medusa_pending_auth", JSON.stringify(pending), {
+    maxAge: 60 * 30,
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+  })
+}
+
+export const getPendingAuth = async (): Promise<PendingAuth | null> => {
+  const cookies = await nextCookies()
+  const value = cookies.get("_medusa_pending_auth")?.value
+  if (!value) {
+    return null
+  }
+  try {
+    const parsed = JSON.parse(value) as PendingAuth
+    return parsed?.email && parsed?.token ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+export const removePendingAuth = async () => {
+  const cookies = await nextCookies()
+  cookies.set("_medusa_pending_auth", "", { maxAge: -1 })
+}
+
 export const getCartId = async () => {
   const cookies = await nextCookies()
   return cookies.get("_medusa_cart_id")?.value

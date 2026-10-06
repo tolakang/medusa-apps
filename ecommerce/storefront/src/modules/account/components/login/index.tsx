@@ -1,10 +1,12 @@
 import { login } from "@lib/data/customer"
+import CompleteProfile from "@modules/account/components/complete-profile"
+import VerifyEmailNotice from "@modules/account/components/verify-email-notice"
 import { LOGIN_VIEW } from "@modules/account/templates/login-template"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import { SubmitButton } from "@modules/checkout/components/submit-button"
 import Input from "@modules/common/components/input"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { useActionState } from "react"
+import { useActionState, useState } from "react"
 
 type Props = {
   setCurrentView: (view: LOGIN_VIEW) => void
@@ -12,6 +14,34 @@ type Props = {
 
 const Login = ({ setCurrentView }: Props) => {
   const [message, formAction] = useActionState(login, null)
+  // "Back to sign in" from the verification screen shows the form again.
+  const [dismissed, setDismissed] = useState(false)
+  const submit = (formData: FormData) => {
+    setDismissed(false)
+    formAction(formData)
+  }
+
+  if (message?.state === "verification_required" && !dismissed) {
+    return (
+      <VerifyEmailNotice
+        title="Verify your email first"
+        email={message.email}
+        sent={message.sent}
+        onBack={() => setDismissed(true)}
+      />
+    )
+  }
+  if (message?.state === "complete_profile") {
+    return <CompleteProfile email={message.email} />
+  }
+
+  // The email stays filled in after an error or "Back to sign in".
+  const email =
+    message?.state === "error"
+      ? message.values?.email
+      : message?.state === "verification_required"
+        ? message.email
+        : undefined
 
   return (
     <div
@@ -22,16 +52,7 @@ const Login = ({ setCurrentView }: Props) => {
       <p className="text-center text-base-regular text-ui-fg-base mb-8">
         Sign in to access an enhanced shopping experience.
       </p>
-      {message?.state === "verification_required" && (
-        <div
-          className="w-full mb-6 text-center text-base-regular text-ui-fg-base bg-ui-bg-subtle border border-ui-border-base rounded-rounded p-4"
-          data-testid="login-verification-message"
-        >
-          We sent a verification link to <strong>{message.email}</strong>.
-          Please verify your email, then sign in.
-        </div>
-      )}
-      <form className="w-full" action={formAction}>
+      <form className="w-full" action={submit}>
         <div className="flex flex-col w-full gap-y-2">
           <Input
             label="Email"
@@ -40,6 +61,7 @@ const Login = ({ setCurrentView }: Props) => {
             title="Enter a valid email address."
             autoComplete="email"
             required
+            defaultValue={email}
             data-testid="email-input"
           />
           <Input

@@ -18,27 +18,67 @@ import {
   removePendingCustomer,
   setAuthToken,
   setPendingCustomer,
+  getPendingAuth,
+  removePendingAuth,
+  setPendingAuth,
 } from "./cookies"
 
+// What the sign-in / sign-up forms show after a submit (owner, 2026-10-06):
+// the typed values come back so the form keeps them (React resets form
+// fields after an action), and each outcome has its own screen.
+export type AuthFormValues = {
+  email?: string
+  first_name?: string
+  last_name?: string
+  phone?: string
+}
+export type VerificationSent = "sent" | "recent" | "failed"
 export type CustomerAuthState =
-  | { state: "error"; error: string }
-  | { state: "verification_required"; email: string }
+  | { state: "error"; error: string; values?: AuthFormValues }
+  | { state: "exists"; email: string; values?: AuthFormValues }
+  | { state: "verification_required"; email: string; sent: VerificationSent }
+  | { state: "complete_profile"; email: string }
   | { state: "success" }
   | null
 
+// Medusa's messages, worded for customers (no "Error:" prefix).
+function friendlyAuthError(error: unknown): string {
+  const message = String((error as Error)?.message ?? error ?? "").replace(/^Error:\s*/, "")
+  if (/invalid email or password|unauthorized/i.test(message)) {
+    return "The email or password is incorrect."
+  }
+  return message || "Something went wrong. Please try again."
+}
+
 // Requests a verification email for the given customer. The request must be
 // authenticated with a token tied to the auth identity (the token returned by
-// register or by a login that requires verification).
-async function requestVerificationEmail(email: string, token: string) {
-  await sdk.auth.verification.request(
-    {
-      entity_id: email,
-      entity_type: "email",
-    },
-    {
-      authorization: `Bearer ${token}`,
-    }
-  )
+// register or by a login that requires verification). The backend sends at
+// most one per address every 2 minutes (429).
+async function requestVerificationEmail(email: string, token: string): Promise<VerificationSent> {
+  try {
+    await sdk.auth.verification.request(
+      {
+        entity_id: email,
+        entity_type: "email",
+      },
+      {
+        authorization: `Bearer ${token}`,
+      }
+    )
+    return "sent"
+  } catch (error) {
+    return (error as FetchError)?.status === 429 ? "recent" : "failed"
+  }
+}
+
+// "Resend link" on the "verify your email" screen, using the token kept from
+// the sign-in (no password needed).
+export async function resendVerificationEmail(): Promise<VerificationSent> {
+  const pending = await getPendingAuth()
+  if (!pending) {
+    return "failed"
+  }
+  return requestVerificationEmail(pending.email, pending.token)
 }
 
 export const retrieveCustomer =
@@ -97,6 +137,7 @@ export async function signup(
     phone: formData.get("phone") as string,
   }
 
+  let exists = false
   try {
     await sdk.auth.register("customer", "emailpass", {
       email: customerForm.email,
@@ -104,25 +145,32 @@ export async function signup(
     })
   } catch (error) {
     const fetchError = error as FetchError
-    // An existing identity (for example, an admin user with the same email) is
-    // expected and handled: the customer can still log in to link a customer
-    // record. Any other error is surfaced.
+    // An existing identity (an earlier sign-up, or an admin user with the
+    // same email) is handled below by signing in. Any other error is shown.
     if (
       fetchError.statusText !== "Unauthorized" ||
       fetchError.message !== "Identity with email already exists"
     ) {
-      return { state: "error", error: String(error) }
+      return { state: "error", error: friendlyAuthError(error), values: customerForm }
     }
+    exists = true
   }
 
-  // Persist the extra signup fields. The customer record is created during
-  // login, which is deferred until after email verification when the backend
-  // requires it.
-  await setPendingCustomer(customerForm)
+  // Persist the extra signup fields (only for a new sign-up, so an attempt on
+  // someone else's email can't change what they get). The customer record is
+  // created at the first sign-in after email verification.
+  if (!exists) {
+    await setPendingCustomer(customerForm)
+  }
 
   // Continue by logging in. The login response tells us whether the backend
   // requires email verification — we don't need a storefront-side flag.
-  return completeLogin(customerForm.email, password)
+  const result = await completeLogin(customerForm.email, password)
+  // The email already has an account and this isn't its password.
+  if (exists && result?.state === "error") {
+    return { state: "exists", email: customerForm.email, values: customerForm }
+  }
+  return result?.state === "error" ? { ...result, values: customerForm } : result
 }
 
 export async function login(
@@ -132,7 +180,8 @@ export async function login(
   const email = formData.get("email") as string
   const password = formData.get("password") as string
 
-  return completeLogin(email, password)
+  const result = await completeLogin(email, password)
+  return result?.state === "error" ? { ...result, values: { email } } : result
 }
 
 // Logs the customer in and reconciles the customer record. The behavior is
@@ -147,7 +196,7 @@ async function completeLogin(
   try {
     result = await sdk.auth.login("customer", "emailpass", { email, password })
   } catch (error) {
-    return { state: "error", error: String(error) }
+    return { state: "error", error: friendlyAuthError(error) }
   }
 
   // A `location` is returned by third-party auth providers, which this flow
@@ -166,12 +215,9 @@ async function completeLogin(
     "verification_required" in result &&
     result.verification_required
   ) {
-    try {
-      await requestVerificationEmail(email, result.token)
-    } catch {
-      // Ignore: the customer can resend from the verification page.
-    }
-    return { state: "verification_required", email }
+    await setPendingAuth({ email, token: result.token })
+    const sent = await requestVerificationEmail(email, result.token)
+    return { state: "verification_required", email, sent }
   }
 
   if (typeof result !== "string") {
@@ -196,6 +242,13 @@ async function completeLogin(
   if (!customerExists) {
     const pending = await getPendingCustomer()
 
+    // No sign-up details on this device (verified on another device, or more
+    // than a day later): ask for them instead of creating a nameless account.
+    if (!pending || pending.email?.toLowerCase() !== email.toLowerCase()) {
+      await setPendingAuth({ email, token })
+      return { state: "complete_profile", email }
+    }
+
     try {
       await sdk.store.customer.create(
         {
@@ -213,7 +266,7 @@ async function completeLogin(
         password,
       })) as string
     } catch (error) {
-      return { state: "error", error: String(error) }
+      return { state: "error", error: friendlyAuthError(error) }
     }
 
     await removePendingCustomer()
@@ -224,12 +277,57 @@ async function completeLogin(
   const customerCacheTag = await getCacheTag("customers")
   revalidateTag(customerCacheTag)
 
+  await removePendingAuth()
+
   try {
     await transferCart()
   } catch (error) {
-    return { state: "error", error: String(error) }
+    return { state: "error", error: friendlyAuthError(error) }
   }
 
+  return { state: "success" }
+}
+
+// "Complete your profile" (owner, 2026-10-06): create the customer record
+// with the sign-in token kept from completeLogin, then refresh the token so
+// it carries the customer (POST /auth/token/refresh; docs "Third-Party or
+// Social Login in Storefront"), without asking for the password again.
+export async function completeProfile(
+  _currentState: unknown,
+  formData: FormData
+): Promise<{ state: "error"; error: string; values?: AuthFormValues } | { state: "success" } | null> {
+  const values = {
+    first_name: String(formData.get("first_name") ?? "").trim(),
+    last_name: String(formData.get("last_name") ?? "").trim(),
+    phone: String(formData.get("phone") ?? "").trim(),
+  }
+  const pending = await getPendingAuth()
+  if (!pending) {
+    return { state: "error", error: "Your sign-in expired. Please sign in again.", values }
+  }
+  const authorization = `Bearer ${pending.token}`
+  try {
+    await sdk.store.customer.create(
+      { email: pending.email, ...values, phone: values.phone || undefined },
+      {},
+      { authorization }
+    )
+    const { token } = await sdk.client.fetch<{ token: string }>("/auth/token/refresh", {
+      method: "POST",
+      headers: { authorization },
+    })
+    await setAuthToken(token)
+  } catch (error) {
+    return { state: "error", error: friendlyAuthError(error), values }
+  }
+  await removePendingAuth()
+  await removePendingCustomer()
+  revalidateTag(await getCacheTag("customers"))
+  try {
+    await transferCart()
+  } catch {
+    // The cart stays as it is; the customer is signed in.
+  }
   return { state: "success" }
 }
 

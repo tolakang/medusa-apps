@@ -1,6 +1,7 @@
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
-import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { PASSWORD_RESET_TEMPLATE, VERIFY_EMAIL_TEMPLATE } from "../../src/lib/auth-email"
+import { PASSWORD_TOO_SHORT_MESSAGE, RESEND_TOO_SOON_MESSAGE } from "../../src/api/auth-guards"
 
 // Account emails (TASKS P1-18): customers verify their email before they can
 // sign in, and reset a forgotten password through an emailed link. Real
@@ -118,6 +119,70 @@ medusaIntegrationTestRunner({
         expect(request.status).toBeLessThan(300)
         await new Promise((r) => setTimeout(r, 1500))
         expect(await count(email, PASSWORD_RESET_TEMPLATE)).toEqual(0)
+      })
+
+      it("refuses passwords shorter than 8 characters at sign-up and reset", async () => {
+        const short = await api
+          .post("/auth/customer/emailpass/register", { email: "short@example.com", password: "abc1" })
+          .catch((e) => e.response)
+        expect(short.status).toEqual(400)
+        expect(short.data.message).toEqual(PASSWORD_TOO_SHORT_MESSAGE)
+
+        const email = "reset-short@example.com"
+        await verifiedCustomer(email)
+        await api.post("/auth/customer/emailpass/reset-password", { identifier: email })
+        const token = (await emailLink(email, PASSWORD_RESET_TEMPLATE))!.searchParams.get("token")
+        const update = await api
+          .post(
+            "/auth/customer/emailpass/update",
+            { email, password: "abc1" },
+            { headers: { authorization: `Bearer ${token}` } }
+          )
+          .catch((e) => e.response)
+        expect(update.status).toEqual(400)
+        expect((await login(email, PASSWORD)).status).toEqual(200)
+      })
+
+      it("sends one verification email per address every 2 minutes", async () => {
+        const email = "resend@example.com"
+        await api.post("/auth/customer/emailpass/register", { email, password: PASSWORD })
+        const { data } = await login(email, PASSWORD)
+        const request = () =>
+          api
+            .post(
+              "/auth/verification/request",
+              { entity_id: email, entity_type: "email" },
+              { headers: { authorization: `Bearer ${data.token}` } }
+            )
+            .catch((e) => e.response)
+        expect((await request()).status).toBeLessThan(300)
+        expect(await emailLink(email, VERIFY_EMAIL_TEMPLATE)).not.toBeNull()
+        const again = await request()
+        expect(again.status).toEqual(429)
+        expect(again.data.message).toEqual(RESEND_TOO_SOON_MESSAGE)
+        await new Promise((r) => setTimeout(r, 1000))
+        expect(await count(email, VERIFY_EMAIL_TEMPLATE)).toEqual(1)
+      })
+
+      it("completes a verified account's profile without the password (token refresh)", async () => {
+        const email = "complete@example.com"
+        await verifiedCustomer(email)
+        const { data } = await login(email, PASSWORD)
+        const key = await getContainer().resolve(Modules.API_KEY).createApiKeys({
+          title: "Store",
+          type: "publishable",
+          created_by: "test",
+        })
+        const registration = {
+          headers: { "x-publishable-api-key": key.token, authorization: `Bearer ${data.token}` },
+        }
+        // What the storefront's "Complete your profile" step sends.
+        await api.post("/store/customers", { email, first_name: "Sok", last_name: "Dara", phone: "012 345 678" }, registration)
+        const refreshed = await api.post("/auth/token/refresh", {}, registration)
+        const { data: me } = await api.get("/store/customers/me", {
+          headers: { "x-publishable-api-key": key.token, authorization: `Bearer ${refreshed.data.token}` },
+        })
+        expect(me.customer).toMatchObject({ email, first_name: "Sok", last_name: "Dara" })
       })
 
       it("sends admin users to the admin dashboard's reset page", async () => {
