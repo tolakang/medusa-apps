@@ -325,6 +325,36 @@ export async function resetPassword(
   }
 }
 
+// Change password while signed in (owner, 2026-10-06): the backend's
+// POST /store/customers/me/password checks the current password first.
+export async function changePassword(
+  _currentState: unknown,
+  formData: FormData
+): Promise<{ success: boolean; error: string | null }> {
+  const current = String(formData.get("current_password") ?? "")
+  const next = String(formData.get("new_password") ?? "")
+  const confirm = String(formData.get("confirm_password") ?? "")
+  if (next.length < MIN_PASSWORD_LENGTH) {
+    return { success: false, error: `Use at least ${MIN_PASSWORD_LENGTH} characters.` }
+  }
+  if (next !== confirm) {
+    return { success: false, error: "The two new passwords don't match." }
+  }
+  if (next === current) {
+    return { success: false, error: "Choose a password different from the current one." }
+  }
+  try {
+    await sdk.client.fetch("/store/customers/me/password", {
+      method: "POST",
+      headers: await getAuthHeaders(),
+      body: { current_password: current, new_password: next },
+    })
+    return { success: true, error: null }
+  } catch (error) {
+    return { success: false, error: (error as Error).message }
+  }
+}
+
 export async function signout(countryCode: string) {
   await sdk.auth.logout()
 

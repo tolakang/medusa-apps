@@ -10,6 +10,7 @@ import {
 } from "../../lib/order-notification"
 import {
   type AuthEmailData,
+  PASSWORD_CHANGED_TEMPLATE,
   PASSWORD_RESET_TEMPLATE,
   VERIFY_EMAIL_TEMPLATE,
 } from "../../lib/auth-email"
@@ -93,5 +94,23 @@ export function renderEmail(
       auth
     )
   }
+  if (template === PASSWORD_CHANGED_TEMPLATE) {
+    return passwordChanged(auth?.url)
+  }
   return null
+}
+
+// After a signed-in customer changes their password (no secret in the link).
+function passwordChanged(forgotUrl: string | undefined) {
+  const subject = "Your password was changed"
+  const link = forgotUrl
+    ? `<p>If you didn't change it, <a href="${escapeHtml(forgotUrl)}">reset your password now</a> to secure your account.</p>`
+    : `<p>If you didn't change it, use "Forgot password?" on the sign-in page to secure your account.</p>`
+  const html = `<!doctype html>
+<html><body style="font-family:Arial,sans-serif;color:#111">
+<h2>${subject}</h2>
+<p>The password of your account was just changed.</p>
+${link}
+</body></html>`
+  return { subject, html }
 }

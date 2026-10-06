@@ -10,6 +10,7 @@ import type { ConfigModule } from "@medusajs/framework/types"
 
 export const VERIFY_EMAIL_TEMPLATE = "auth-verify-email"
 export const PASSWORD_RESET_TEMPLATE = "auth-password-reset"
+export const PASSWORD_CHANGED_TEMPLATE = "auth-password-changed"
 
 export type AuthEmailData = { url: string; expires_minutes?: number }
 
@@ -17,14 +18,15 @@ export type AuthEmailData = { url: string; expires_minutes?: number }
 // country and keeps the query string (src/middleware.ts in the storefront).
 export function storefrontLink(
   config: ConfigModule,
-  page: "verify-account" | "reset-password",
+  page: "verify-account" | "reset-password" | "forgot-password",
   params: Record<string, string>
 ): string | null {
   const base = (config.admin.storefrontUrl ?? "").replace(/\/+$/, "")
   if (!/^https?:\/\//.test(base)) {
     return null
   }
-  return `${base}/${page}?${new URLSearchParams(params)}`
+  const query = new URLSearchParams(params).toString()
+  return `${base}/${page}${query ? `?${query}` : ""}`
 }
 
 // The admin dashboard's own reset page (`<admin>/reset-password`). The admin is

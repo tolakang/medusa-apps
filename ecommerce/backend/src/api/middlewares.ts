@@ -4,6 +4,7 @@ import {
   validateAndTransformBody,
 } from '@medusajs/framework/http'
 import { PostAdminUploadLimit } from './admin/upload-limit/validators'
+import { PostCustomerPassword } from './store/customers/me/password/validators'
 import { PostWishlistItem } from './store/customers/me/wishlists/items/validators'
 import {
   requireContact,
@@ -58,6 +59,12 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/store/payment-collections/:id/payment-sessions',
       middlewares: [requireContactBeforePayment],
+    },
+    {
+      // Change password while signed in (current + new, at least 8).
+      method: ['POST'],
+      matcher: '/store/customers/me/password',
+      middlewares: [validateAndTransformBody(PostCustomerPassword)],
     },
     {
       // Wishlist item body (TASKS P1-19).
