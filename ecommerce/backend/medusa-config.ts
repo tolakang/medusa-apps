@@ -238,5 +238,22 @@ module.exports = defineConfig({
     { resolve: "./src/modules/telegram-links" },
     // Customer wishlists (TASKS P1-19).
     { resolve: "./src/modules/wishlist" },
+    // Auth Module with the default email + password provider and two-factor
+    // sign-in for admins (TASKS P1-22; docs "Auth Module Options" and
+    // "Multi-Factor Authentication", v2.15.5+; the admin's Settings → Profile
+    // has the screens). Listing the module here replaces Medusa's default
+    // entry, so emailpass is listed explicitly (utils define-config
+    // resolveModules). disable_policy "challenge": switching 2FA off needs a
+    // fresh code, so a stolen session can't remove it.
+    {
+      resolve: "@medusajs/medusa/auth",
+      options: {
+        providers: [{ resolve: "@medusajs/medusa/auth-emailpass", id: "emailpass" }],
+        mfa: {
+          encryption_key: process.env.AUTH_MFA_ENCRYPTION_KEY,
+          disable_policy: "challenge",
+        },
+      },
+    },
   ],
 })

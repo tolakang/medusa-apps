@@ -10,6 +10,7 @@ Follow the steps in order. Field names are Dokploy's own (docs.dokploy.com, chec
 ```bash
 openssl rand -base64 32   # JWT_SECRET
 openssl rand -base64 32   # COOKIE_SECRET
+openssl rand -hex 32      # AUTH_MFA_ENCRYPTION_KEY (admin 2FA; never change it later)
 ```
 
 ---
@@ -35,6 +36,7 @@ openssl rand -base64 32   # COOKIE_SECRET
    REDIS_URL=<Redis Internal Connection URL>
    MEDUSA_FF_CACHING=true
    JWT_SECRET=<generated>
+   AUTH_MFA_ENCRYPTION_KEY=<generated, 64 hex characters>   # admin 2FA (P1-22); set on backend AND worker; never change once used
    COOKIE_SECRET=<generated>
    STORE_CORS=https://<shop host>
    ADMIN_CORS=https://<api host>
@@ -322,6 +324,7 @@ Do these after the backend, worker and storefront are deployed with the step 2.5
    - **Google reCAPTCHA** (current version, Google Cloud): Google Cloud console → **Security → reCAPTCHA** (Fraud Defense) → create a **website key**, *score-based* (no checkbox), domains `<shop host>`; copy its **key ID**. Enable the **reCAPTCHA Enterprise API**, create an **API key** restricted to that API. Set `CAPTCHA_PROVIDER=recaptcha`, `RECAPTCHA_PROJECT_ID`, `RECAPTCHA_API_KEY`, `RECAPTCHA_SITE_KEY=<key ID>` on the backend, and `NEXT_PUBLIC_CAPTCHA_PROVIDER=recaptcha`, `NEXT_PUBLIC_CAPTCHA_SITE_KEY=<key ID>` on the storefront. 10,000 checks a month are free; enable billing before going over, or sign-ins are refused.
    - **Cloudflare Turnstile** (free): Cloudflare dashboard → **Turnstile** → add a widget for `<shop host>` (mode *Managed*); `CAPTCHA_PROVIDER=turnstile`, `CAPTCHA_SECRET_KEY=<secret>` on the backend; `NEXT_PUBLIC_CAPTCHA_PROVIDER=turnstile`, `NEXT_PUBLIC_CAPTCHA_SITE_KEY=<site key>` on the storefront.
    - Check: sign-in, sign-up and Forgot password still work in the shop; `curl -s -X POST https://<api host>/auth/customer/emailpass -H 'content-type: application/json' -d '{"email":"x@example.com","password":"x"}'` answers `Please complete the security check and try again.`
+9. **Two-factor sign-in for every admin** (P1-22; Medusa has no setting that forces it, so make it a rule). With `AUTH_MFA_ENCRYPTION_KEY` set: each admin opens the dashboard → **Settings → Profile → Two-factor authentication → Enable**, scans the QR code with an authenticator app (Google Authenticator, 1Password, …), enters the 6-digit code, and **downloads the recovery codes** and keeps them offline. From then on every admin sign-in asks for a code; "Lost access to your authenticator app? Use a recovery code" covers a lost phone. Switching 2FA off also asks for a code (`disable_policy: "challenge"`). Check: sign out and in again → the dashboard asks for the code.
 
 ---
 
