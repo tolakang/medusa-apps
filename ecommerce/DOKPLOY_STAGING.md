@@ -64,6 +64,12 @@ openssl rand -base64 32   # COOKIE_SECRET
    RESEND_API_KEY=<Resend key>
    RESEND_FROM=My Shop <orders@<verified domain>>
    RESEND_FROM_ACCOUNT=My Shop <verify@<verified domain>>   # account emails (P1-18); empty = RESEND_FROM
+   # CAPTCHA (P1-21), server only; must match the storefront's NEXT_PUBLIC_CAPTCHA_PROVIDER
+   CAPTCHA_PROVIDER=                 # recaptcha | turnstile | empty = off
+   CAPTCHA_SECRET_KEY=               # turnstile: secret key
+   RECAPTCHA_PROJECT_ID=             # recaptcha: Google Cloud project ID
+   RECAPTCHA_API_KEY=                # recaptcha: API key (reCAPTCHA Enterprise API)
+   RECAPTCHA_SITE_KEY=               # recaptcha: key ID (score-based)
    # Staff Telegram alerts (P1-04)
    TELEGRAM_BOT_TOKEN=<staff bot token>
    TELEGRAM_CHAT_ID=<staff group id, negative>
@@ -141,6 +147,8 @@ openssl rand -base64 32   # COOKIE_SECRET
    NEXT_PUBLIC_BASE_URL=https://<shop host>
    NEXT_PUBLIC_DEFAULT_REGION=kh
    NEXT_PUBLIC_STRIPE_KEY=
+   NEXT_PUBLIC_CAPTCHA_PROVIDER=     # P1-21: same as the backend's CAPTCHA_PROVIDER
+   NEXT_PUBLIC_CAPTCHA_SITE_KEY=     # recaptcha: key ID; turnstile: site key
    S3_IMAGE_HOSTNAME=<host part of the backend's S3_FILE_URL>
    S3_IMAGE_PATHNAME=/**
    ```
@@ -306,6 +314,10 @@ Do these after the backend, worker and storefront are deployed with the step 2.5
 5. **Uploads.** Upload a product image of a few MB in the admin: it must be stored in the bucket and show in the shop.
 6. **Cache refresh.** `curl -s -o /dev/null -w '%{http_code}\n' -X POST https://<shop host>/api/revalidate` answers `401`. A product price change shows in the shop within seconds.
 7. **Backups.** Set up §7.1–7.2 and run the §7.3 restore test once before taking real orders.
+8. **CAPTCHA** (P1-21) on sign-in, sign-up and forgot password. Set the **storefront build args and the backend variables together** (a backend with CAPTCHA and a storefront without it refuses every sign-in), then rebuild the storefront and redeploy the backend.
+   - **Google reCAPTCHA** (current version, Google Cloud): Google Cloud console → **Security → reCAPTCHA** (Fraud Defense) → create a **website key**, *score-based* (no checkbox), domains `<shop host>`; copy its **key ID**. Enable the **reCAPTCHA Enterprise API**, create an **API key** restricted to that API. Set `CAPTCHA_PROVIDER=recaptcha`, `RECAPTCHA_PROJECT_ID`, `RECAPTCHA_API_KEY`, `RECAPTCHA_SITE_KEY=<key ID>` on the backend, and `NEXT_PUBLIC_CAPTCHA_PROVIDER=recaptcha`, `NEXT_PUBLIC_CAPTCHA_SITE_KEY=<key ID>` on the storefront. 10,000 checks a month are free; enable billing before going over, or sign-ins are refused.
+   - **Cloudflare Turnstile** (free): Cloudflare dashboard → **Turnstile** → add a widget for `<shop host>` (mode *Managed*); `CAPTCHA_PROVIDER=turnstile`, `CAPTCHA_SECRET_KEY=<secret>` on the backend; `NEXT_PUBLIC_CAPTCHA_PROVIDER=turnstile`, `NEXT_PUBLIC_CAPTCHA_SITE_KEY=<site key>` on the storefront.
+   - Check: sign-in, sign-up and Forgot password still work in the shop; `curl -s -X POST https://<api host>/auth/customer/emailpass -H 'content-type: application/json' -d '{"email":"x@example.com","password":"x"}'` answers `Please complete the security check and try again.`
 
 ---
 

@@ -1,5 +1,6 @@
 import type { MedusaNextFunction, MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { MedusaError, Modules } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, MedusaError, Modules } from "@medusajs/framework/utils"
+import { captchaConfig, verifyCaptcha, type CaptchaAction } from "../lib/captcha"
 import { MIN_PASSWORD_LENGTH } from "./store/customers/me/password/validators"
 
 // Checks in front of Medusa's own auth routes (owner, 2026-10-06; registered
@@ -52,4 +53,42 @@ export async function limitVerificationEmails(
     return next(e)
   }
   next()
+}
+
+// CAPTCHA (owner, 2026-10-06; TASKS P1-21) on customer sign-in, sign-up and
+// forgot password. The storefront sends the token in the
+// `x-captcha-token` header or as `captcha_token` in the body. Off when
+// CAPTCHA_PROVIDER is empty (src/lib/captcha.ts).
+export const CAPTCHA_FAILED_MESSAGE =
+  "Please complete the security check and try again."
+
+export function requireCaptcha(action: CaptchaAction) {
+  return async function captchaMiddleware(
+    req: MedusaRequest,
+    _res: MedusaResponse,
+    next: MedusaNextFunction
+  ) {
+    let config
+    try {
+      config = captchaConfig()
+    } catch (e) {
+      return next(e)
+    }
+    if (!config) {
+      return next()
+    }
+    const header = req.headers["x-captcha-token"]
+    const body = (req.body ?? {}) as { captcha_token?: unknown }
+    const token =
+      (typeof header === "string" && header) ||
+      (typeof body.captcha_token === "string" ? body.captcha_token : "")
+    const result = await verifyCaptcha(config, token, action)
+    if (!result.ok) {
+      req.scope
+        .resolve(ContainerRegistrationKeys.LOGGER)
+        .info(`CAPTCHA refused (${action}): ${result.reason}`)
+      return next(new MedusaError(MedusaError.Types.INVALID_DATA, CAPTCHA_FAILED_MESSAGE))
+    }
+    next()
+  }
 }

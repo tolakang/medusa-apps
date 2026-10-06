@@ -137,11 +137,14 @@ export async function signup(
     phone: formData.get("phone") as string,
   }
 
-  let exists = false
+  const captchaToken = String(formData.get("captcha_token") ?? "")
+  let registrationToken = ""
   try {
-    await sdk.auth.register("customer", "emailpass", {
+    registrationToken = await sdk.auth.register("customer", "emailpass", {
       email: customerForm.email,
       password,
+      // Checked by the backend's CAPTCHA middleware (TASKS P1-21).
+      captcha_token: captchaToken,
     })
   } catch (error) {
     const fetchError = error as FetchError
@@ -153,24 +156,18 @@ export async function signup(
     ) {
       return { state: "error", error: friendlyAuthError(error), values: customerForm }
     }
-    exists = true
-  }
-
-  // Persist the extra signup fields (only for a new sign-up, so an attempt on
-  // someone else's email can't change what they get). The customer record is
-  // created at the first sign-in after email verification.
-  if (!exists) {
-    await setPendingCustomer(customerForm)
-  }
-
-  // Continue by logging in. The login response tells us whether the backend
-  // requires email verification — we don't need a storefront-side flag.
-  const result = await completeLogin(customerForm.email, password)
-  // The email already has an account and this isn't its password.
-  if (exists && result?.state === "error") {
+    // The email already has an account: offer sign-in / reset instead.
     return { state: "exists", email: customerForm.email, values: customerForm }
   }
-  return result?.state === "error" ? { ...result, values: customerForm } : result
+
+  // Persist the extra signup fields; the customer record is created at the
+  // first sign-in after email verification. The verification email is sent
+  // with the token from registration (no second sign-in, so the single-use
+  // CAPTCHA token is spent once).
+  await setPendingCustomer(customerForm)
+  await setPendingAuth({ email: customerForm.email, token: registrationToken })
+  const sent = await requestVerificationEmail(customerForm.email, registrationToken)
+  return { state: "verification_required", email: customerForm.email, sent }
 }
 
 export async function login(
@@ -180,7 +177,8 @@ export async function login(
   const email = formData.get("email") as string
   const password = formData.get("password") as string
 
-  const result = await completeLogin(email, password)
+  const captchaToken = String(formData.get("captcha_token") ?? "")
+  const result = await completeLogin(email, password, captchaToken)
   return result?.state === "error" ? { ...result, values: { email } } : result
 }
 
@@ -189,12 +187,18 @@ export async function login(
 // email verification is enabled.
 async function completeLogin(
   email: string,
-  password: string
+  password: string,
+  captchaToken: string
 ): Promise<CustomerAuthState> {
   let result: Awaited<ReturnType<typeof sdk.auth.login>>
 
   try {
-    result = await sdk.auth.login("customer", "emailpass", { email, password })
+    result = await sdk.auth.login("customer", "emailpass", {
+      email,
+      password,
+      // Checked by the backend's CAPTCHA middleware (TASKS P1-21).
+      captcha_token: captchaToken,
+    })
   } catch (error) {
     return { state: "error", error: friendlyAuthError(error) }
   }
@@ -261,10 +265,14 @@ async function completeLogin(
         { authorization: `Bearer ${token}` }
       )
 
-      token = (await sdk.auth.login("customer", "emailpass", {
-        email,
-        password,
-      })) as string
+      // A token that carries the new customer, without signing in again
+      // (the CAPTCHA token is single-use): POST /auth/token/refresh.
+      token = (
+        await sdk.client.fetch<{ token: string }>("/auth/token/refresh", {
+          method: "POST",
+          headers: { authorization: `Bearer ${token}` },
+        })
+      ).token
     } catch (error) {
       return { state: "error", error: friendlyAuthError(error) }
     }
@@ -355,9 +363,18 @@ export type PasswordFormState =
   | { state: "success" }
   | null
 
-async function sendPasswordResetLink(email: string): Promise<PasswordFormState> {
+async function sendPasswordResetLink(
+  email: string,
+  captchaToken: string
+): Promise<PasswordFormState> {
   try {
-    await sdk.auth.resetPassword("customer", "emailpass", { identifier: email })
+    await sdk.client.fetch("/auth/customer/emailpass/reset-password", {
+      method: "POST",
+      // Checked by the backend's CAPTCHA middleware (TASKS P1-21).
+      // 201 Created with a plain-text body, as the JS SDK's resetPassword sends.
+      headers: { "x-captcha-token": captchaToken, accept: "text/plain" },
+      body: { identifier: email },
+    })
     return { state: "success" }
   } catch {
     return {
@@ -375,18 +392,25 @@ export async function requestPasswordReset(
   if (!email) {
     return { state: "error", error: "Enter your email address." }
   }
-  return sendPasswordResetLink(email)
+  return sendPasswordResetLink(email, String(formData.get("captcha_token") ?? ""))
 }
 
 // Account → Profile: a signed-in customer changes their password through the
 // same emailed link (Medusa has no store route that changes a password with
 // the old one).
 export async function requestOwnPasswordReset(): Promise<PasswordFormState> {
-  const customer = await retrieveCustomer().catch(() => null)
-  if (!customer?.email) {
+  const headers = await getAuthHeaders()
+  if (!("authorization" in headers)) {
     return { state: "error", error: "Sign in again, then try once more." }
   }
-  return sendPasswordResetLink(customer.email)
+  try {
+    // The signed-in route needs no CAPTCHA (backend
+    // /store/customers/me/password-reset, same core workflow).
+    await sdk.client.fetch("/store/customers/me/password-reset", { method: "POST", headers })
+    return { state: "success" }
+  } catch {
+    return { state: "error", error: "We couldn't send the link right now. Please try again." }
+  }
 }
 
 // The reset link's token goes in the Authorization header (since v2.6; the

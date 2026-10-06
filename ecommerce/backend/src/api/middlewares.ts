@@ -12,7 +12,7 @@ import {
   validatePhoneFields,
 } from './contact-validation'
 import { enforceUploadLimits } from './upload-limits'
-import { limitVerificationEmails, requireStrongPassword } from './auth-guards'
+import { limitVerificationEmails, requireCaptcha, requireStrongPassword } from './auth-guards'
 
 // The product index declares filterable `status` and `sales_channel_ids`, so
 // the route narrows it to published products in the key's sales channels.
@@ -77,12 +77,23 @@ export default defineMiddlewares({
       // Customer passwords: at least 8 characters at sign-up and reset.
       method: ['POST'],
       matcher: '/auth/customer/emailpass/register',
-      middlewares: [requireStrongPassword],
+      middlewares: [requireCaptcha('signup'), requireStrongPassword],
     },
     {
       method: ['POST'],
       matcher: '/auth/customer/emailpass/update',
       middlewares: [requireStrongPassword],
+    },
+    {
+      // CAPTCHA on customer sign-in and forgot password (sign-up above).
+      method: ['POST'],
+      matcher: '/auth/customer/emailpass',
+      middlewares: [requireCaptcha('login')],
+    },
+    {
+      method: ['POST'],
+      matcher: '/auth/customer/emailpass/reset-password',
+      middlewares: [requireCaptcha('password_reset')],
     },
     {
       // One verification email per address every 2 minutes.
