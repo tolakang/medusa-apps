@@ -4,6 +4,7 @@ import {
   validateAndTransformBody,
 } from '@medusajs/framework/http'
 import { PostAdminUploadLimit } from './admin/upload-limit/validators'
+import { PostWishlistItem } from './store/customers/me/wishlists/items/validators'
 import {
   requireContact,
   requireContactBeforePayment,
@@ -57,6 +58,12 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/store/payment-collections/:id/payment-sessions',
       middlewares: [requireContactBeforePayment],
+    },
+    {
+      // Wishlist item body (TASKS P1-19).
+      method: ['POST'],
+      matcher: '/store/customers/me/wishlists/items',
+      middlewares: [validateAndTransformBody(PostWishlistItem)],
     },
     {
       method: ['POST'],
