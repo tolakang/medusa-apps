@@ -75,6 +75,7 @@ openssl rand -hex 32      # AUTH_MFA_ENCRYPTION_KEY (admin 2FA; never change it 
    # Anti-abuse (P1-21): per-IP limits on customer auth are built in; set this
    # only behind another proxy (e.g. Cloudflare orange cloud: cf-connecting-ip)
    CLIENT_IP_HEADER=
+   SHOPPER_IP_SECRET=<openssl rand -hex 32, same on the storefront>   # shoppers' IPs for the limits
    UNVERIFIED_ACCOUNT_RETENTION_DAYS=   # worker: delete never-verified sign-ups after N days (default 28)
    # Staff Telegram alerts (P1-04)
    TELEGRAM_BOT_TOKEN=<staff bot token>
@@ -165,7 +166,10 @@ openssl rand -hex 32      # AUTH_MFA_ENCRYPTION_KEY (admin 2FA; never change it 
    PORT=8000
    MEDUSA_BACKEND_URL=https://<api host>
    REVALIDATE_SECRET=<same value as on the backend and worker>
+   SHOPPER_IP_SECRET=<same value as on the backend>
+   CLIENT_IP_HEADER=                 # only behind another proxy (Cloudflare: cf-connecting-ip)
    ```
+   **Per-shopper limits (TASKS P1-21):** sign-in, sign-up and password emails run on the storefront's server, so the backend would see one IP for every shopper and one bot could lock everyone out. With the same `SHOPPER_IP_SECRET` on the storefront and the backend, the storefront forwards each shopper's IP and the backend trusts it only with that secret.
    The public API URL is fine for staging. The backend's internal hostname also works (starter change 6), but only use it once you have confirmed the exact name.
    **Cache refresh (TASKS P1-10):** generate one secret (`openssl rand -hex 32`) and set it as `REVALIDATE_SECRET` here **and** on `ecommerce-backend` and `ecommerce-worker`, together with `STOREFRONT_URL=https://<shop host>` on those two. Then admin changes to products, variants, categories, collections and regions show in the shop within seconds, and anything else (e.g. price lists) within 10 minutes. Check: `curl -s -X POST https://<shop host>/api/revalidate` must answer `401` (the route exists and wants the secret).
 4. **Domains:** host `<shop host>`, path `/`, **container port `8000`**, HTTPS as for the backend.
