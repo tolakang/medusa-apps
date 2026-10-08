@@ -34,6 +34,20 @@ describe("clientIp", () => {
     )
     expect(clientIp(req({ "x-real": "1.1.1.1, 2.2.2.2" }), { CLIENT_IP_HEADER: "x-real" })).toEqual("1.1.1.1")
   })
+
+  it("uses the shopper IP from the storefront only with the shared secret", () => {
+    const env = { SHOPPER_IP_SECRET: "shared-secret" }
+    const fromStorefront = { "x-shopper-ip": "203.0.113.9", "x-shopper-ip-secret": "shared-secret" }
+    expect(clientIp(req(fromStorefront), env)).toEqual("203.0.113.9")
+    expect(clientIp(req({ "x-shopper-ip": "2001:db8::1", "x-shopper-ip-secret": "shared-secret" }), env)).toEqual(
+      "2001:db8::1"
+    )
+    // Wrong or missing secret, secret not configured, or not an IP: ignored.
+    expect(clientIp(req({ ...fromStorefront, "x-shopper-ip-secret": "guess" }), env)).toEqual("10.0.0.9")
+    expect(clientIp(req({ "x-shopper-ip": "203.0.113.9" }), env)).toEqual("10.0.0.9")
+    expect(clientIp(req(fromStorefront), {})).toEqual("10.0.0.9")
+    expect(clientIp(req({ ...fromStorefront, "x-shopper-ip": "evil<script>" }), env)).toEqual("10.0.0.9")
+  })
 })
 
 describe("cleanup of never-verified sign-ups", () => {

@@ -39,6 +39,31 @@ medusaIntegrationTestRunner({
         expect(blocked.data.message).toMatch(/^Too many attempts/)
         expect((await attempt("203.0.113.8")).status).toEqual(401)
       })
+
+      it("limits each shopper behind the storefront separately", async () => {
+        process.env.SHOPPER_IP_SECRET = "shared-secret"
+        try {
+          // All calls come from one storefront server (one x-test-ip).
+          const attempt = (shopper: string, secret = "shared-secret") =>
+            api
+              .post(
+                "/auth/customer/emailpass",
+                { email: "x@example.com", password: "wrong-pass-1" },
+                { headers: { "x-test-ip": "192.0.2.50", "x-shopper-ip": shopper, "x-shopper-ip-secret": secret } }
+              )
+              .then((r) => r.status)
+              .catch((e) => e.response.status)
+          for (let i = 0; i < AUTH_LIMITS.login; i++) {
+            expect(await attempt("198.51.100.20")).toEqual(401)
+          }
+          expect(await attempt("198.51.100.20")).toEqual(429)
+          expect(await attempt("198.51.100.21")).toEqual(401)
+          // Without the secret the header is ignored: the storefront's own IP counts.
+          expect(await attempt("198.51.100.20", "guess")).toEqual(401)
+        } finally {
+          delete process.env.SHOPPER_IP_SECRET
+        }
+      })
     })
 
     describe("Cleanup of never-verified sign-ups (TASKS P1-21)", () => {

@@ -2,6 +2,7 @@ import type { MedusaNextFunction, MedusaRequest, MedusaResponse } from "@medusaj
 import { ContainerRegistrationKeys, MedusaError, Modules } from "@medusajs/framework/utils"
 import { captchaConfig, verifyCaptcha, type CaptchaAction } from "../lib/captcha"
 import { FixedWindowLimiter } from "../lib/rate-limit"
+import { safeEqual } from "../lib/safe-equal"
 import { MIN_PASSWORD_LENGTH } from "./store/customers/me/password/validators"
 
 // Checks in front of Medusa's own auth routes (owner, 2026-10-06; registered
@@ -95,19 +96,39 @@ export function requireCaptcha(action: CaptchaAction) {
 }
 
 // Per-IP limits on customer auth (TASKS P1-21): slows password guessing,
-// mass sign-ups and email bombing. The client IP is `req.ip` (Medusa sets
-// Express `trust proxy` to 1, so behind Traefik this is the visitor), or the
-// header named in CLIENT_IP_HEADER when another proxy sits in front (e.g.
-// `cf-connecting-ip` behind Cloudflare). 429 with Retry-After.
+// mass sign-ups and email bombing. 429 with Retry-After.
+// Which IP: the storefront's server makes the customer sign-in calls, so the
+// backend sees the storefront, not the shopper. The storefront forwards the
+// shopper's IP in SHOPPER_IP_HEADER together with the shared secret
+// SHOPPER_IP_SECRET (Dokploy env on both apps); without the right secret the
+// header is ignored, so callers can't pick their own IP. Otherwise `req.ip`
+// (Medusa sets Express `trust proxy` to 1, so behind Traefik this is the
+// caller), or the header named in CLIENT_IP_HEADER when another proxy sits in
+// front (e.g. `cf-connecting-ip` behind Cloudflare).
 const limiter = new FixedWindowLimiter()
+
+export const SHOPPER_IP_HEADER = "x-shopper-ip"
+export const SHOPPER_IP_SECRET_HEADER = "x-shopper-ip-secret"
+const IP_PATTERN = /^[0-9a-fA-F:.]{2,45}$/
 
 export const TOO_MANY_ATTEMPTS_MESSAGE = (seconds: number) =>
   `Too many attempts. Please wait ${seconds >= 60 ? `${Math.ceil(seconds / 60)} minute${seconds >= 120 ? "s" : ""}` : `${seconds} seconds`} and try again.`
 
+function firstHeader(req: MedusaRequest, name: string): string | undefined {
+  const value = req.headers[name]
+  return (Array.isArray(value) ? value[0] : value)?.split(",")[0]?.trim()
+}
+
 export function clientIp(req: MedusaRequest, env: NodeJS.ProcessEnv = process.env): string {
+  const secret = env.SHOPPER_IP_SECRET?.trim()
+  if (secret && safeEqual(req.headers[SHOPPER_IP_SECRET_HEADER], secret)) {
+    const shopper = firstHeader(req, SHOPPER_IP_HEADER)
+    if (shopper && IP_PATTERN.test(shopper)) {
+      return shopper
+    }
+  }
   const headerName = env.CLIENT_IP_HEADER?.trim().toLowerCase()
-  const header = headerName ? req.headers[headerName] : undefined
-  const fromHeader = (Array.isArray(header) ? header[0] : header)?.split(",")[0]?.trim()
+  const fromHeader = headerName ? firstHeader(req, headerName) : undefined
   return fromHeader || req.ip || req.socket?.remoteAddress || "unknown"
 }
 
