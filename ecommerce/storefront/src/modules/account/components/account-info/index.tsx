@@ -106,14 +106,19 @@ const AccountInfo = ({
         </Disclosure.Panel>
       </Disclosure>
 
+      {/* The closed editor is clipped and inert: the starter left it
+          overflow-visible, so its invisible fields and "Save changes" button
+          covered the next row and a click on that row's Edit saved this form
+          (owner self-test, 2026-10-07). */}
       <Disclosure>
         <Disclosure.Panel
           static
+          inert={!state}
           className={clx(
-            "transition-[max-height,opacity] duration-300 ease-in-out overflow-visible",
+            "transition-[max-height,opacity] duration-300 ease-in-out",
             {
-              "max-h-[1000px] opacity-100": state,
-              "max-h-0 opacity-0": !state,
+              "max-h-[1000px] opacity-100 overflow-visible": state,
+              "max-h-0 opacity-0 overflow-hidden": !state,
             }
           )}
         >

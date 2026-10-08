@@ -1,3 +1,4 @@
+import { getShopperIp } from "@lib/data/shopper-ip"
 import { getLocaleHeader } from "@lib/util/get-locale-header"
 import Medusa, { FetchArgs, FetchInput } from "@medusajs/js-sdk"
 
@@ -23,6 +24,22 @@ export const sdk = new Medusa({
 
 const originalFetch = sdk.client.fetch.bind(sdk.client)
 
+// Requests the backend limits per IP (customer auth, password change) carry
+// the shopper's IP and the shared SHOPPER_IP_SECRET (server-only env, same
+// value on the backend). Only these paths: reading request headers makes a
+// page dynamic, and other requests stay cacheable.
+const SHOPPER_IP_PATHS = ["/auth/", "/store/customers/me/password"]
+
+async function shopperIpHeaders(input: FetchInput): Promise<Record<string, string>> {
+  const secret = process.env.SHOPPER_IP_SECRET?.trim()
+  const path = typeof input === "string" ? input : ""
+  if (typeof window !== "undefined" || !secret || !SHOPPER_IP_PATHS.some((p) => path.startsWith(p))) {
+    return {}
+  }
+  const ip = await getShopperIp()
+  return ip ? { "x-shopper-ip": ip, "x-shopper-ip-secret": secret } : {}
+}
+
 sdk.client.fetch = async <T>(
   input: FetchInput,
   init?: FetchArgs
@@ -36,6 +53,7 @@ sdk.client.fetch = async <T>(
 
   const newHeaders = {
     ...localeHeader,
+    ...(await shopperIpHeaders(input)),
     ...headers,
   }
   init = {
