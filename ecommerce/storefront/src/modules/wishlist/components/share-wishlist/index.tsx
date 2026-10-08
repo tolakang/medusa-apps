@@ -4,6 +4,7 @@ import { shareWishlist } from "@lib/data/wishlist"
 import { Button } from "@modules/common/components/ui"
 import { useParams } from "next/navigation"
 import { useState } from "react"
+import { formatDate } from "@lib/util/format-date"
 
 // "Share wishlist" (TASKS P1-19): a link anyone can open for 30 days. It shows
 // the products, not who saved them.
@@ -19,7 +20,7 @@ export default function ShareWishlist() {
     if (result.state === "success") {
       setLink({
         url: `${window.location.origin}/${countryCode}/wishlists/${result.token}`,
-        expires: new Date(result.expires_at).toLocaleDateString(),
+        expires: formatDate(result.expires_at),
       })
       setState("idle")
     } else {

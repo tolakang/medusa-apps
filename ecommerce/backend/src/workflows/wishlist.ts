@@ -15,7 +15,8 @@ import type WishlistModuleService from "../modules/wishlist/service"
 // the wishlist is created on the first "add" instead of by a separate call;
 // it is always looked up by customer AND sales channel (the guide's unique
 // index, while its lookups used the customer only); a missing variant is a
-// clear 404 instead of a crash.
+// clear 404 instead of a crash. The guide's customer check is kept: a sign-in
+// whose customer was deleted gets a 404 instead of an orphan wishlist.
 
 export const WISHLIST_FIELDS = [
   "id",
@@ -62,6 +63,20 @@ const getOrCreateWishlistStep = createStep(
     }
     const service: WishlistModuleService = container.resolve(WISHLIST_MODULE)
     await service.deleteWishlists(createdId)
+  }
+)
+
+// The signed-in customer still exists (guide "validate-customer-create-wishlist").
+const validateCustomerStep = createStep(
+  "validate-wishlist-customer",
+  async (input: { customer_id: string }, { container }) => {
+    const query = container.resolve(ContainerRegistrationKeys.QUERY)
+    const {
+      data: [customer],
+    } = await query.graph({ entity: "customer", fields: ["id"], filters: { id: input.customer_id } })
+    if (!customer) {
+      throw new MedusaError(MedusaError.Types.NOT_FOUND, "Customer was not found. Please sign in again.")
+    }
   }
 )
 
@@ -132,6 +147,7 @@ const addWishlistItemStep = createStep(
 export const addWishlistItemWorkflow = createWorkflow(
   "add-wishlist-item",
   function (input: Owner & { variant_id: string }) {
+    validateCustomerStep({ customer_id: input.customer_id })
     validateVariantStep({ variant_id: input.variant_id, sales_channel_id: input.sales_channel_id })
     const wishlist = getOrCreateWishlistStep({
       customer_id: input.customer_id,

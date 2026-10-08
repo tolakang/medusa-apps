@@ -10,6 +10,7 @@ import {
   getCacheOptions,
   getCacheTag,
   getCartId,
+  removeAuthToken,
   removeCartId,
   setCartId,
 } from "./cookies"
@@ -67,11 +68,19 @@ export async function getOrSetCart(countryCode: string) {
 
   if (!cart) {
     const locale = await getLocale()
-    const cartResp = await sdk.store.cart.create(
-      { region_id: region.id, locale: locale || undefined },
-      {},
-      headers
-    )
+    const body = { region_id: region.id, locale: locale || undefined }
+    const cartResp = await sdk.store.cart.create(body, {}, headers).catch(async (error) => {
+      // A sign-in whose customer no longer exists (e.g. deleted by staff)
+      // makes Medusa refuse the cart with 404 "Customer … was not found":
+      // drop that sign-in and continue as a guest (owner self-test, 2026-10-07).
+      if (!("authorization" in headers) || (error as { status?: number }).status !== 404) {
+        throw error
+      }
+      await removeAuthToken()
+      const customerCacheTag = await getCacheTag("customers")
+      revalidateTag(customerCacheTag)
+      return sdk.store.cart.create(body, {})
+    })
     cart = cartResp.cart
 
     await setCartId(cart.id)

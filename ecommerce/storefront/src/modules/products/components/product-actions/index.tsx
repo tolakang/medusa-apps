@@ -39,6 +39,7 @@ export default function ProductActions({
 
   const [options, setOptions] = useState<Record<string, string | undefined>>({})
   const [isAdding, setIsAdding] = useState(false)
+  const [addError, setAddError] = useState<string | null>(null)
   const countryCode = useParams().countryCode as string
 
   // If there is only 1 variant, preselect the options
@@ -126,14 +127,22 @@ export default function ProductActions({
     if (!selectedVariant?.id) return null
 
     setIsAdding(true)
+    setAddError(null)
 
-    await addToCart({
-      variantId: selectedVariant.id,
-      quantity: 1,
-      countryCode,
-    })
-
-    setIsAdding(false)
+    // A failed request used to leave the button loading forever (owner
+    // self-test, 2026-10-07). Server action errors are hidden in production,
+    // so the message is a general one.
+    try {
+      await addToCart({
+        variantId: selectedVariant.id,
+        quantity: 1,
+        countryCode,
+      })
+    } catch {
+      setAddError("We couldn't add this to your cart. Please try again.")
+    } finally {
+      setIsAdding(false)
+    }
   }
 
   return (
@@ -183,6 +192,11 @@ export default function ProductActions({
             ? "Out of stock"
             : "Add to cart"}
         </Button>
+        {addError && (
+          <p className="text-rose-500 text-center" role="alert" data-testid="add-to-cart-error">
+            {addError}
+          </p>
+        )}
         <WishlistButton variantId={selectedVariant?.id} />
         <MobileActions
           product={product}
