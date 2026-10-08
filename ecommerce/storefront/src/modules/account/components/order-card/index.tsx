@@ -5,6 +5,7 @@ import Thumbnail from "@modules/products/components/thumbnail"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
+import { formatDate } from "@lib/util/format-date"
 
 type OrderCardProps = {
   order: HttpTypes.StoreOrder
@@ -30,7 +31,7 @@ const OrderCard = ({ order }: OrderCardProps) => {
       </div>
       <div className="flex items-center divide-x divide-gray-200 text-small-regular text-ui-fg-base">
         <span className="pr-2" data-testid="order-created-at">
-          {new Date(order.created_at).toDateString()}
+          {formatDate(order.created_at)}
         </span>
         <span className="px-2" data-testid="order-amount">
           {convertToLocale({

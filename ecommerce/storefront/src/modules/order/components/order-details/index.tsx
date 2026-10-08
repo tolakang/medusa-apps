@@ -1,5 +1,6 @@
 import { HttpTypes } from "@medusajs/types"
 import { Text } from "@modules/common/components/ui"
+import { formatDate } from "@lib/util/format-date"
 
 type OrderDetailsProps = {
   order: HttpTypes.StoreOrder
@@ -35,7 +36,7 @@ const OrderDetails = ({ order, showStatus }: OrderDetailsProps) => {
       <Text className="mt-2">
         Order date:{" "}
         <span data-testid="order-date">
-          {new Date(order.created_at).toDateString()}
+          {formatDate(order.created_at)}
         </span>
       </Text>
       <Text className="mt-2 text-ui-fg-interactive">

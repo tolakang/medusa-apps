@@ -4,6 +4,7 @@ import { isStripeLike, paymentInfoMap } from "@lib/constants"
 import Divider from "@modules/common/components/divider"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
+import { formatDateTime } from "@lib/util/format-date"
 
 type PaymentDetailsProps = {
   order: HttpTypes.StoreOrder
@@ -45,9 +46,7 @@ const PaymentDetails = ({ order }: PaymentDetailsProps) => {
                     : `${convertToLocale({
                         amount: payment.amount,
                         currency_code: order.currency_code,
-                      })} paid at ${new Date(
-                        payment.created_at ?? ""
-                      ).toLocaleString()}`}
+                      })} paid at ${formatDateTime(payment.created_at ?? "")}`}
                 </Text>
               </div>
             </div>

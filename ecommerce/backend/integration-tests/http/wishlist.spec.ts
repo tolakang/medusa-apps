@@ -90,6 +90,21 @@ medusaIntegrationTestRunner({
           (await fail(api.post("/store/customers/me/wishlists/items", { variant_id: "variant_missing" }, me))).status
         ).toEqual(404)
 
+        // A sign-in whose customer was deleted: 404, and no wishlist is created.
+        const ghost = await signIn("ghost@example.com")
+        const ghostId = (await api.get("/store/customers/me", ghost)).data.customer.id
+        await container.resolve(Modules.CUSTOMER).deleteCustomers([ghostId])
+        expect(
+          (await fail(api.post("/store/customers/me/wishlists/items", { variant_id: variants[0] }, ghost))).status
+        ).toEqual(404)
+        const query = container.resolve(ContainerRegistrationKeys.QUERY)
+        const { data: ghostLists } = await query.graph({
+          entity: "wishlist",
+          fields: ["id"],
+          filters: { customer_id: ghostId },
+        })
+        expect(ghostLists).toHaveLength(0)
+
         // A product in no sales channel can't be saved.
         const { result } = await createProductsWorkflow(container).run({
           input: {
