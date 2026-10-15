@@ -6,7 +6,7 @@
   "description": "Next.js Starter to be used with Medusa V2",
   "packageManager": "pnpm@12.6.0",
   "engines": {
-    "node": "^20.19.0 || >=22.12.0"
+    "node": ">=22.22.0"
   },
   "keywords": [
     "medusa-storefront"
