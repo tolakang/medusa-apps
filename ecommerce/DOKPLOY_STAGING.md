@@ -1,6 +1,6 @@
 # Runbook: `ecommerce-staging` on Dokploy (tasks P0-18, P0-19)
 
-Follow the steps in order. Field names are Dokploy's own (docs.dokploy.com, checked 2026-09-25). The project layout is decision **D6** (`TASKS.md`). Sections 1–6 are the Phase 0 base setup. **Phase 1 features** (S3 file storage, upload limits, email and Telegram notifications, ABA PayWay, cache refresh) add the variables in step 2.5 and the go-live steps in **§8**. Backups are **§7**; the smoke test after every deploy is **§9**; rotating a leaked secret is **§10**.
+Follow the steps in order. Field names are Dokploy's own (docs.dokploy.com, checked 2026-09-25). The project layout is decision **D6** (`TASKS.md`). Sections 1–6 are the Phase 0 base setup. **Phase 1 features** (S3 file storage, upload limits, email and Telegram notifications, ABA PayWay, cache refresh) add the variables in step 2.5 and the go-live steps in **§8**. Backups are **§7**; the smoke test after every deploy is **§9**; rotating a leaked secret is **§10**. Production (P1-08) is **§11**.
 
 **You need:** a Dokploy server with the GitHub provider connected to `<github-owner>/medusa-apps` (Dokploy → Git → GitHub App), and two hostnames. Either use your DNS (`api.staging.<your-domain>`, `shop.staging.<your-domain>` → the Dokploy server IP), or use Dokploy's **Generated** domains.
 
@@ -408,3 +408,32 @@ Do this whenever a key, password or token was pasted into chat, printed in a log
 - [ ] Smoke test (§9).
 - [ ] Record the date in `TASKS.md` and remove the "rotate" line from the operator notes.
 - [ ] Production (P1-08) gets fresh values for every secret; never reuse a staging one.
+
+---
+
+## 11. Production (TASKS P1-08)
+
+Production is a **separate Dokploy project `ecommerce`**, built with §1–§4 and §8 of this runbook using production values (`ecommerce/README.md` → *Staging project* lists what differs). This section adds only what staging doesn't need.
+
+**Before you start**
+- [ ] Dokploy updated to v0.29.9 or newer (§10 step 0).
+- [ ] Server hardened (plan §5 *Server access*): SSH-key login only, no password login for root or any uid-0 account (`kt`), no public Postgres port, OS updates applied and restarted at a quiet time.
+- [ ] Staging keys rotated (§10), so nothing leaked there is reused.
+- [ ] The commit to release is green in CI and passed the smoke test (§9) on staging.
+
+**Values to collect** (fresh for production; never copy a staging value)
+- [ ] Domains: `<api host>` and `<shop host>`, with DNS pointing at the Dokploy server.
+- [ ] New `JWT_SECRET`, `COOKIE_SECRET`, `AUTH_MFA_ENCRYPTION_KEY`, `REVALIDATE_SECRET` and `SHOPPER_IP_SECRET` (the last two must match on backend and storefront); generate them as at the top of this runbook.
+- [ ] Live ABA PayWay: `PAYWAY_MERCHANT_ID`, `PAYWAY_API_KEY`, `PAYWAY_API_URL=https://checkout.payway.com.kh`, `PAYWAY_RETURN_URL` on the production shop host; ABA has whitelisted both production hosts and the server's public IP (§8 step 2).
+- [ ] A production image bucket and key (`S3_*`, storefront `S3_IMAGE_HOSTNAME`), and a separate private backup bucket and key (§7.1).
+- [ ] Resend: a sender on a verified domain (`RESEND_FROM`, `RESEND_FROM_ACCOUNT`) and its own API key.
+- [ ] Telegram: production staff bot and chat (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`) and customer bot (`TELEGRAM_CUSTOMER_*`).
+- [ ] CAPTCHA keys for `<shop host>` (§8 step 8).
+
+**Deploy**
+1. Follow §1–§4 in project `ecommerce`, with **Replicas = 1** on the backend server (plan R-h: two servers migrating at once is unsafe).
+2. Run §8 go-live steps 1–9. For the backup (step 7), use its own prefix (`ecommerce`) and do the §7.3 restore test before taking real orders.
+3. Smoke test (§9) the **production** way: at checkout press **Cancel** on the PayWay page; pay for real only on purpose, then refund in the PayWay merchant portal.
+4. Record the date, commit and ✅ per line in `TASKS.md` under P1-08.
+
+**Every later release** (plan §8): deploy to staging first and smoke test; then **back up production** (▶ on the backup row, §7.2), keep the backend at **one** replica while it migrates, deploy, smoke test (§9). Rollback (plan §8) = redeploy the previous commit, plus `medusa db:rollback` of the migrated modules or a restore of that backup.
