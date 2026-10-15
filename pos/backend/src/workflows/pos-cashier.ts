@@ -88,3 +88,37 @@ export const acceptPosCashierInviteWorkflow = createWorkflow(
     return new WorkflowResponse(cashier)
   }
 )
+
+type UpdateCashierInput = { id: string; name?: string; is_active?: boolean }
+
+// Admins rename or (de)activate a cashier (TASKS P2-06). requireCashier
+// refuses a deactivated cashier's token on the next request.
+const updatePosCashierStep = createStep(
+  "update-pos-cashier",
+  async (input: UpdateCashierInput, { container }) => {
+    const pos: PosModuleService = container.resolve(POS_MODULE)
+    const [before] = await pos.listPosCashiers({ id: input.id })
+    if (!before) {
+      throw new MedusaError(MedusaError.Types.NOT_FOUND, `Cashier ${input.id} was not found.`)
+    }
+    const cashier = await pos.updatePosCashiers({
+      id: input.id,
+      ...(input.name !== undefined ? { name: input.name } : {}),
+      ...(input.is_active !== undefined ? { is_active: input.is_active } : {}),
+    })
+    return new StepResponse(cashier, { id: before.id, name: before.name, is_active: before.is_active })
+  },
+  async (before: { id: string; name: string; is_active: boolean } | undefined, { container }) => {
+    if (!before) {
+      return
+    }
+    await container.resolve<PosModuleService>(POS_MODULE).updatePosCashiers(before)
+  }
+)
+
+export const updatePosCashierWorkflow = createWorkflow(
+  "update-pos-cashier",
+  function (input: UpdateCashierInput) {
+    return new WorkflowResponse(updatePosCashierStep(input))
+  }
+)
