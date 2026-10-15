@@ -1,6 +1,37 @@
 {
   "permissions": {
     "deny": [
+      "Edit(BUILD_PLAN.md)",
+      "Edit(/BUILD_PLAN.md)",
+      "Edit(.build-plan.sha256)",
+      "Edit(/.build-plan.sha256)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/protect-build-plan.sh pre",
+            "timeout": 10,
+            "onFailure": "block"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/protect-build-plan.sh post",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }
