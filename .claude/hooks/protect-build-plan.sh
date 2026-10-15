@@ -13,14 +13,26 @@ set -u
 mode="${1:-}"
 root="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 input="$(cat)"
-session="$(printf '%s' "$input" | jq -r '.session_id // "nosession"' 2>/dev/null || echo nosession)"
+# Hook input is JSON on stdin (docs: hooks, "Common input fields"). jq when
+# available; without it, fall back to the raw JSON text so the guard never
+# silently turns off.
+if command -v jq >/dev/null 2>&1; then
+  session="$(printf '%s' "$input" | jq -r '.session_id // "nosession"' 2>/dev/null)"
+else
+  session="$(printf '%s' "$input" | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)"
+fi
+session="$(printf '%s' "${session:-nosession}" | tr -c 'A-Za-z0-9_-' '_')"
 snap="${TMPDIR:-/tmp}/claude-plan-guard-${session}"
 files=(BUILD_PLAN.md .build-plan.sha256)
 
 if [ "$mode" = "pre" ]; then
-  cmd="$(printf '%s' "$input" | jq -r '.tool_input.command // ""')"
+  if command -v jq >/dev/null 2>&1; then
+    cmd="$(printf '%s' "$input" | jq -r '.tool_input.command // ""' 2>/dev/null)"
+  else
+    cmd="$input"
+  fi
   if printf '%s' "$cmd" | grep -qE 'BUILD_PLAN\.md|build-plan\.sha256'; then
-    if printf '%s' "$cmd" | grep -qE '(^|[^0-9&])>|\btee\b|sed[^|;&]*-i|perl[^|;&]*-[a-zA-Z]*i|\b(cp|mv|rm|ln|dd|truncate|install|rsync|patch|chmod)\b|open\(|write|git[[:space:]]+(checkout|restore|apply|am|stash|reset|mv|rm)'; then
+    if printf '%s' "$cmd" | grep -qE '(^|[^0-9&])>|(^|[^[:alnum:]_])(tee|cp|mv|rm|ln|dd|truncate|install|rsync|patch|chmod)([^[:alnum:]_]|$)|sed[^|;&]*-i|perl[^|;&]*-[a-zA-Z]*i|open\(|write|git[[:space:]]+(checkout|restore|apply|am|stash|reset|mv|rm)'; then
       echo "Blocked: BUILD_PLAN.md is frozen (CLAUDE.md). Only the owner changes it, through an approved revision. Read-only commands (cat, grep, sed -n, diff, sha256sum) are fine." >&2
       exit 2
     fi
