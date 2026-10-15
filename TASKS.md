@@ -126,7 +126,14 @@
     - Cashier and admin tokens are refused on each other's routes, and a deactivated cashier gets 401.
 
   Design choices are logged as F-039.
-- [ ] P2-07 Admin: shift report page (per register / cashier / day).
+- [x] P2-07 Admin: shift report page (per register / cashier / day). — **done 2026-10-15** (branch `feat/pos-p2-07-shift-report`). The admin UI route `src/admin/routes/pos-shifts/page.tsx` appears in the sidebar as **Shift report** at `/app/pos-shifts`. It reads `GET /admin/pos/shifts` (P2-06) and the register and cashier lists.
+  - **Filters:** register, cashier, status, and a From/To day range (inclusive, the viewer's local days).
+  - **Summary:** per day, per register or per cashier, one row per currency (USD and KHR are never added together). Each row shows the shift count, open shifts, the closed shifts whose count was off, and the expected, counted and variance totals of the closed shifts; a group with only open shifts shows "–".
+  - **Shift list:** opened and closed times, register, cashier (and who closed it, if someone else), opening, expected, counted, and the variance as a badge: green when it matches, red when cash is short, orange when there's extra. 20 per page.
+  - The summary covers the latest 200 shifts that match the filters, and the page says so when there are more.
+  - Logic is in `src/admin/lib/shift-report.ts`, with sums in integer cents. Unit tests: `src/admin/lib/__tests__/shift-report.unit.spec.ts` 7/7 (per-register totals, open-only groups, currencies kept apart, day in the shop's time zone, fallbacks, formatting, date range).
+  - Checked in a real admin (dev server, Chromium) with 2 registers, 2 cashiers, 5 closed shifts (USD and KHR) and 1 open shift: per-day and per-register totals were correct (for example Front till USD 992.65 expected, 994.65 counted, +2.00) and the console had no errors.
+  - Whole backend: 124 unit + 36 module + 68 HTTP tests ✅.
 - [x] P2-08 Decide **D5** (PWA vs native) and log it. — done 2026-10-15: **PWA** (owner), Decisions log D5.
 
 **Clients**
@@ -236,7 +243,7 @@
 
 ## Session handoff (2026-10-05): start here in a new session
 
-Current position (updated 2026-10-15): **Phase 1 (Ecommerce) built and running on staging; production (P1-08) waits on the owner's values (`ecommerce/DOKPLOY_STAGING.md` §11). Phase 2 (POS) started in parallel (F-034): P2-01 to P2-06, P2-08, P2-12 and P2-13 done; next P2-07 (admin shift report page over `GET /admin/pos/shifts`) or P2-10 (`pos/pos-app` PWA over the `/pos` routes).** Every merge first gets the skill check of DEV_FLOW §7.1. Phase 0 is complete (P0-01 to P0-20). Plan: `BUILD_PLAN.md` **Revision 7** (2026-10-15, owner-approved; Revision 6 was 2026-10-04) matches this file; the edit block in `.claude/settings.json` is back on.
+Current position (updated 2026-10-15): **Phase 1 (Ecommerce) built and running on staging; production (P1-08) waits on the owner's values (`ecommerce/DOKPLOY_STAGING.md` §11). Phase 2 (POS) started in parallel (F-034): P2-01 to P2-08, P2-12 and P2-13 done; next P2-10 (`pos/pos-app` PWA over the `/pos` routes), P2-09 (`pos/storefront`) or P2-11 (a register sale takes stock only from its shop's location).** Every merge first gets the skill check of DEV_FLOW §7.1. Phase 0 is complete (P0-01 to P0-20). Plan: `BUILD_PLAN.md` **Revision 7** (2026-10-15, owner-approved; Revision 6 was 2026-10-04) matches this file; the edit block in `.claude/settings.json` is back on.
 
 **Staging (Dokploy project `ecommerce-staging`):** backend `https://api.staging.example.com` (admin `/app`), storefront `https://shop.staging.example.com` (`/kh`), worker; Medusa 2.21.2. Live there: Cambodia seed, ABA PayWay **sandbox** (order #11 captured), order email (Resend), staff and customer Telegram bots, RustFS files, cache refresh, daily database backups (restore test passed 2026-10-04). Setup and every variable: `ecommerce/DOKPLOY_STAGING.md` (§2.5 Phase 1 variables, §7 backups, §8 go-live steps).
 

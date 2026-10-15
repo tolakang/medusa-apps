@@ -74,7 +74,7 @@ Setting a cashier's `is_active` to false (`POST /admin/pos/cashiers/:id` `{ "is_
 
 Admin (admin token):
 - `POST /admin/pos/registers` `{ name, code, stock_location_id, sales_channel_id }` sets up a till; each register sells from one stock location in one sales channel. List: `GET /admin/pos/registers`. Change: `POST /admin/pos/registers/:id` (name, `is_active`, location, channel).
-- `GET /admin/pos/shifts?register_id=&cashier_id=&status=&from=&to=` returns the shift report: expected cash, counted cash and variance.
+- **Shift report** in the admin sidebar (`/app/pos-shifts`, TASKS P2-07): shifts per day, register or cashier, with expected cash, counted cash and the variance (red when cash is short). It filters by register, cashier, status and dates, and reads `GET /admin/pos/shifts?register_id=&cashier_id=&status=&from=&to=`.
 
 Cashier (cashier token, from the POS app):
 1. `GET /pos/registers` lists the registers; pick one, then `POST /pos/shifts/open` `{ register_id, opening_cash }`.

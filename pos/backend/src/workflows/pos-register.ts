@@ -26,7 +26,7 @@ const channelLink = (registerId: string, id: string): LinkDefinition => ({
   [Modules.SALES_CHANNEL]: { sales_channel_id: id },
 })
 
-const validateRegisterLinksStep = createStep(
+const validatePosRegisterLinksStep = createStep(
   "validate-pos-register-links",
   async (input: RegisterLinks, { container }) => {
     if (input.stock_location_id) {
@@ -83,7 +83,7 @@ const createPosRegisterStep = createStep(
 export const createPosRegisterWorkflow = createWorkflow(
   "create-pos-register",
   function (input: CreatePosRegisterInput) {
-    validateRegisterLinksStep(input)
+    validatePosRegisterLinksStep(input)
     const register = createPosRegisterStep(input)
     const links = transform({ input, register }, ({ input, register }) => [
       locationLink(register.id, input.stock_location_id),
@@ -158,7 +158,7 @@ const updatePosRegisterStep = createStep(
 export const updatePosRegisterWorkflow = createWorkflow(
   "update-pos-register",
   function (input: UpdatePosRegisterInput) {
-    validateRegisterLinksStep(input)
+    validatePosRegisterLinksStep(input)
     const changes = getPosRegisterLinkChangesStep(input)
     const register = updatePosRegisterStep(input)
     const toDismiss = transform({ changes }, ({ changes }) => changes.dismiss)
