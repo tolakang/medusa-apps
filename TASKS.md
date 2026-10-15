@@ -213,7 +213,7 @@
 
 ## Session handoff (2026-10-05): start here in a new session
 
-Current position: **Phase 1 (Ecommerce) built and running on staging; production (P1-08) is next.** Phase 0 is complete (P0-01 to P0-20). Plan: `BUILD_PLAN.md` **Revision 7** (2026-10-15, owner-approved; Revision 6 was 2026-10-04) matches this file; the edit block in `.claude/settings.json` is back on.
+Current position (updated 2026-10-15): **Phase 1 (Ecommerce) built and running on staging; production (P1-08) waits on the owner's values (`ecommerce/DOKPLOY_STAGING.md` §11). Phase 2 (POS) started in parallel (F-034): P2-01, P2-02, P2-03, P2-08 and P2-13 done; next P2-04 (open-shift / close-shift workflows).** Every merge first gets the skill check of DEV_FLOW §7.1. Phase 0 is complete (P0-01 to P0-20). Plan: `BUILD_PLAN.md` **Revision 7** (2026-10-15, owner-approved; Revision 6 was 2026-10-04) matches this file; the edit block in `.claude/settings.json` is back on.
 
 **Staging (Dokploy project `ecommerce-staging`):** backend `https://api.staging.example.com` (admin `/app`), storefront `https://shop.staging.example.com` (`/kh`), worker; Medusa 2.21.2. Live there: Cambodia seed, ABA PayWay **sandbox** (order #11 captured), order email (Resend), staff and customer Telegram bots, RustFS files, cache refresh, daily database backups (restore test passed 2026-10-04). Setup and every variable: `ecommerce/DOKPLOY_STAGING.md` (§2.5 Phase 1 variables, §7 backups, §8 go-live steps).
 
