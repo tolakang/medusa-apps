@@ -2,13 +2,13 @@
 
 Standalone [Medusa](https://medusajs.com) backends, one per commerce scenario, each deployable on its own with Dokploy.
 
-> **Status: planning.** No application code yet; deployment templates (Dockerfile + env per deployable) are in place. Start with [`BUILD_PLAN.md`](./BUILD_PLAN.md).
+> **Status: Phase 1 (ecommerce) built and running on staging; production deploy is next.** The other categories have deployment templates only (Dockerfile + env per deployable). Progress is tracked in [`TASKS.md`](./TASKS.md); requirements are in [`BUILD_PLAN.md`](./BUILD_PLAN.md).
 
 Each folder is **one business project** (one Dokploy project). Inside it, every deployable has its own `Dockerfile` and `.env.example` and deploys independently.
 
 | Folder | Scenario | Deployables (Dokploy Build Path) | Status |
 |---|---|---|---|
-| [`ecommerce/`](./ecommerce) | Direct-to-consumer online store | `/ecommerce/backend`, `/ecommerce/storefront` | Planned — Phase 1 |
+| [`ecommerce/`](./ecommerce) | Direct-to-consumer online store | `/ecommerce/backend`, `/ecommerce/storefront` | Built, on staging — Phase 1 (production pending) |
 | [`pos/`](./pos) | Physical shop checkout | `/pos/backend`, `/pos/storefront`, `/pos/pos-app` | Planned — Phase 2 |
 | [`booking-services/`](./booking-services) | Appointments, classes, tickets, rentals | `/booking-services/backend`, `/booking-services/storefront` | Planned — Phase 3 |
 | [`wholesale/`](./wholesale) | Sellers buy your products in bulk | `/wholesale/backend`, `/wholesale/storefront` | Planned — Phase 4 |
@@ -17,7 +17,7 @@ Each folder is **one business project** (one Dokploy project). Inside it, every 
 
 Each category's `README.md` is its Dokploy guide: services, build paths, ports, env and first-deploy order.
 
-The `Dockerfile`s and `.env.example`s are committed **ready templates**; app code is added in the build phase, so these folders can't be deployed yet.
+Outside `ecommerce/`, the `Dockerfile`s and `.env.example`s are committed **ready templates**; app code is added in each category's build phase, so those folders can't be deployed yet.
 
 ## Documents
 
