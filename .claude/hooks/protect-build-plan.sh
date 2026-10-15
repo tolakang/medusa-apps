@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Keeps BUILD_PLAN.md frozen against Claude's shell commands (CLAUDE.md:
-# "Frozen. Never edit it."). The Edit(...) deny rules in settings.json only
-# cover the file-editing tools; this hook covers Bash.
+# "Frozen. Never edit it."). The Edit(...) deny rules in settings.json cover
+# Claude's file tools and the shell file commands Claude Code recognizes
+# (sed, tee, redirects), but not scripts that open files themselves, such as
+# python or node (docs: permissions, "Read and Edit"). This hook covers those.
 #   pre  (PreToolUse, Bash): refuse a command that names a protected file and
 #        looks like a write; snapshot the files for the post check.
 #   post (PostToolUse, Bash): if a protected file changed during the command
