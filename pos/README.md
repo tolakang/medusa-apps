@@ -1,8 +1,8 @@
 # POS — `pos/`
 
-> **Physical shop checkout + online store on shared stock.** Planned — Phase 2. Scope: [BUILD_PLAN.md §6.2](../BUILD_PLAN.md).
+> **Physical shop checkout + online store on shared stock.** Phase 2 in progress: `backend/` is built (a copy of `ecommerce/backend`, POS features follow); `storefront/` and `pos-app/` are still templates. Scope: [BUILD_PLAN.md §6.2](../BUILD_PLAN.md).
 >
-> The `Dockerfile` and `.env.example` files here are **ready templates**. Application code is added in the build phase; until then a Dokploy build of these folders will fail at `COPY package.json`.
+> The `storefront/` and `pos-app/` folders hold only **ready templates** (`Dockerfile`, `.env.example`); until their code is added, a Dokploy build of them fails at `COPY package.json`.
 
 This folder is **one complete business project**. Copy the whole folder's setup into one Dokploy project and every piece deploys on its own.
 
