@@ -1,6 +1,6 @@
 # POS — `pos/`
 
-> **Physical shop checkout + online store on shared stock.** Phase 2 in progress: `backend/` is built (a copy of `ecommerce/backend`; the POS module, cashier sign-in, shift workflows and the `pos-checkout` workflow are in, and the `/pos` routes follow in P2-06); `storefront/` and `pos-app/` are still templates. Scope: [BUILD_PLAN.md §6.2](../BUILD_PLAN.md).
+> **Physical shop checkout + online store on shared stock.** Phase 2 in progress: `backend/` is built (a copy of `ecommerce/backend`; the POS module, cashier sign-in, shifts, checkout and the `/pos` and `/admin/pos` routes are in; see *Shop setup and selling*); `storefront/` and `pos-app/` are still templates. Scope: [BUILD_PLAN.md §6.2](../BUILD_PLAN.md).
 >
 > The `storefront/` and `pos-app/` folders hold only **ready templates** (`Dockerfile`, `.env.example`); until their code is added, a Dokploy build of them fails at `COPY package.json`.
 
@@ -68,7 +68,22 @@ Cashiers are **not** admin users: they are the custom actor type `cashier` and c
 3. The cashier accepts with that token: `POST /pos/cashiers/accept` (`Authorization: Bearer <token>`). An email without an active invitation is refused.
 4. From then on: `POST /auth/cashier/emailpass` → token for `/pos/*` (e.g. `GET /pos/cashiers/me`).
 
-Setting a cashier's `is_active` to false locks them out at once, including tokens already issued. Sign-up and sign-in have the same per-IP limits as customers.
+Setting a cashier's `is_active` to false (`POST /admin/pos/cashiers/:id` `{ "is_active": false }`) locks them out at once, including tokens already issued. Sign-up and sign-in have the same per-IP limits as customers.
+
+## Shop setup and selling (API, TASKS P2-06)
+
+Admin (admin token):
+- `POST /admin/pos/registers` `{ name, code, stock_location_id, sales_channel_id }` sets up a till; each register sells from one stock location in one sales channel. List: `GET /admin/pos/registers`. Change: `POST /admin/pos/registers/:id` (name, `is_active`, location, channel).
+- `GET /admin/pos/shifts?register_id=&cashier_id=&status=&from=&to=` returns the shift report: expected cash, counted cash and variance.
+
+Cashier (cashier token, from the POS app):
+1. `GET /pos/registers` lists the registers; pick one, then `POST /pos/shifts/open` `{ register_id, opening_cash }`.
+2. `GET /pos/products/lookup?code=<scanned>&shift_id=` finds the product by barcode, EAN, UPC or SKU, with its price.
+3. Optionally find or add the customer: `GET /pos/customers?q=` or `POST /pos/customers` `{ first_name, phone | email }`.
+4. `POST /pos/checkout` `{ shift_id, items: [{ variant_id, quantity }], payment_method: cash | card | qr, customer_id?, promo_codes? }` records the sale and returns the order for the receipt.
+5. `POST /pos/shifts/close` `{ shift_id, counted_cash }` returns the expected cash and the variance.
+
+Card and QR payments are taken on the shop's own terminal or KHQR stand, and the sale only records them (TASKS F-038).
 
 ## Independence rules
 

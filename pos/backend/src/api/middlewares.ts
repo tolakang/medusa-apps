@@ -4,6 +4,17 @@ import {
   validateAndTransformBody,
 } from '@medusajs/framework/http'
 import { PostAdminPosCashier } from './admin/pos/cashiers/validators'
+import {
+  PostAdminPosCashierUpdate,
+  PostAdminPosRegister,
+  PostAdminPosRegisterUpdate,
+} from './admin/pos/validators'
+import {
+  PostPosCheckout,
+  PostPosCustomer,
+  PostPosShiftClose,
+  PostPosShiftOpen,
+} from './pos/validators'
 import { PostAdminUploadLimit } from './admin/upload-limit/validators'
 import { PostCustomerPassword } from './store/customers/me/password/validators'
 import { PostWishlistItem } from './store/customers/me/wishlists/items/validators'
@@ -158,6 +169,43 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/admin/pos/cashiers',
       middlewares: [validateAndTransformBody(PostAdminPosCashier)],
+    },
+    // POS setup and cashier routes (TASKS P2-06); /pos* auth runs first
+    // (wildcard matchers before static ones).
+    {
+      method: ['POST'],
+      matcher: '/admin/pos/cashiers/:id',
+      middlewares: [validateAndTransformBody(PostAdminPosCashierUpdate)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/pos/registers',
+      middlewares: [validateAndTransformBody(PostAdminPosRegister)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/pos/registers/:id',
+      middlewares: [validateAndTransformBody(PostAdminPosRegisterUpdate)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/pos/shifts/open',
+      middlewares: [validateAndTransformBody(PostPosShiftOpen)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/pos/shifts/close',
+      middlewares: [validateAndTransformBody(PostPosShiftClose)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/pos/checkout',
+      middlewares: [validateAndTransformBody(PostPosCheckout)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/pos/customers',
+      middlewares: [validateAndTransformBody(PostPosCustomer)],
     },
   ],
 })
