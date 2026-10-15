@@ -59,6 +59,17 @@ After the first deploy, every service can be redeployed, rebuilt or rolled back 
 - The storefront reaches the backend through the public `NEXT_PUBLIC_MEDUSA_BACKEND_URL` (build-time). Runtime `MEDUSA_BACKEND_URL` can be the backend's **internal** Dokploy hostname once starter change 6 in BUILD_PLAN.md §4.2 is applied (faster, private; copy the exact name Dokploy shows for the service, it may carry a suffix). Build-time URLs must be **public**, because the build runs on the build server.
 - `NEXT_PUBLIC_*` values are baked in at build time. Changing one = rebuild that client.
 
+## Cashiers (POS app sign-in)
+
+Cashiers are **not** admin users: they are the custom actor type `cashier` and can only use `/pos/*` (TASKS P2-03). Sign-up is invite-only:
+
+1. An admin invites the cashier: `POST /admin/pos/cashiers` `{ "name", "email" }` (list: `GET /admin/pos/cashiers`).
+2. The cashier registers that email: `POST /auth/cashier/emailpass/register` `{ "email", "password" }` (at least 8 characters) → registration token.
+3. The cashier accepts with that token: `POST /pos/cashiers/accept` (`Authorization: Bearer <token>`). An email without an active invitation is refused.
+4. From then on: `POST /auth/cashier/emailpass` → token for `/pos/*` (e.g. `GET /pos/cashiers/me`).
+
+Setting a cashier's `is_active` to false locks them out at once, including tokens already issued. Sign-up and sign-in have the same per-IP limits as customers.
+
 ## Independence rules
 
 - This project has its **own** Postgres and Redis. Never point two business projects at the same database.

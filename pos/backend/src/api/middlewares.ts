@@ -3,6 +3,7 @@ import {
   defineMiddlewares,
   validateAndTransformBody,
 } from '@medusajs/framework/http'
+import { PostAdminPosCashier } from './admin/pos/cashiers/validators'
 import { PostAdminUploadLimit } from './admin/upload-limit/validators'
 import { PostCustomerPassword } from './store/customers/me/password/validators'
 import { PostWishlistItem } from './store/customers/me/wishlists/items/validators'
@@ -19,6 +20,7 @@ import {
   requireCaptcha,
   requireStrongPassword,
 } from './auth-guards'
+import { posCors, requireCashier } from './pos-auth'
 
 // The product index declares filterable `status` and `sales_channel_ids`, so
 // the route narrows it to published products in the key's sales channels.
@@ -132,6 +134,30 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/store/customers/me/addresses/:address_id',
       middlewares: [validatePhoneFields],
+    },
+    {
+      // POS app routes (TASKS P2-03): POS_CORS, then a signed-in, active
+      // cashier on every /pos route (pos-auth.ts).
+      matcher: '/pos*',
+      middlewares: [posCors, requireCashier],
+    },
+    {
+      // Cashier sign-up and sign-in: same per-IP limits and password rule as
+      // customers; no CAPTCHA (shop tablets). Sign-up only becomes a cashier
+      // with an admin's invitation (/pos/cashiers/accept).
+      method: ['POST'],
+      matcher: '/auth/cashier/emailpass/register',
+      middlewares: [limitPerIp('cashier_signup', AUTH_LIMITS.signup, 60), requireStrongPassword],
+    },
+    {
+      method: ['POST'],
+      matcher: '/auth/cashier/emailpass',
+      middlewares: [limitPerIp('cashier_login', AUTH_LIMITS.login, 60)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/pos/cashiers',
+      middlewares: [validateAndTransformBody(PostAdminPosCashier)],
     },
   ],
 })

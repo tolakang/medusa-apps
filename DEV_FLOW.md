@@ -151,6 +151,15 @@ Answer each question with yes or no plus a pointer. Any "no" sends the task back
 
 Optional extra pass: run the `/code-review` skill on the branch.
 
+### 7.1 Skill check and documents before every merge (owner rule, 2026-10-15)
+
+After every finished task or phase, **before the PR is merged and pushed to `main`**:
+
+1. Load the `medusa-v2` skill (`.claude/skills/medusa-v2/SKILL.md`) and check every Medusa API, import, option, step, route rule and error type in the diff against `MEDUSA_SKILL.md`. Anything not in it is confirmed through the evidence ladder (`MEDUSA_SKILL.md` §0) and **added to `MEDUSA_SKILL.md`** with its source.
+2. Scan the diff for the skill's hard rules: zod only from `@medusajs/framework/zod`; `MedusaError`, never `throw new Error`; `ContainerRegistrationKeys` or module constants, never magic container keys; no `async` workflow constructors; a workflow for every write; validation, auth and CORS on every new route.
+3. Update every related document in the same PR: `TASKS.md` (tick, findings log, session handoff), the category `README.md`, the deployable `README.md`, `.env.example` for new settings, `MEDUSA_SKILL.md` for newly verified facts. The plan changes only through an owner-approved revision.
+4. Write the result in the PR description: the reference sheet and a line `Skill check (DEV_FLOW §7.1): ✅`.
+
 ## 8. Stage 6: Record in `TASKS.md`
 
 - Tick the task: `- [x] P3-04 … — done: <short sha>, tests: <n passed>, refs: MEDUSA_SKILL §6`.
