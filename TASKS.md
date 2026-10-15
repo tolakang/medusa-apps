@@ -226,7 +226,7 @@ Current position: **Phase 1 (Ecommerce) built and running on staging; production
 2. **P1-09 phase exit checklist** after P1-08 (every other exit item is proven, see P1-09).
 3. Later: automatic PayWay refunds (Refund API, RSA key), RustFS 1.0.0+ (then the `--streaming-upload-cutoff` flag can go). When Medusa **2.22.0** is released: it requires Node ≥ 22.22 and adds price-list events (could replace the storefront's 10-minute expiry and the starter's search TODOs); read its notes before `scripts/update-medusa.sh`. Update Dokploy to the latest before P1-08 (F-031).
 
-**Operator notes:** never paste secrets into chat; when sharing logs, filter them (`grep -v -i "secret\|access-key\|api_key"`). Rotate the keys that were exposed earlier (Redis password 2026-09-25, Resend key, RustFS backup key). The Dokploy terminal opens in `/`. Copying files to the server over SSH does not work with the current SSH setup; use Dokploy's own buttons (e.g. Restore Backup) instead.
+**Operator notes:** never paste secrets into chat; when sharing logs, filter them (`grep -v -i "secret\|access-key\|api_key"`). Rotate the keys that were exposed earlier (Redis password 2026-09-25, Resend key, RustFS backup key): checklist in `ecommerce/DOKPLOY_STAGING.md` §10. The Dokploy terminal opens in `/`. Copying files to the server over SSH does not work with the current SSH setup; use Dokploy's own buttons (e.g. Restore Backup) instead.
 
 ## Decisions log (plan §10)
 
