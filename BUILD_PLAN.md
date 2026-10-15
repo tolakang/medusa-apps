@@ -1,8 +1,10 @@
 # Build Plan — Medusa Apps (Pre-Build)
 
 > **Status (2026-10-04): building.** Phase 0 (foundation, staging on Dokploy) is complete. Phase 1 (Ecommerce) is built and running on staging; the production deploy (P1-08) is next. Progress, decisions and evidence live in `TASKS.md`. Every deployable folder has its `Dockerfile` and `.env.example`, and every category has a Dokploy guide in `<category>/README.md`.
-> Baseline checked 2026-09-25: **Medusa 2.21.1**, **pnpm 12.6.0**, **Node 22 LTS**. **Current pin: Medusa 2.21.2** (updated 2026-10-01 with `scripts/update-medusa.sh`).
+> Baseline checked 2026-09-25: **Medusa 2.21.1**, **pnpm 12.6.0**, **Node 22 LTS**. **Current pin: Medusa 2.21.2** (updated 2026-10-01 with `scripts/update-medusa.sh`; still npm `latest` on 2026-10-15). Medusa 2.22.0 (in preview) requires **Node ≥ 22.22.0**; the backends already declare it.
 > Re-check these versions on the day Phase 0 starts.
+>
+> **Revision 7 (2026-10-15, owner):** re-check of Medusa and the official starters (TASKS F-035, F-034): 2.21.2 is still `latest`, 2.22.0 needs Node ≥ 22.22.0; the admin RBAC API is now in the JS SDK reference but still flag-only, so cashiers, vendors and sellers stay custom actor types; `dtc-starter` dropped `generateStaticParams` upstream (§4.2 change 5 only matters for older copies; `ecommerce/storefront` and `pos` follow the starter); `b2b-starter` is on 2.21.2. Phase 2 (POS) started before the ecommerce production deploy, with `pos/backend` copied from `ecommerce/backend` (§7).
 >
 > **Revision 6 (2026-10-04, owner):** brings the plan in line with Phase 1 work done after Revision 5: Medusa 2.21.2; Cambodia contact rules (phone required, email optional, optional Telegram contact); order updates to customers on Telegram, with one small data module (`telegram_links`) for the order-to-chat link; ABA PayWay as built (checkout flow, manual refunds for now, domain and IP whitelisting); daily database backups with a restore test before go-live; server hardening before production. Changed sections: header, 3.2, 5, 6.1, 8, 10.
 >
@@ -115,7 +117,7 @@ Names are lowercase kebab-case because they become Dokploy build paths, image na
 
 ### 3.2 Version policy
 
-- All `@medusajs/*` packages that follow the Medusa release line pinned to the **exact same version** (no `^`/`~`). Exception: **`@medusajs/ui` has its own version line** (4.x while Medusa is 2.21.1); pin it to the exact version that `@medusajs/dashboard@<medusa version>` depends on, so the lockfile holds one copy (owner decision, F-006: for 2.21.1 the dashboard needs 4.2.5 while `dtc-starter` pins 4.2.4). `update-medusa.sh` reads it from the dashboard and falls back to the starter's pin. For 2.21.2 the dashboard needs 4.2.6.
+- All `@medusajs/*` packages that follow the Medusa release line pinned to the **exact same version** (no `^`/`~`). Exception: **`@medusajs/ui` has its own version line** (4.x while Medusa is 2.21.x); pin it to the exact version that `@medusajs/dashboard@<medusa version>` depends on, so the lockfile holds one copy (owner decision, F-006: for 2.21.1 the dashboard needs 4.2.5 while `dtc-starter` pins 4.2.4). `update-medusa.sh` reads it from the dashboard and falls back to the starter's pin. For 2.21.2 the dashboard needs 4.2.6.
 - `packageManager: "pnpm@<exact>"` in each `package.json`; the Dockerfile installs exactly that version.
 - `pnpm install --frozen-lockfile` everywhere (local CI and Docker). A build never resolves new versions on its own.
 - Only public imports: `@medusajs/framework/*`, `@medusajs/medusa/*`, `@medusajs/medusa/core-flows`, `@medusajs/admin-sdk`, `@medusajs/ui`. Never import from `dist/` paths.
@@ -267,7 +269,7 @@ Scenario-specific variables are listed in each scenario plan in §6.
   2. Rename the package (`@dtc/storefront` → `<category>-storefront`).
   3. Add `output: "standalone"` to `next.config.js`.
   4. Image domains: the starter reads `MEDUSA_CLOUD_S3_HOSTNAME` / `MEDUSA_CLOUD_S3_PATHNAME`; change these two reads to `S3_IMAGE_HOSTNAME` / `S3_IMAGE_PATHNAME` so any bucket (S3, R2, MinIO) works.
-  5. **Make the build independent of the backend:** the starter's `generateStaticParams` (products, collections, categories) calls the backend during `next build`, and the categories one fails the build if the backend is unreachable. Wrap each in a guard that returns `[]` on error, so pages render on demand instead. The build then only needs the publishable key.
+  5. **Make the build independent of the backend:** the starter's `generateStaticParams` (products, collections, categories) calls the backend during `next build`, and the categories one fails the build if the backend is unreachable. Wrap each in a guard that returns `[]` on error, so pages render on demand instead. The build then only needs the publishable key. *(Upstream since `dtc-starter` `f677db4`, 2026-10-09: the starter no longer has these functions. Copies made from that commit or later skip this change.)*
   6. *(Optional)* **Internal backend URL on the server:** the starter's `src/lib/config.ts` uses `NEXT_PUBLIC_MEDUSA_BACKEND_URL` for both browser and server. Change it to prefer a server-only `MEDUSA_BACKEND_URL` when `typeof window === "undefined"`, so server-side calls use the private Dokploy hostname. Without this change the runtime `MEDUSA_BACKEND_URL` is unused.
   7. **Product pages render dynamically:** `export const dynamic = "force-dynamic"` on `products/[handle]/page.tsx`. The starter's `cookies()` helper swallows Next's `DynamicServerError`, so product pages returned 500 in the production image (F-015).
   8. **`outputFileTracingRoot: __dirname`** in `next.config.js`, so `server.js` lands at the standalone root on any machine (F-010).
@@ -345,7 +347,7 @@ Each scenario lists: custom modules (tables are prefixed to avoid collisions), l
 - **Custom module `pos`:** `pos_register` (name, code, is_active), `pos_shift` (status open/closed, opened_by, closed_by, opened_at, closed_at, currency_code, opening_cash, counted_cash, expected_cash, notes).
 - **Links:** register ↔ stock location (many → one), register ↔ sales channel (many → one), shift → orders (one → many).
 - **Workflows:** `open-shift` (one open shift per register), `close-shift` (compute expected cash from cash payments, store variance), `pos-checkout` — follows the official POS recipe: creates the sale as a **draft order** in the POS sales channel (core draft-order workflows; the `@medusajs/draft-order` plugin ships with the starter), applies promotions, records payment, converts it to an order and links the order to the shift.
-- **Cashier auth:** Medusa 2.21.1 has **no admin roles** (RBAC is not in the official docs; the upstream PR is still open), so any admin user can do everything. Cashiers are therefore a custom actor type **`cashier`** (same pattern as vendors, §6.6: `/auth/cashier/emailpass`, `authenticate("cashier", ["session", "bearer"])`), and the POS app only calls `/pos/*` routes, which run core workflows on the server. Revisit when RBAC ships.
+- **Cashier auth:** Medusa 2.21.x has **no usable admin roles**: the admin RBAC API is in the JS SDK reference (since v2.15.5), but it only works behind the flag `MEDUSA_FF_RBAC`, enabling it is not documented, and the dashboard still shows pages a role can't open (medusajs/medusa#15945), so any admin user can do everything. Cashiers are therefore a custom actor type **`cashier`** (same pattern as vendors, §6.6: `/auth/cashier/emailpass`, `authenticate("cashier", ["session", "bearer"])`), and the POS app only calls `/pos/*` routes, which run core workflows on the server. Revisit when RBAC ships.
 - **API routes:** `/pos/registers`, `/pos/shifts/open|close`, `/pos/checkout`, `/pos/customers` (cashier), `/admin/pos/*` (reports, register setup), barcode lookup on the variant's `barcode` / `ean` / `upc` / `sku` fields (recipe: custom route).
 - **Admin:** shift report page (per register / per cashier / per day).
 - **Client apps:** `pos/storefront` (online shop on the same stock) and `pos/pos-app` (Next.js PWA for tablets): login, barcode scan, cart, customer lookup, payment (cash / card / QR), receipt.
@@ -373,7 +375,7 @@ Each scenario lists: custom modules (tables are prefixed to avoid collisions), l
 
 ### 6.4 Wholesale — `wholesale/`
 
-- **Start from the official B2B starter** (`medusajs/b2b-starter`, on Medusa 2.21.1): copy its `apps/backend` into `wholesale/backend` (modules `company`, `quote`, `approval`) and its `apps/storefront` into `wholesale/storefront`, applying the same starter changes as §4.2. Extend its modules; don't rebuild them.
+- **Start from the official B2B starter** (`medusajs/b2b-starter`, on Medusa 2.21.2, Node ≥ 22.22.0): copy its `apps/backend` into `wholesale/backend` (modules `company`, `quote`, `approval`) and its `apps/storefront` into `wholesale/storefront`, applying the same starter changes as §4.2. Extend its modules; don't rebuild them.
 - **Modules (from the starter, extended):** `company` + `employee` (add payment_terms prepaid/net_15/net_30/net_60, credit_limit, tax_id, status), `quote` and `approval` in the **MVP** (they come with the starter).
 - **Links:** employee ↔ customer (one ↔ one), company ↔ customer group (the price tier).
 - **Catalog scope (recipe):** a B2B **sales channel** + its own publishable key, so the B2B storefront only sees B2B products.
@@ -503,7 +505,7 @@ A throwaway prototype was built on Medusa 2.21.1 + pnpm 12.6.0 to test this plan
 | R-c | Duplicated boilerplate drifts between folders → Phase 0 `verify.sh` also diffs the standard files across folders | ongoing |
 | R-d | Client built against an old publishable key or backend URL → keys and URLs are build args; changing them means rebuilding that client (documented in each `.env.example`) | ongoing |
 | R-f | Official starters/recipes change (e.g. the v2.14 move to `dtc-starter`) → re-check docs.medusajs.com and the starter repos at the start of every phase, not only Medusa package versions | every phase |
-| R-g | No admin roles in 2.21.1 → every admin user has full access; cashiers, vendors and sellers never get admin users (custom actor types instead). RBAC code exists behind the undocumented flag `MEDUSA_FF_RBAC`; re-evaluate when Medusa documents it (F-001) | Phase 2 |
+| R-g | No usable admin roles in 2.21.x → every admin user has full access; cashiers, vendors and sellers never get admin users (custom actor types instead). RBAC exists behind the flag `MEDUSA_FF_RBAC` and its admin API is in the JS SDK reference, but enabling it is not documented; re-evaluate when Medusa documents enabling it (F-001, F-035) | Phase 2 |
 | R-h | Two server replicas migrating at once (only per-module advisory locks, F-004) → scale to 1 during deploys | every deploy |
 | R-e | Worker and server accidentally both run migrations → worker env always has `RUN_MIGRATIONS=false` (in every backend `.env.example`) | every deploy |
 
