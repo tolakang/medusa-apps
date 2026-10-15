@@ -1,6 +1,6 @@
 # Medusa v2 Skill: Verified Reference for This Project
 
-> **What this is:** the only Medusa knowledge the builder may use without looking it up again. Every rule below was checked on **2026-09-25** against **Medusa 2.21.1** and re-checked on **2026-10-01** against **2.21.2** and on **2026-10-05** against the current docs (2.21.2 is still npm `latest`) (the official docs at docs.medusajs.com, the published `@medusajs/*` packages, and the official `dtc-starter` / `b2b-starter` repos). Each section cites its source.
+> **What this is:** the only Medusa knowledge the builder may use without looking it up again. Every rule below was checked on **2026-09-25** against **Medusa 2.21.1** and re-checked on **2026-10-01** against **2.21.2** and on **2026-10-05** and **2026-10-15** against the current docs (2.21.2 is still npm `latest` on 2026-10-15) (the official docs at docs.medusajs.com, the published `@medusajs/*` packages, and the official `dtc-starter` / `b2b-starter` repos). Each section cites its source.
 >
 > **Reading order for the builder:** `CLAUDE.md` → `BUILD_PLAN.md` (frozen) → this file → `DEV_FLOW.md` → `TASKS.md`.
 >
@@ -31,11 +31,19 @@ When the docs and the installed types disagree, **the installed types win** (the
 | Item | Value | Source |
 |---|---|---|
 | Medusa | `2.21.2` (npm `latest`, released 2026-09-28; 2.21.1 before) | `npm view @medusajs/medusa version`; release notes v2.21.2 |
-| Node | `^20.19.0 \|\| >=22.12.0` (docs: "v20.19.0+ or v22.12.0+, LTS versions only"; with the Next.js storefront "v24 LTS or lower"). Project uses **Node 22** (Docker `node:22-bookworm-slim` = newest 22.x; CI `node-version: 22`). **Coming in 2.22** (preview only on 2026-10-05): Node 20 dropped, **Node ≥ 22.22.0** required (medusajs/medusa#17107); `dtc-starter` already sets `engines.node` `>=22.22.0` (commit `15ef93d`) | `npm view @medusajs/medusa engines`; docs `learn/installation`; `dtc-starter` commits |
-| pnpm | `12.6.0`; supported since Medusa v2.13.0 | `npm view pnpm version`; docs `learn/configurations/pnpm` |
+| Node | `^20.19.0 \|\| >=22.12.0` (docs: "v20.19.0+ or v22.12.0+, LTS versions only"; with the Next.js storefront "v24 LTS or lower"). Project uses **Node 22** (Docker `node:22-bookworm-slim` = newest 22.x; CI `node-version: 22`). **Coming in 2.22** (still preview / snapshot only on 2026-10-15; release PR medusajs/medusa#17068 open; `npm view @medusajs/medusa@2.22.0-snapshot-20261008225942 engines` = `>=22.22.0`): Node 20 dropped, **Node ≥ 22.22.0** required (medusajs/medusa#17107); `dtc-starter` already sets `engines.node` `>=22.22.0` (commit `15ef93d`) | `npm view @medusajs/medusa engines`; docs `learn/installation`; `dtc-starter` commits |
+| pnpm | `12.6.0` pinned in this repo; supported since Medusa v2.13.0. Newer pnpm exists (`12.11.2` on 2026-10-15); bump only with `scripts/update-medusa.sh` (plan §8 step 2, optional) | `npm view pnpm version`; docs `learn/configurations/pnpm` |
 | Versioning | All `@medusajs/*` packages share one version, **except** design-system packages (`@medusajs/ui` = `4.2.x`). This repo pins `@medusajs/ui` to the version `@medusajs/dashboard@<release>` depends on (`4.2.6` for 2.21.2; `4.2.5` for 2.21.1), so the lockfile holds one copy — TASKS.md F-006 | docs `learn/update`; `npm view @medusajs/dashboard@2.21.2 dependencies` |
 | Minor releases | **May contain breaking changes.** Always read the release notes | docs `learn/update` |
-| Starters | `medusajs/dtc-starter` (the old `medusa-starter-default` and `nextjs-starter-medusa` are deprecated). Latest commit checked: `15ef93d` (2026-10-02): Medusa 2.21.2 pins + `engines.node` only | starter READMEs; `gh api repos/medusajs/dtc-starter/commits` |
+| Starters | `medusajs/dtc-starter` (the old `medusa-starter-default` and `nextjs-starter-medusa` are deprecated). Latest commit checked: **`f677db4` (2026-10-09)**: removes `generateStaticParams` from the product, collection and category pages (PR #73), so the starter build no longer calls the backend (this repo's storefront already guards them, plan §4.2 change 5). Before it: `15ef93d` (2026-10-02), Medusa 2.21.2 pins + `engines.node`. **`medusajs/b2b-starter`** (Phase 4): `3ed7131` (2026-10-02), Medusa **2.21.2**, `engines.node` `>=22.22.0`, `packageManager` `pnpm@9.15.0` | starter READMEs; `gh api repos/medusajs/dtc-starter/commits` |
+
+### 1.1 Coming in 2.22.0 (preview; not installed, don't use yet)
+
+From the open release PR (medusajs/medusa#17068) and the docs changes queued for it (medusajs/medusa#17065), checked 2026-10-15. Re-verify against the release notes before `scripts/update-medusa.sh`:
+- **Node ≥ 22.22.0** (medusajs/medusa#17107). This repo already sets `engines.node` `>=22.22.0` on its backends; Docker `node:22-bookworm-slim` and CI `node-version: 22` resolve to the newest 22.x.
+- **`price-list.*` events** (docs "Product Index Examples" → "Changing Price Lists"): can replace the storefront's `revalidate: 600` safety net for price lists (plan §4.2 change 9) and the starter's search TODOs.
+- Removing a product option from a product with variants removes the option's values from the variants instead of throwing (docs "Manage Products with the Admin API").
+- `@medusajs/ui` **4.2.7** ships with 2.22.0 (pin rule in the Versioning row).
 
 ---
 
@@ -91,7 +99,7 @@ The snippet above is the pattern only. The real config makes the Redis modules c
 | Stripe: provider `@medusajs/medusa/payment-stripe` with options `apiKey` and `webhookSecret` (required when deployed). Webhook URL: `{server_url}/hooks/payment/{provider_id}` → `/hooks/payment/stripe_stripe`. **Not used by ecommerce** (Stripe is not available in Cambodia, TASKS F-022); custom providers: §15 | `resources/commerce-modules/payment/payment-provider/stripe` |
 | The system payment provider `pp_system_default` is built in (manual payments) | `resources/commerce-modules/payment/payment-provider` |
 | The **Search Module** is registered by default since 2.21.1 (PostgreSQL provider). Indexes live in `src/search/*.ts` (the starter ships `product.ts`) | `resources/infrastructure-modules/search` |
-| Feature flags present in the 2.21.1 and 2.21.2 package source: `MEDUSA_FF_CACHING`, `MEDUSA_FF_RBAC` (default **off**, **not documented**), `MEDUSA_FF_RBAC_FILTER_FIELDS`, `MEDUSA_FF_INDEX_ENGINE`, `MEDUSA_FF_TRANSLATION`, `MEDUSA_FF_VIEW_CONFIGURATIONS`, `MEDUSA_FF_BACKEND_HMR`. **Only enable a flag the docs document** (currently: caching) | `node_modules/@medusajs/medusa/dist/feature-flags/*.js` |
+| Feature flags present in the 2.21.1 and 2.21.2 package source: `MEDUSA_FF_CACHING`, `MEDUSA_FF_RBAC` (default **off**; how to enable it is **not documented**, though the admin RBAC API is in the JS SDK reference since v2.15.5: `sdk.admin.rbacRole`, `sdk.admin.rbacPolicy`; open dashboard issue medusajs/medusa#15945, sidebar ignores permissions, fix PR #15620 open), `MEDUSA_FF_RBAC_FILTER_FIELDS`, `MEDUSA_FF_INDEX_ENGINE`, `MEDUSA_FF_TRANSLATION`, `MEDUSA_FF_VIEW_CONFIGURATIONS`, `MEDUSA_FF_BACKEND_HMR`. **Only enable a flag the docs document** (currently: caching) | `node_modules/@medusajs/medusa/dist/feature-flags/*.js` |
 | Admin customizations read env vars only with the `VITE_` prefix, via `import.meta.env` | `learn/fundamentals/environment-variables` |
 
 ---
@@ -357,7 +365,7 @@ moduleIntegrationTestRunner<BlogModuleService>({ moduleName: BLOG_MODULE, module
 
 ## 14. Refreshing this skill
 
-This file is pinned to **2.21.2** (refreshed 2026-10-01 from 2.21.1: §1 and §6 checks re-run against `node_modules`; re-checked 2026-10-05 against the current docs: §1 Node and starter, §3 indexes, §4 link aliases, §6 core-flows (20 names), §7 middleware order, §8 event payloads, §11 CLI flags, new §15 providers). When `scripts/update-medusa.sh` moves to a new version:
+This file is pinned to **2.21.2** (refreshed 2026-10-01 from 2.21.1: §1 and §6 checks re-run against `node_modules`; re-checked 2026-10-15: §1 versions, starters, RBAC flag note, new §1.1 2.22 preview notes; re-checked 2026-10-05 against the current docs: §1 Node and starter, §3 indexes, §4 link aliases, §6 core-flows (20 names), §7 middleware order, §8 event payloads, §11 CLI flags, new §15 providers). When `scripts/update-medusa.sh` moves to a new version:
 
 1. Read the release notes for every version you skip.
 2. Re-run the checks in §1 and the core-flows export check in §6 against the new `node_modules`.
