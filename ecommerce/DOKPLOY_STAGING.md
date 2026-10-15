@@ -1,6 +1,6 @@
 # Runbook: `ecommerce-staging` on Dokploy (tasks P0-18, P0-19)
 
-Follow the steps in order. Field names are Dokploy's own (docs.dokploy.com, checked 2026-09-25). The project layout is decision **D6** (`TASKS.md`). Sections 1–6 are the Phase 0 base setup. **Phase 1 features** (S3 file storage, upload limits, email and Telegram notifications, ABA PayWay, cache refresh) add the variables in step 2.5 and the go-live steps in **§8**. Backups are **§7**; the smoke test after every deploy is **§9**.
+Follow the steps in order. Field names are Dokploy's own (docs.dokploy.com, checked 2026-09-25). The project layout is decision **D6** (`TASKS.md`). Sections 1–6 are the Phase 0 base setup. **Phase 1 features** (S3 file storage, upload limits, email and Telegram notifications, ABA PayWay, cache refresh) add the variables in step 2.5 and the go-live steps in **§8**. Backups are **§7**; the smoke test after every deploy is **§9**; rotating a leaked secret is **§10**.
 
 **You need:** a Dokploy server with the GitHub provider connected to `<github-owner>/medusa-apps` (Dokploy → Git → GitHub App), and two hostnames. Either use your DNS (`api.staging.<your-domain>`, `shop.staging.<your-domain>` → the Dokploy server IP), or use Dokploy's **Generated** domains.
 
@@ -372,3 +372,39 @@ When sharing a log, filter it first: `grep -v -i "secret\|access-key\|api_key"`.
 4. **Only after a backend deploy that touched notifications, Telegram or PayWay:** on that staging order, tap **Get order updates on Telegram** → the bot confirms; fulfil and ship it in the admin → staff and customer get "shipped".
 
 Record the result (date, commit, ✅ per line) in `TASKS.md` for releases that matter (phase exit, production).
+
+---
+
+## 10. Rotating a leaked secret
+
+Do this whenever a key, password or token was pasted into chat, printed in a log or shared by mistake. Never paste the new values anywhere either. Staging still owes one rotation: the Redis password (2026-09-25), the Resend key and the RustFS backup key (TASKS → *Session handoff*, operator notes).
+
+**0. Update Dokploy first.** Back up first, then update Dokploy to **v0.29.9 or newer**. Older versions print the S3 backup keys in Dokploy's own service log (F-031, §7.2), so a new backup key would leak the same way.
+
+**1. Redis password**
+- [ ] `ecommerce-redis` → set a new password → **Deploy**.
+- [ ] Copy its new **Internal Connection URL** into `REDIS_URL` on **`ecommerce-backend`** and **`ecommerce-worker`**. Both stay unable to reach Redis until they are redeployed.
+- [ ] Redeploy the backend: `/health` 200, no Redis errors in **Logs**.
+- [ ] Redeploy the worker: `Starting Medusa (worker mode: worker)`, the three Redis connections, no `error` lines (§9).
+
+**2. Resend API key**
+- [ ] Resend dashboard → create a new API key (sending access is enough).
+- [ ] Set `RESEND_API_KEY` on **`ecommerce-backend`** and **`ecommerce-worker`**, redeploy both.
+- [ ] Send a password reset email and place one sandbox order (with an email): both emails arrive.
+- [ ] Only then delete the old key in Resend.
+
+**3. RustFS backup key**
+- [ ] RustFS console → create a new key limited to the backup bucket (same policy as §7.1 step 2).
+- [ ] Dokploy → **Settings → S3 Destinations** → the backup destination (§7.1 step 3): enter the new key and secret, **Test connection**.
+- [ ] Manual run (▶ on the backup row) and check the log as in §7.2; it must end with `✅ Backup uploaded to S3 successfully`, and the new file must appear in the bucket.
+- [ ] Check that Dokploy no longer prints the key; this must print `0`:
+  ```bash
+  docker service logs dokploy 2>&1 | grep -c '<first 6 characters of the new key>'
+  ```
+- [ ] Delete the old key in RustFS.
+- [ ] If the backend's file storage uses the same key pair (`S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY`), rotate it too: new key, update the backend, redeploy, upload one admin image and check it shows in the shop.
+
+**4. Close out**
+- [ ] Smoke test (§9).
+- [ ] Record the date in `TASKS.md` and remove the "rotate" line from the operator notes.
+- [ ] Production (P1-08) gets fresh values for every secret; never reuse a staging one.
