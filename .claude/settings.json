@@ -1,8 +1,6 @@
 {
   "permissions": {
     "deny": [
-      "Edit(BUILD_PLAN.md)",
-      "Edit(/BUILD_PLAN.md)"
     ]
   }
 }
