@@ -1,0 +1,35 @@
+{
+  "name": "pos-pos-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "POS counter app (Next.js PWA) for the pos business project (TASKS P2-10)",
+  "packageManager": "pnpm@12.6.0",
+  "engines": {
+    "node": ">=22.22.0"
+  },
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test src/lib/__tests__/*.test.ts"
+  },
+  "dependencies": {
+    "@medusajs/js-sdk": "2.21.2",
+    "next": "15.5.27",
+    "react": "19.0.5",
+    "react-dom": "19.0.5",
+    "server-only": "0.0.1"
+  },
+  "devDependencies": {
+    "@medusajs/types": "2.21.2",
+    "@medusajs/ui-preset": "2.21.2",
+    "@types/node": "22.20.5",
+    "@types/react": "19.0.5",
+    "@types/react-dom": "19.0.5",
+    "autoprefixer": "10.6.1",
+    "postcss": "8.5.28",
+    "tailwindcss": "3.4.19",
+    "typescript": "5.9.3"
+  }
+}

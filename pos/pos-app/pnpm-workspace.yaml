@@ -1,0 +1,6 @@
+# pnpm SETTINGS for this app only. No `packages:` key, so this is a single
+# package, not a workspace (web client standard, plan §4.2).
+
+overrides:
+  "@types/react": 19.0.5
+  "@types/react-dom": 19.0.5

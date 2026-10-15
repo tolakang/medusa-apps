@@ -1,8 +1,8 @@
 # POS — `pos/`
 
-> **Physical shop checkout + online store on shared stock.** Phase 2 in progress: `backend/` is built (a copy of `ecommerce/backend`; the POS module, cashier sign-in, shifts, checkout and the `/pos` and `/admin/pos` routes are in; see *Shop setup and selling*); `storefront/` and `pos-app/` are still templates. Scope: [BUILD_PLAN.md §6.2](../BUILD_PLAN.md).
+> **Physical shop checkout + online store on shared stock.** Phase 2 in progress: `backend/` is built (a copy of `ecommerce/backend`; the POS module, cashier sign-in, shifts, checkout and the `/pos` and `/admin/pos` routes are in; see *Shop setup and selling*); `pos-app/` is built (the counter PWA, TASKS P2-10, `pos-app/README.md`); `storefront/` is still a template. Scope: [BUILD_PLAN.md §6.2](../BUILD_PLAN.md).
 >
-> The `storefront/` and `pos-app/` folders hold only **ready templates** (`Dockerfile`, `.env.example`); until their code is added, a Dokploy build of them fails at `COPY package.json`.
+> The `storefront/` folder holds only a **ready template** (`Dockerfile`, `.env.example`); until its code is added, a Dokploy build of it fails at `COPY package.json`.
 
 This folder is **one complete business project**. Copy the whole folder's setup into one Dokploy project and every piece deploys on its own.
 
@@ -43,7 +43,7 @@ Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Doc
 4. In the admin: create a region, a sales channel and a **publishable API key**.
 5. Deploy `pos-worker` (same Build Path, worker overrides).
 6. Put the publishable key and backend URL into the storefront's **Build-time Arguments**, then deploy `pos-storefront`.
-7. Deploy `pos-pos-app`.
+7. Deploy `pos-pos-app` with runtime `MEDUSA_BACKEND_URL` (the backend's internal hostname) and `COOKIE_SECRET` (`openssl rand -hex 32`). No build arguments are needed.
 8. Set the final domains in the backend CORS variables and redeploy the backend.
 
 After the first deploy, every service can be redeployed, rebuilt or rolled back **independently**.
@@ -54,7 +54,7 @@ After the first deploy, every service can be redeployed, rebuilt or rolled back 
 - Backend CORS must list each client domain:
   - `STORE_CORS` = storefront domain
   - `ADMIN_CORS` = admin domain only
-  - `POS_CORS` = POS app domain (the app uses `/pos/*` routes as a `cashier`, not the admin API)
+  - `POS_CORS` = POS app domain. The app built in P2-10 calls `/pos/*` from its own server (the browser never sees the token), so it doesn't need CORS. Set it only for a client that calls `/pos/*` from the browser.
   - `AUTH_CORS` = every domain where someone logs in
 - The storefront reaches the backend through the public `NEXT_PUBLIC_MEDUSA_BACKEND_URL` (build-time). Runtime `MEDUSA_BACKEND_URL` can be the backend's **internal** Dokploy hostname once starter change 6 in BUILD_PLAN.md §4.2 is applied (faster, private; copy the exact name Dokploy shows for the service, it may carry a suffix). Build-time URLs must be **public**, because the build runs on the build server.
 - `NEXT_PUBLIC_*` values are baked in at build time. Changing one = rebuild that client.
@@ -76,7 +76,7 @@ Admin (admin token):
 - `POST /admin/pos/registers` `{ name, code, stock_location_id, sales_channel_id }` sets up a till; each register sells from one stock location in one sales channel. List: `GET /admin/pos/registers`. Change: `POST /admin/pos/registers/:id` (name, `is_active`, location, channel).
 - **Shift report** in the admin sidebar (`/app/pos-shifts`, TASKS P2-07): shifts per day, register or cashier, with expected cash, counted cash and the variance (red when cash is short). It filters by register, cashier, status and dates, and reads `GET /admin/pos/shifts?register_id=&cashier_id=&status=&from=&to=`.
 
-Cashier (cashier token, from the POS app):
+Cashier: the **POS app** (`pos-app/`, P2-10) does all of this on screen: sign in (first time: *Set your password*), pick a register, open the shift, scan, customer, pay, print, close. The routes underneath (cashier token):
 1. `GET /pos/registers` lists the registers; pick one, then `POST /pos/shifts/open` `{ register_id, opening_cash }`.
 2. `GET /pos/products/lookup?code=<scanned>&shift_id=` finds the product by barcode, EAN, UPC or SKU, with its price.
 3. Optionally find or add the customer: `GET /pos/customers?q=` or `POST /pos/customers` `{ first_name, phone | email }`.

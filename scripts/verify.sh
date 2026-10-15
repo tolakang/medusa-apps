@@ -60,6 +60,13 @@ for D in $DEPLOYABLES; do
       step "$D" "tests: unit, modules, http (real Postgres)"
       (cd "$D" && pnpm test:unit && pnpm test:integration:modules && pnpm test:integration:http)
       ;;
+    *)
+      # Clients with their own unit tests (e.g. pos/pos-app, TASKS P2-10).
+      if grep -q '"test":' "$D/package.json"; then
+        step "$D" "tests: unit"
+        (cd "$D" && pnpm test)
+      fi
+      ;;
   esac
 
   if [ "$IMAGE" = 1 ]; then

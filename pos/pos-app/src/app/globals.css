@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  @apply bg-ui-bg-subtle text-ui-fg-base;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Big, tablet-friendly controls. */
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-base font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+}
+.btn-primary {
+  @apply btn bg-ui-button-inverted text-ui-fg-on-inverted hover:bg-ui-button-inverted-hover;
+}
+.btn-secondary {
+  @apply btn border border-ui-border-base bg-ui-bg-base hover:bg-ui-bg-base-hover;
+}
+.btn-danger {
+  @apply btn bg-ui-button-danger text-ui-fg-on-color hover:bg-ui-button-danger-hover;
+}
+.field {
+  @apply w-full rounded-lg border border-ui-border-base bg-ui-bg-field px-3 py-3 text-base outline-none focus:border-ui-border-interactive;
+}
+.card {
+  @apply rounded-xl border border-ui-border-base bg-ui-bg-base;
+}
+
+/* Receipt printing: only the receipt, on narrow thermal paper. */
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 4mm;
+  }
+  body * {
+    visibility: hidden;
+  }
+  #receipt,
+  #receipt * {
+    visibility: visible;
+  }
+  #receipt {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 72mm;
+    border: 0;
+    font-size: 11px;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
