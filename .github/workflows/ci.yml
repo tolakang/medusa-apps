@@ -33,6 +33,7 @@ jobs:
         deployable:
           - ecommerce/backend
           - ecommerce/storefront
+          - pos/backend
     services:
       postgres:
         image: docker.io/library/postgres:15-alpine
