@@ -311,6 +311,11 @@ export default Widget
 
 UI routes go in `src/admin/routes/<path>/page.tsx`. Before using a widget zone name, look it up in the docs' injection-zones reference.
 
+- **UI route config** (verified 2.21.2, `@medusajs/admin-sdk/dist/index.d.ts`): `export const config = defineRouteConfig({ label?, icon?, nested?, rank?, translationNs? })`. With a `label`, the route shows in the sidebar; without one it doesn't. `icon` is a React component, usually from `@medusajs/icons`. That package isn't a declared dependency here, and pnpm refuses undeclared imports, so add it to `package.json` (exact pin) before using an icon. The page is served at `/app/<path>` (`pos/backend/src/admin/routes/pos-shifts/page.tsx` → `/app/pos-shifts`).
+- **Data in admin pages:** `sdk.client.fetch<T>(path, { method?, body?, query? })` (`@medusajs/js-sdk` `types.d.ts`: `query?: Record<string, any>`) with `@tanstack/react-query` `useQuery` / `useMutation`. Both are already used by this repo's widgets. The SDK in `src/admin/lib/sdk.ts` uses session auth.
+- **`@medusajs/ui` 4.2.6 components used** (checked against the installed exports): `Container`, `Heading`, `Text`, `Label`, `Input`, `Button`, `Badge` (`color`: green, red, blue, orange, grey or purple), `Select` with `.Trigger`, `.Value`, `.Content` and `.Item`, `Table` with `.Header`, `.Row`, `.HeaderCell`, `.Body`, `.Cell` and `.Pagination` (`count`, `pageSize`, `pageIndex`, `pageCount`, `canPreviousPage`, `canNextPage`, `previousPage`, `nextPage`), and `toast`. Radix `Select.Item` can't have the value `""`, so use a sentinel such as `"all"`.
+- **Keep page logic testable:** put the grouping and formatting in a React-free module (`src/admin/lib/*.ts`) with a `__tests__/*.unit.spec.ts`. The unit runner covers `src/**`.
+
 ---
 
 ## 10. Testing
