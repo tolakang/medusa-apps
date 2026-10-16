@@ -10,6 +10,7 @@ import { POS_MODULE } from "../../src/modules/pos"
 import type PosModuleService from "../../src/modules/pos/service"
 import { posCheckoutWorkflow } from "../../src/workflows/pos-checkout"
 import { closePosShiftWorkflow, openPosShiftWorkflow } from "../../src/workflows/pos-shift"
+import { stockAt } from "../helpers/pos-stock"
 
 // TASKS P2-05 (pos-checkout through draft orders, BUILD_PLAN §6.2). Data as
 // on staging: the starter's demo products (seed-initial-data) plus the
@@ -40,10 +41,17 @@ medusaIntegrationTestRunner({
         })
         const pos = container.resolve<PosModuleService>(POS_MODULE)
         const register = await pos.createPosRegisters({ name: "Till", code: `SALE-${++registerCode}` })
-        await container.resolve(ContainerRegistrationKeys.LINK).create({
-          [POS_MODULE]: { pos_register_id: register.id },
-          [Modules.SALES_CHANNEL]: { sales_channel_id: store.default_sales_channel_id },
-        })
+        // The register sells from the Phnom Penh shop, which holds the items
+        // (since P2-11 a sale takes stock only from the register's location).
+        const [shop] = await container.resolve(Modules.STOCK_LOCATION).listStockLocations({ name: "Phnom Penh" })
+        await container.resolve(ContainerRegistrationKeys.LINK).create([
+          {
+            [POS_MODULE]: { pos_register_id: register.id },
+            [Modules.SALES_CHANNEL]: { sales_channel_id: store.default_sales_channel_id },
+          },
+          { [POS_MODULE]: { pos_register_id: register.id }, [Modules.STOCK_LOCATION]: { stock_location_id: shop.id } },
+        ])
+        await stockAt(container, variant.id, shop.id, 50)
         const { result: shift } = await openPosShiftWorkflow(container).run({
           input: { register_id: register.id, cashier_id: "pcash_1", opening_cash: 20 },
         })

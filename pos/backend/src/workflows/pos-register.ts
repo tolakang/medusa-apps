@@ -5,9 +5,11 @@ import {
   createWorkflow,
   StepResponse,
   transform,
+  when,
   WorkflowResponse,
 } from "@medusajs/framework/workflows-sdk"
 import { createRemoteLinkStep, dismissRemoteLinkStep } from "@medusajs/medusa/core-flows"
+import { ensurePosInStoreOptionWorkflow } from "./pos-in-store"
 import { POS_MODULE } from "../modules/pos"
 import type PosModuleService from "../modules/pos/service"
 
@@ -90,6 +92,10 @@ export const createPosRegisterWorkflow = createWorkflow(
       channelLink(register.id, input.sales_channel_id),
     ])
     createRemoteLinkStep(links)
+    // The location's in-store shipping option, for counter sales (P2-11).
+    ensurePosInStoreOptionWorkflow.runAsStep({
+      input: transform({ input }, ({ input }) => ({ stock_location_id: input.stock_location_id })),
+    })
     return new WorkflowResponse(register)
   }
 )
@@ -165,6 +171,11 @@ export const updatePosRegisterWorkflow = createWorkflow(
     const toCreate = transform({ changes }, ({ changes }) => changes.create)
     dismissRemoteLinkStep(toDismiss)
     createRemoteLinkStep(toCreate)
+    when("pos-register-location-changed", { input }, ({ input }) => !!input.stock_location_id).then(() => {
+      ensurePosInStoreOptionWorkflow.runAsStep({
+        input: transform({ input }, ({ input }) => ({ stock_location_id: input.stock_location_id! })),
+      })
+    })
     return new WorkflowResponse(register)
   }
 )
