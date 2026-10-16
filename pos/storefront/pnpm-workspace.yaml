@@ -1,0 +1,15 @@
+# pnpm SETTINGS for this app only. No `packages:` key, so this is a single
+# package, not a workspace (BUILD_PLAN.md §4.2).
+
+# Carried over from the dtc-starter root package.json (pnpm.overrides).
+overrides:
+  "@types/react": 19.0.5
+  "@types/react-dom": 19.0.5
+  tsconfig-paths: ^4.2.0
+
+# pnpm blocks dependency install scripts unless they are listed here.
+# unrs-resolver: ESLint import resolver (via eslint-config-next); lint is not
+# part of `next build` (eslint.ignoreDuringBuilds), and the dtc-starter does
+# not allow it either.
+allowBuilds:
+  unrs-resolver: false

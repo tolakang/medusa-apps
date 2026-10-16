@@ -1,8 +1,11 @@
 # POS — `pos/`
 
-> **Physical shop checkout + online store on shared stock.** Phase 2 in progress: `backend/` is built (a copy of `ecommerce/backend`; the POS module, cashier sign-in, shifts, checkout and the `/pos` and `/admin/pos` routes are in; see *Shop setup and selling*); `pos-app/` is built (the counter PWA, TASKS P2-10, `pos-app/README.md`); `storefront/` is still a template. Scope: [BUILD_PLAN.md §6.2](../BUILD_PLAN.md).
+> **Physical shop checkout + online store on shared stock.** Phase 2 in progress; all three apps are built:
+> - `backend/`: a copy of `ecommerce/backend`. The POS module, cashier sign-in, shifts, checkout and the `/pos` and `/admin/pos` routes are in; see *Shop setup and selling*.
+> - `pos-app/`: the counter PWA (TASKS P2-10, `pos-app/README.md`).
+> - `storefront/`: the online shop, a copy of `ecommerce/storefront` (TASKS P2-09, `storefront/README.md`).
 >
-> The `storefront/` folder holds only a **ready template** (`Dockerfile`, `.env.example`); until its code is added, a Dokploy build of it fails at `COPY package.json`.
+> Scope: [BUILD_PLAN.md §6.2](../BUILD_PLAN.md).
 
 This folder is **one complete business project**. Copy the whole folder's setup into one Dokploy project and every piece deploys on its own.
 
@@ -42,7 +45,7 @@ Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Doc
    `docker-entrypoint.sh medusa user -e you@example.com -p <password>`
 4. In the admin: create a region, a sales channel and a **publishable API key**.
 5. Deploy `pos-worker` (same Build Path, worker overrides).
-6. Put the publishable key and backend URL into the storefront's **Build-time Arguments**, then deploy `pos-storefront`.
+6. Put the publishable key and backend URL into the storefront's **Build-time Arguments**, then deploy `pos-storefront`. Use the key of the **online** sales channel. Link that key to exactly one channel, which must hold the products (see *Stock*).
 7. Deploy `pos-pos-app` with runtime `MEDUSA_BACKEND_URL` (the backend's internal hostname) and `COOKIE_SECRET` (`openssl rand -hex 32`). No build arguments are needed.
 8. Set the final domains in the backend CORS variables and redeploy the backend.
 
@@ -86,6 +89,12 @@ Cashier: the **POS app** (`pos-app/`, P2-10) does all of this on screen: sign in
 Card and QR payments are taken on the shop's own terminal or KHQR stand, and the sale only records them (TASKS F-038).
 
 **Stock (TASKS P2-11).** A register sells only from its own stock location. Give each shop location inventory in the admin (Inventory → item → locations), otherwise the till answers "Not enough stock at <shop>". The sale is fulfilled at once from that location, so the shop's stock goes down at the counter and other locations (the warehouse, the online shop's stock) are untouched. To do that, every register location gets a hidden shipping option, **"In store (POS)"**. It is created when the register is set up and never appears in the online checkout. Don't delete it; if it's deleted, the next sale creates it again.
+
+**Online shop on the same stock (TASKS P2-09).** To let the online shop sell the shop's stock, link the shop's stock location to the online sales channel as well (Admin → Settings → Locations & Shipping → the shop → Sales Channels). The online shop shows stocked − reserved over its channel's locations, so:
+- a till sale lowers what the shop page shows at once;
+- an online order reserves stock, which the till then can't sell (e.g. "Not enough stock at Phnom Penh: … (7 left)").
+
+Stock that only the online shop should sell (a warehouse) goes in a location that no register uses.
 
 ## Independence rules
 
