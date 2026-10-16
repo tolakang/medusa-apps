@@ -99,14 +99,23 @@ for D in $DEPLOYABLES; do
   # 12. No NEW type suppressions (DEV_FLOW §6). Starter code keeps its own:
   #     <deployable>/.guard-baseline holds the repo commit that imported the
   #     starter; lines are "new" relative to it (else relative to BASE_REF).
-  REF="$BASE_REF"
-  [ -f "$D/.guard-baseline" ] && REF=$(tr -d '[:space:]' < "$D/.guard-baseline")
-  if git rev-parse --verify --quiet "$REF^{commit}" >/dev/null; then
-    BAD=$(git diff -U0 "$REF" -- "$SRC" 2>/dev/null | grep -E '^\+' | grep -vE '^\+\+\+' \
-          | grep -E "@ts-ignore|@ts-nocheck|as any\b" || true)
-    [ -z "$BAD" ] && pass "no new type suppressions vs $REF" || fail "new type suppressions: $BAD"
-  else
+  #     A copied app (e.g. pos/storefront, TASKS P2-09) names its source too:
+  #     "<commit> <source app>"; then a suppression is new unless the source
+  #     app had the same line at that commit.
+  REF="$BASE_REF"; FROM=""
+  [ -f "$D/.guard-baseline" ] && read -r REF FROM < "$D/.guard-baseline"
+  SUPPRESS="@ts-ignore|@ts-nocheck|as any\b"
+  if ! git rev-parse --verify --quiet "$REF^{commit}" >/dev/null; then
     echo "  skip: new-suppression check (ref '$REF' not found; set GUARD_BASE_REF)"
+  elif [ -n "$FROM" ]; then
+    trim() { sed -E 's/^[^:]*:[0-9]+://; s/^[[:space:]]+//; s/[[:space:]]+$//' | sort; }
+    BAD=$(comm -23 <(grep -rnE "$SUPPRESS" "$SRC" 2>/dev/null | trim) \
+                   <(git grep -nE "$SUPPRESS" "$REF" -- "$FROM/src" 2>/dev/null | sed -E 's/^[^:]*://' | trim) || true)
+    [ -z "$BAD" ] && pass "no new type suppressions vs $FROM at $REF" || fail "new type suppressions: $BAD"
+  else
+    BAD=$(git diff -U0 "$REF" -- "$SRC" 2>/dev/null | grep -E '^\+' | grep -vE '^\+\+\+' \
+          | grep -E "$SUPPRESS" || true)
+    [ -z "$BAD" ] && pass "no new type suppressions vs $REF" || fail "new type suppressions: $BAD"
   fi
 done
 

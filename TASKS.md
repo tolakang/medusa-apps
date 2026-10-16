@@ -137,7 +137,15 @@
 - [x] P2-08 Decide **D5** (PWA vs native) and log it. — done 2026-10-15: **PWA** (owner), Decisions log D5.
 
 **Clients**
-- [ ] P2-09 `pos/storefront` from the standard (same stock, online channel key).
+- [x] P2-09 `pos/storefront` from the standard (same stock, online channel key). — **done 2026-10-16** (branch `feat/pos-p2-09-storefront`). **Copied from `ecommerce/storefront`** at `main` `5efa245` (tracked files only), as `pos/backend` was copied from `ecommerce/backend` (F-034, F-035: "`pos/storefront` copies `ecommerce/storefront`"). It talks to `pos/backend`, which has the same store routes, so PayWay, the Cambodia contact rules, CAPTCHA, wishlist and revalidation work unchanged.
+  - **Changes from the copy:** package `pos-storefront`; the Dockerfile and `.env.example` name `pos/storefront`, use the default region `kh` and describe the online channel's key; comments now point at `pos/backend`. A stale comment path (`phone-validation.ts` → `contact-validation.ts`) is also fixed in `ecommerce/storefront`.
+  - **Same stock:** the shop page reads `+variants.inventory_quantity`. Medusa computes it as stocked − reserved over the stock locations of the key's **single** sales channel (`variant-inventory-quantity.js` → `getVariantAvailability`; a key with several channels gets a 400). The till's location is linked to the online channel, so both sell the same units. MEDUSA_SKILL §6 has the details.
+  - **Tests:** `integration-tests/http/pos-shared-stock.spec.ts`, 2/2, on the staging seed, with the warehouse emptied for the test variant:
+    - The online shop shows the shop's 10. A till sale of 2 → 8 online.
+    - An online order of 3 is reserved at the shop (10 stocked, 3 reserved), so the shop shows 7. The till then refuses 8 ("(7 left)") and sells 7 → 0 online.
+  - **Wiring:** CI matrix gains `pos/storefront`; `pos/docker-compose.local.yml` gains the storefront on port 8000.
+  - **Guard:** `scripts/guard.sh` now reads an optional source app in `.guard-baseline`. `pos/storefront/.guard-baseline` is `159252e ecommerce/storefront`, so the starter's 3 type suppressions that came with the copy count as starter code, while a new one still fails (checked by planting `as any`).
+  - **Gates:** `scripts/verify.sh pos/storefront` (install, build with the backend down, typecheck) and `scripts/guard.sh all` pass. The image is built in CI.
 - [x] P2-10 `pos/pos-app` (Next.js PWA): login, scan, cart, customer lookup, payment (cash / card / QR), receipt. — **done 2026-10-15** (branch `feat/pos-p2-10-pos-app`). Plain Next.js 15.5.27, React 19.0.5 and `@medusajs/js-sdk` 2.21.2 with `@medusajs/ui-preset` (web client standard: own lockfile, standalone output, `outputFileTracingRoot`). Design (F-040):
   - **Backend access:** server-side only. The app's `/api/pos/*` proxy forwards an allow-list of cashier routes with the token; POSTs need a same-origin request.
   - **Session:** the cashier's JWT sits in an httpOnly, SameSite=Strict cookie sealed with AES-256-GCM under `COOKIE_SECRET`.
@@ -282,7 +290,7 @@
 
 ## Session handoff (2026-10-05): start here in a new session
 
-Current position (updated 2026-10-15): **Phase 1 (Ecommerce) built and running on staging; production (P1-08) waits on the owner's values (`ecommerce/DOKPLOY_STAGING.md` §11). Phase 2 (POS) started in parallel (F-034): P2-01 to P2-08 and P2-10 to P2-13 done; next P2-09 (`pos/storefront`), then P2-14 (exit checklist).** Every merge first gets the skill check of DEV_FLOW §7.1. Phase 0 is complete (P0-01 to P0-20). Plan: `BUILD_PLAN.md` **Revision 7** (2026-10-15, owner-approved; Revision 6 was 2026-10-04) matches this file; the edit block in `.claude/settings.json` is back on.
+Current position (updated 2026-10-15): **Phase 1 (Ecommerce) built and running on staging; production (P1-08) waits on the owner's values (`ecommerce/DOKPLOY_STAGING.md` §11). Phase 2 (POS) started in parallel (F-034): P2-01 to P2-13 done; next P2-14 (exit checklist).** Every merge first gets the skill check of DEV_FLOW §7.1. Phase 0 is complete (P0-01 to P0-20). Plan: `BUILD_PLAN.md` **Revision 7** (2026-10-15, owner-approved; Revision 6 was 2026-10-04) matches this file; the edit block in `.claude/settings.json` is back on.
 
 **Staging (Dokploy project `ecommerce-staging`):** backend `https://api.staging.example.com` (admin `/app`), storefront `https://shop.staging.example.com` (`/kh`), worker; Medusa 2.21.2. Live there: Cambodia seed, ABA PayWay **sandbox** (order #11 captured), order email (Resend), staff and customer Telegram bots, RustFS files, cache refresh, daily database backups (restore test passed 2026-10-04). Setup and every variable: `ecommerce/DOKPLOY_STAGING.md` (§2.5 Phase 1 variables, §7 backups, §8 go-live steps).
 
