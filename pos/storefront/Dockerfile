@@ -8,7 +8,7 @@
 #   Environment -> Build-time Arguments: the ARG values below
 #   Environment -> Runtime variables   : see .env.example
 #   Domain -> port 8000
-#   Full steps: pos/README.md (same as ecommerce/DOKPLOY_STAGING.md section 4).
+#   Full steps: pos/DOKPLOY_STAGING.md section 4.
 #
 # NEXT_PUBLIC_* values are baked into the JS bundle at build time, so
 # changing one requires a rebuild (Dokploy: Rebuild).

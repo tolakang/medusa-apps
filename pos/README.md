@@ -39,6 +39,8 @@ Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Doc
 
 ## Deploy order (first time)
 
+Step-by-step for staging, including the POS setup and the checks for the phase exit: **`DOKPLOY_STAGING.md`** (TASKS P2-14).
+
 1. Create `pos-postgres` and `pos-redis`.
 2. Deploy `pos-backend` (server). Migrations run on start. Check `https://api.example.com/health`.
 3. Create the first admin user from the backend's Dokploy terminal:

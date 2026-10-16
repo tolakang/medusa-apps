@@ -1,7 +1,9 @@
 # =====================================================================
 # pos / backend — Medusa server + worker (same image, two Dokploy apps)
 #
-# Dokploy: Build Type = Dockerfile, Build Path = /pos/backend
+# Dokploy: Build Type = Dockerfile, Build Path = /,
+#   Docker File = pos/backend/Dockerfile, Docker Context Path = pos/backend,
+#   Watch Paths = pos/backend/**   (full steps: pos/DOKPLOY_STAGING.md)
 #   server app : MEDUSA_WORKER_MODE=server   (domain -> port 9000)
 #   worker app : MEDUSA_WORKER_MODE=worker, DISABLE_MEDUSA_ADMIN=true,
 #                RUN_MIGRATIONS=false        (no domain)
