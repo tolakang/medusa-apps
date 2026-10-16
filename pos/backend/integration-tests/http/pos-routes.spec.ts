@@ -7,6 +7,7 @@ import {
 import jwt from "jsonwebtoken"
 import seedInitialData from "../../src/scripts/seed-initial-data"
 import seed from "../../src/scripts/seed"
+import { stockAt } from "../helpers/pos-stock"
 
 // TASKS P2-06: the POS routes end to end, as the POS app (P2-10) and the
 // admin will call them. Data as on staging (demo products + Cambodia seed);
@@ -120,6 +121,13 @@ medusaIntegrationTestRunner({
         expect(shift).toEqual(expect.objectContaining({ status: "open", opened_by: cashierId, currency_code: "usd" }))
         const { data: listOpen } = await api.get("/pos/registers", cashier)
         expect(listOpen.registers[0].open_shift.id).toEqual(shift.id)
+
+        // The shop holds the shirts (a register sale takes stock only there, P2-11).
+        const query2 = container.resolve(ContainerRegistrationKeys.QUERY)
+        const {
+          data: [shirt],
+        } = await query2.graph({ entity: "product_variant", fields: ["id"], filters: { sku: "SHIRT-L-BLACK" } })
+        await stockAt(container, shirt.id, location.id, 20)
 
         // Scan: by SKU and by barcode, priced in USD.
         const { data: bySku } = await api.get(`/pos/products/lookup?code=SHIRT-L-BLACK&shift_id=${shift.id}`, cashier)

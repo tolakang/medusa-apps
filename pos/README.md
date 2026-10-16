@@ -85,6 +85,8 @@ Cashier: the **POS app** (`pos-app/`, P2-10) does all of this on screen: sign in
 
 Card and QR payments are taken on the shop's own terminal or KHQR stand, and the sale only records them (TASKS F-038).
 
+**Stock (TASKS P2-11).** A register sells only from its own stock location. Give each shop location inventory in the admin (Inventory → item → locations), otherwise the till answers "Not enough stock at <shop>". The sale is fulfilled at once from that location, so the shop's stock goes down at the counter and other locations (the warehouse, the online shop's stock) are untouched. To do that, every register location gets a hidden shipping option, **"In store (POS)"**. It is created when the register is set up and never appears in the online checkout. Don't delete it; if it's deleted, the next sale creates it again.
+
 ## Independence rules
 
 - This project has its **own** Postgres and Redis. Never point two business projects at the same database.
