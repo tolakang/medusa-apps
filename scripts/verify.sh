@@ -33,6 +33,10 @@ list_deployables() {
       *) case "$dir" in "$TARGET"/*) echo "$dir" ;; esac ;;
     esac
   done
+  # A non-matching last folder leaves a false `[ … ]` as the loop's status;
+  # under `set -e` that would abort the caller's $(…) (seen when pos/pos-app
+  # became the last deployable). "No match" is checked by the caller.
+  return 0
 }
 
 step() { echo; echo "---- [$1] $2"; }
@@ -59,6 +63,13 @@ for D in $DEPLOYABLES; do
     */backend)
       step "$D" "tests: unit, modules, http (real Postgres)"
       (cd "$D" && pnpm test:unit && pnpm test:integration:modules && pnpm test:integration:http)
+      ;;
+    *)
+      # Clients with their own unit tests (e.g. pos/pos-app, TASKS P2-10).
+      if grep -q '"test":' "$D/package.json"; then
+        step "$D" "tests: unit"
+        (cd "$D" && pnpm test)
+      fi
       ;;
   esac
 

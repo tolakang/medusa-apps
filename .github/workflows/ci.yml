@@ -34,6 +34,7 @@ jobs:
           - ecommerce/backend
           - ecommerce/storefront
           - pos/backend
+          - pos/pos-app
     services:
       postgres:
         image: docker.io/library/postgres:15-alpine

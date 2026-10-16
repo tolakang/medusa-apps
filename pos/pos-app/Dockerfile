@@ -9,8 +9,9 @@
 # NEXT_PUBLIC_* values are baked into the JS bundle at build time, so
 # changing one requires a rebuild (Dokploy: Rebuild).
 #
-# STATUS: ready template. Builds once the app code is added
-# (BUILD_PLAN.md §4.2). Requires `output: "standalone"` in next.config.
+# STATUS: app code added (TASKS P2-10). next.config.js sets
+# `output: "standalone"`; the build needs no backend and no build args (the
+# NEXT_PUBLIC_* values below are only a fallback for MEDUSA_BACKEND_URL).
 # =====================================================================
 ARG NODE_VERSION=22
 

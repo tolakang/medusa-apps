@@ -6,7 +6,8 @@
 #
 # Host ports are offset to avoid clashing with other local databases. They are the
 # same as ecommerce's, so run one category's stack at a time.
-# The storefront (TASKS P2-09) and POS app (P2-10) are added here when they exist.
+# The POS app (P2-10) is at http://localhost:3000; the storefront (P2-09) is added
+# here when it exists.
 name: pos-local
 
 services:
@@ -70,6 +71,17 @@ services:
       MEDUSA_WORKER_MODE: worker
       DISABLE_MEDUSA_ADMIN: "true"
       RUN_MIGRATIONS: "false"
+
+  pos-app:
+    build: ./pos-app
+    container_name: pos-local-pos-app
+    depends_on:
+      backend: { condition: service_healthy }
+    ports: ["3000:3000"]
+    environment:
+      # Server-side calls only (the app proxies /pos for the browser).
+      MEDUSA_BACKEND_URL: http://backend:9000
+      COOKIE_SECRET: local-only-pos-app-cookie-secret
 
 volumes:
   postgres_data:
