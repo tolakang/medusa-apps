@@ -178,7 +178,11 @@ PAYWAY_RETURN_URL=https://<api host>/hooks/payment/payway_payway
    - Order **Start First**
    - **Save Update Config**
 
-   The dropdowns may show blank after saving. That's normal; the values are stored (F-020).
+   **Failure Action** and **Order** show "Select…" again after saving. That's a Dokploy display quirk: the values are stored (F-020), and the number fields keeping their values show the save worked. To confirm, after the next deploy (Dokploy applies the setting then), run on the server:
+   ```bash
+   docker service inspect $(docker service ls --format '{{.Name}}' | grep pos-backend) --format '{{json .Spec.UpdateConfig}}'
+   ```
+   It must include `"FailureAction":"rollback"` and `"Order":"start-first"`. If they're missing, pick both dropdowns again, press **Save Update Config** (not **Clear**), and redeploy. The same check works for every app; use its name instead of `pos-backend`.
 4. **Replicas:** `1`.
 
 ### D. Deploy and check
