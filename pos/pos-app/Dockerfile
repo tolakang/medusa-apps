@@ -5,7 +5,7 @@
 #   Docker File = pos/pos-app/Dockerfile,
 #   Docker Context Path = pos/pos-app,
 #   Watch Paths = pos/pos-app/**
-#   Full steps: pos/DOKPLOY_STAGING.md section 5.
+#   Full steps: pos/DOKPLOY_STAGING.md step 6.
 #   Environment -> Build-time Arguments: the ARG values below
 #   Environment -> Runtime variables   : see .env.example
 #   Domain -> port 3000

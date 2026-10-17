@@ -27,7 +27,7 @@ The ecommerce notes below apply unchanged. **Starter:** `medusajs/dtc-starter` `
 - **Runtime:** `MEDUSA_BACKEND_URL` (internal Dokploy hostname), `PORT=8000`, `REVALIDATE_SECRET`, `SHOPPER_IP_SECRET`, `CLIENT_IP_HEADER`. Details in `.env.example`.
 
 ## Deploy (Dokploy)
-Service `pos-storefront` in the `pos` project (`../README.md`): Build Path `/`, Docker File `pos/storefront/Dockerfile`, Context `pos/storefront`, Watch Paths `pos/storefront/**`, domain port 8000. The steps are the same as `../../ecommerce/DOKPLOY_STAGING.md` section 4. Set the backend's `STORE_CORS` and `AUTH_CORS` to this domain, and its `STOREFRONT_URL` and `REVALIDATE_SECRET` to match.
+Service `pos-storefront` in the `pos` project (`../README.md`): Build Path `/`, Docker File `pos/storefront/Dockerfile`, Context `pos/storefront`, Watch Paths `pos/storefront/**`, domain port 8000. Full steps: `../DOKPLOY_STAGING.md` step 5. Set the backend's `STORE_CORS` and `AUTH_CORS` to this domain, and its `STOREFRONT_URL` and `REVALIDATE_SECRET` to match.
 
 ## Verify (DEV_FLOW §5)
 ```bash
