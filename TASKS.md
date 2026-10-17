@@ -193,8 +193,8 @@
 - [x] P2-13 A cashier token can't call `/admin/*`. — **done 2026-10-15** with P2-03: `pos-cashier.spec.ts` "cashiers can't use the admin API…" (`/admin/products`, `/admin/pos/cashiers` → 401 with a cashier token; admin and customer tokens → 401 on `/pos`).
 - [~] P2-14 Phase exit checklist. — **repo part done 2026-10-16** (branch `feat/pos-p2-14-exit`). The two staging items wait on the owner's Dokploy run (`pos/DOKPLOY_STAGING.md`).
   - [x] **CI gate green for every deployable:** guard plus verify for `pos/backend`, `pos/storefront` and `pos/pos-app`. The `main` runs after P2-10 (`4f755aa`), P2-11 (`5efa245`) and P2-09 (`42e5c06`) are all green, and PR #90 was green on all 6 jobs, including the new `verify (pos/storefront)` image build.
-  - [ ] **Whole category on a Dokploy staging project from committed `Dockerfile`s and `.env.example`s:** runbook `pos/DOKPLOY_STAGING.md` (new). It lists what differs from `ecommerce/DOKPLOY_STAGING.md`:
-    - the `pos-*` names and paths
+  - [ ] **Whole category on a Dokploy staging project from committed `Dockerfile`s and `.env.example`s:** runbook `pos/DOKPLOY_STAGING.md` (new; rewritten 2026-10-17 as a stand-alone click-by-click walkthrough, owner request). Each step ends with a **Check** and a **Reply with**. It covers:
+    - all six services with their `pos-*` names and paths
     - `POS_CORS`, and `AUTH_CORS` with the till host
     - the online key with one channel
     - the till app service: port 3000, its own `COOKIE_SECRET`, health check `/manifest.webmanifest`
@@ -206,7 +206,7 @@
     - Target 2.21.2 is still npm `latest` (2.22.0 is preview/snapshot only), so a dry run is allowed. `@medusajs/ui` is 4.2.6 (the dashboard's dependency).
     - "Already up to date" for all three apps; no `package.json` or lockfile diff.
     - `verify: PASS (pos)`: backend unit 124, modules 36, HTTP 74 (22 suites); storefront and till app install, build, typecheck and tests.
-  - [ ] **Each app redeployed alone once:** `pos/DOKPLOY_STAGING.md` §8, for the four apps (backend, worker, storefront, till app). **Owner.** The Swarm rollback was proven for the repo in P0-19.
+  - [ ] **Each app redeployed alone once:** `pos/DOKPLOY_STAGING.md` step 9, for the four apps (backend, worker, storefront, till app). **Owner.** The Swarm rollback was proven for the repo in P0-19.
   - [x] **All acceptance criteria have passing tests** (plan §6.2):
     - "A sale at a register reduces stock at that shop's location only": `pos-stock.spec.ts` (P2-11, 4 tests), plus `pos-shared-stock.spec.ts` (P2-09) for the online shop on the same stock.
     - "A shift closes with a correct cash variance": `pos-shift.spec.ts` "P2-12: closes with expected cash from cash payments and the variance".
@@ -317,7 +317,7 @@
 
 ## Session handoff (2026-10-05): start here in a new session
 
-Current position (updated 2026-10-15): **Phase 1 (Ecommerce) built and running on staging; production (P1-08) waits on the owner's values (`ecommerce/DOKPLOY_STAGING.md` §11). Phase 2 (POS) started in parallel (F-034): P2-01 to P2-13 done; P2-14 repo part done, waiting on the owner's `pos-staging` run (`pos/DOKPLOY_STAGING.md` §7–§8).** Every merge first gets the skill check of DEV_FLOW §7.1. Phase 0 is complete (P0-01 to P0-20). Plan: `BUILD_PLAN.md` **Revision 7** (2026-10-15, owner-approved; Revision 6 was 2026-10-04) matches this file; the edit block in `.claude/settings.json` is back on.
+Current position (updated 2026-10-15): **Phase 1 (Ecommerce) built and running on staging; production (P1-08) waits on the owner's values (`ecommerce/DOKPLOY_STAGING.md` §11). Phase 2 (POS) started in parallel (F-034): P2-01 to P2-13 done; P2-14 repo part done, waiting on the owner's `pos-staging` run (`pos/DOKPLOY_STAGING.md` steps 7–9).** Every merge first gets the skill check of DEV_FLOW §7.1. Phase 0 is complete (P0-01 to P0-20). Plan: `BUILD_PLAN.md` **Revision 7** (2026-10-15, owner-approved; Revision 6 was 2026-10-04) matches this file; the edit block in `.claude/settings.json` is back on.
 
 **Staging (Dokploy project `ecommerce-staging`):** backend `https://api.staging.example.com` (admin `/app`), storefront `https://shop.staging.example.com` (`/kh`), worker; Medusa 2.21.2. Live there: Cambodia seed, ABA PayWay **sandbox** (order #11 captured), order email (Resend), staff and customer Telegram bots, RustFS files, cache refresh, daily database backups (restore test passed 2026-10-04). Setup and every variable: `ecommerce/DOKPLOY_STAGING.md` (§2.5 Phase 1 variables, §7 backups, §8 go-live steps).
 
