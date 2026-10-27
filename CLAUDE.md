@@ -9,6 +9,8 @@ Six standalone Medusa v2 business projects (ecommerce, pos, booking-services, wh
 4. `TASKS.md`: pick the next task, and tick it with evidence when done.
 5. `COMPARISON.md` and `<category>/README.md`: scenario context and Dokploy setup.
 
+When designing, refactoring or reviewing backend structure, also use `BACKEND_PATTERNS_SKILL.md` (skill `backend-patterns`): problem → pattern, when not to use it, and how each pattern maps to Medusa's own mechanisms. It never overrides the rules below or `MEDUSA_SKILL.md`.
+
 ## Non-negotiable rules
 - **No hallucination.** Every Medusa API, import, option, hook, step or CLI flag must be cited from `MEDUSA_SKILL.md` or found via its evidence ladder (installed `.d.ts` → docs `.md` → official starters → release notes). No source means you don't use it.
 - **Plan is frozen.** If evidence contradicts `BUILD_PLAN.md`, log it in `TASKS.md` → *Plan deviations & findings log*. Scope or architecture changes wait for human approval.
