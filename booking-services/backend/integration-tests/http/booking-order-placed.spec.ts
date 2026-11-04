@@ -121,16 +121,22 @@ medusaIntegrationTestRunner({
         expect(data.type).toEqual("order")
         return { orderId: data.order.id as string, holds }
       }
-      // The subscriber runs after the event; wait for it.
+      // The subscriber runs after the event; wait until its workflow has
+      // finished: the bookings are confirmed (step 2) AND linked to the order
+      // (step 3, a moment later).
       const waitConfirmed = async (ids: string[]) => {
-        for (let i = 0; i < 40; i++) {
-          const rows = await booking().listBookings({ id: ids })
-          if (rows.every((b) => b.status === "confirmed")) {
-            return rows
+        for (let i = 0; i < 60; i++) {
+          const { data: rows } = await query().graph({
+            entity: "booking",
+            fields: ["id", "status", "hold_expires_at", "order.id"],
+            filters: { id: ids },
+          })
+          if (rows.length === ids.length && rows.every((b) => b.status === "confirmed" && b.order?.id)) {
+            return await booking().listBookings({ id: ids })
           }
           await new Promise((r) => setTimeout(r, 250))
         }
-        throw new Error("bookings were not confirmed")
+        throw new Error("bookings were not confirmed and linked")
       }
       const linkedTo = async (orderId: string) => {
         const {
