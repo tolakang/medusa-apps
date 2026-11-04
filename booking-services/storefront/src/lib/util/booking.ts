@@ -1,4 +1,4 @@
-import { HttpTypes } from "@medusajs/types"
+import type { HttpTypes } from "@medusajs/types"
 
 // Booking helpers shared by the product page, cart and checkout (TASKS P3-13).
 // A service is a product whose variants have metadata.duration_minutes and

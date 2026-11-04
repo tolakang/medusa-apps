@@ -196,6 +196,28 @@ medusaIntegrationTestRunner({
         })
       })
 
+      describe("GET /store/customers/me/bookings (P3-13)", () => {
+        it("lists only the signed-in customer's bookings, newest first, without run-out holds", async () => {
+          const sok = await customerToken("sok@example.com")
+          const dara = await customerToken("dara@example.com")
+          await booking().createBookings([
+            { resource_id: stylistId, starts_at: new Date(utc("02:00")), ends_at: new Date(utc("03:00")), status: "confirmed", customer_id: sok.customerId },
+            { resource_id: stylistId, starts_at: new Date(utc("04:00")), ends_at: new Date(utc("05:00")), status: "cancelled", customer_id: sok.customerId },
+            { resource_id: stylistId, starts_at: new Date(utc("03:00")), ends_at: new Date(utc("04:00")), status: "pending", hold_expires_at: new Date(Date.now() - 60_000), customer_id: sok.customerId },
+            { resource_id: stylistId, starts_at: new Date(utc("03:00")), ends_at: new Date(utc("04:00")), status: "confirmed", customer_id: dara.customerId },
+          ])
+
+          const { data } = await api.get("/store/customers/me/bookings", { headers: sok.headers })
+          expect(data.bookings.map((b) => [b.starts_at, b.status])).toEqual([
+            [utc("04:00"), "cancelled"],
+            [utc("02:00"), "confirmed"],
+          ])
+          expect(data.bookings[0]).toMatchObject({ resource: { name: "Sophea", timezone: "Asia/Phnom_Penh" }, order: null })
+          expect(data.bookings[0].hold_expires_at).toBeUndefined()
+          expect(await failure(api.get("/store/customers/me/bookings", store))).toMatchObject({ status: 401 })
+        })
+      })
+
       describe("POST /store/booking/cancel", () => {
         it("lets a signed-in customer cancel their own booking only", async () => {
           const sok = await customerToken("sok@example.com")

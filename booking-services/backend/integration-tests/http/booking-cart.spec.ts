@@ -128,6 +128,9 @@ medusaIntegrationTestRunner({
             booking_resource_id: resource.id,
             booking_starts_at: STARTS,
             booking_ends_at: ENDS,
+            // For display (P3-13).
+            booking_resource_name: "Sophea",
+            booking_timezone: "Asia/Phnom_Penh",
           },
         })
       })
