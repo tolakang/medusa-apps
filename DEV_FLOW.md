@@ -177,7 +177,7 @@ After every finished task or phase, **before the PR is merged and pushed to `mai
 1. `git push -u origin <branch>` and open a PR using the template below.
 2. CI must run the same gates (Phase 0 wires `scripts/verify.sh` + `scripts/guard.sh` per deployable).
 3. If CI fails, go back to the fix cycle (§6), treating the CI log as the captured error.
-4. Merge to `main` only when CI is green. Fast-forward or squash; never force-push `main`.
+4. Merge to `main` only when CI is green. Fast-forward or squash; never force-push `main`. The `protect main` ruleset requires the check **`ci-ok`** (the last job in `.github/workflows/ci.yml`, which passes only when `guard` and every `verify` job passed), and the repo allows auto-merge (owner, 2026-11-04). So once the pre-merge checks (no PR based on this branch, base `main`) pass, turn on **squash auto-merge** for the PR: GitHub merges it by itself when `ci-ok` is green and holds it when anything fails. Squash merges delete the branch (repo setting).
 5. Dokploy redeploys only the changed deployables (watch paths). Smoke-test staging before production (BUILD_PLAN §8).
 
 **PR description template**
