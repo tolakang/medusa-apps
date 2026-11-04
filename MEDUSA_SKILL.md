@@ -257,7 +257,9 @@ export const createPostWorkflow = createWorkflow("create-post",
 | `try/catch`, object spreading, loops | do these in a step or inside `transform` |
 
 - **Returning:** wrap results in `new WorkflowResponse(...)`. *Plan spike:* returning a `when(...).then(...)` result directly fails the type check. Wrap it: `new WorkflowResponse({ result })`.
-- **Nesting:** `someWorkflow.runAsStep({ input })` returns the output directly, with no `.result`.
+- **Nesting:** `someWorkflow.runAsStep({ input })` returns the output directly, with no `.result`. A nested workflow is compensated when a later step of the parent fails (docs `learn/fundamentals/workflows/execute-another-workflow`; booking P3-04 test). `addToCartWorkflow` returns `undefined` (`ReturnWorkflow<AddToCartWorkflowInputDTO & AdditionalData, undefined, …>`, 2.22.2), so find the new line item afterwards, e.g. by a `metadata` key.
+- **Step outputs are serialized:** a `Date` returned by one step arrives in the next step (and in `transform`) as an ISO string. Pass ISO strings and build the `Date` where it's used.
+- **A failed `run()` rejects with the serialized step error**, a plain object (`message`, `type`, `__isMedusaError`), not an `Error` instance, so Jest's `.rejects.toThrow(...)` reports "did not throw". Match with `.rejects.toMatchObject({ message: expect.stringContaining(...) })`, or use `run({ input, throwOnError: false })` and read `errors[].action` / `errors[].error` (`workflows-sdk` `helper/workflow-export.js`: `throwOnError` defaults to true).
 - **Events:** `emitEventStep({ eventName: "custom.created", data })` emits only after the workflow succeeds.
 - **Consuming core hooks** (`src/workflows/hooks/*.ts`):
   `createProductsWorkflow.hooks.productsCreated(async ({ products, additional_data }, { container }) => { ... return new StepResponse(undefined, compInput) }, async (compInput, { container }) => { /* undo */ })`
