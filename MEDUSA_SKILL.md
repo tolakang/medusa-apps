@@ -263,6 +263,7 @@ export const createPostWorkflow = createWorkflow("create-post",
 - **Events:** `emitEventStep({ eventName: "custom.created", data })` emits only after the workflow succeeds.
 - **Consuming core hooks** (`src/workflows/hooks/*.ts`):
   `createProductsWorkflow.hooks.productsCreated(async ({ products, additional_data }, { container }) => { ... return new StepResponse(undefined, compInput) }, async (compInput, { container }) => { /* undo */ })`
+- **No hooks on `createPaymentSessionsWorkflow`** (2.22.2 `core-flows/dist/payment-collection/workflows/create-payment-session.d.ts`: `ReturnWorkflow<CreatePaymentSessionsWorkflowInput, PaymentSessionDTO, []>`), and no event for a new payment session (`PaymentEvents` has only `payment.captured` and `payment.refunded`, `utils/dist/core-flows/events.d.ts`). To act when a customer starts paying, add a middleware on `POST /store/payment-collections/:id/payment-sessions` (it runs before the route; this repo already checks the contact there) and find the cart with Query `payment_collection.cart.id` (booking P3-06).
 - **Cart hooks used by this project** (verified in the workflow reference and the 2.21.1 types):
   - `addToCartWorkflow.hooks.validate`, `addToCartWorkflow.hooks.setPricingContext`
   - `updateLineItemInCartWorkflow.hooks.validate`, `.setPricingContext`

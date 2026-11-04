@@ -46,6 +46,12 @@ export type SlotCheck =
   | { available: true; capacity: number; remaining: number }
   | { available: false; reason: SlotUnavailableReason; capacity: number; remaining: number }
 
+export type ExtendedHold = {
+  id: string
+  previous_hold_expires_at: Date | null
+  hold_expires_at: Date
+}
+
 export type CreateHoldInput = {
   resource_id: string
   starts_at: Date
@@ -156,6 +162,61 @@ class BookingModuleService extends MedusaService({
       sharedContext
     )
     return hold.id
+  }
+
+  // Renews the pending holds of a cart when the customer starts paying
+  // (TASKS P3-06), so a slow payment doesn't lose the slot halfway. Each hold
+  // gets hold_expires_at = now + holdMinutes, but only if its slot is still
+  // free when this cart's own holds are ignored: a hold that already ran out
+  // and was taken by someone else stays as it is (checkout then refuses it,
+  // P3-05). Resource rows are locked in id order, as in createHold.
+  @InjectManager()
+  async extendCartHolds(
+    input: { cart_id: string; now?: Date },
+    @MedusaContext() sharedContext: Context<EntityManager> = {}
+  ): Promise<ExtendedHold[]> {
+    return await this.extendCartHolds_(input, sharedContext)
+  }
+
+  @InjectTransactionManager()
+  protected async extendCartHolds_(
+    input: { cart_id: string; now?: Date },
+    @MedusaContext() sharedContext: Context<EntityManager> = {}
+  ): Promise<ExtendedHold[]> {
+    const now = input.now ?? new Date()
+    const until = new Date(now.getTime() + this.options_.holdMinutes * 60_000)
+    const holds = await this.listBookings(
+      { cart_id: input.cart_id, status: "pending" },
+      { order: { resource_id: "ASC", starts_at: "ASC" } },
+      sharedContext
+    )
+    const extended: ExtendedHold[] = []
+    for (const hold of holds) {
+      await sharedContext.transactionManager!.execute(
+        "SELECT id FROM booking_resource WHERE id = ? AND deleted_at IS NULL FOR UPDATE",
+        [hold.resource_id]
+      )
+      const previous = hold.hold_expires_at ? new Date(hold.hold_expires_at) : null
+      if (previous && previous.getTime() >= until.getTime()) {
+        continue
+      }
+      const check = await this.checkSlot_(
+        {
+          resource_id: hold.resource_id,
+          starts_at: new Date(hold.starts_at),
+          ends_at: new Date(hold.ends_at),
+          ignore_cart_id: input.cart_id,
+          now,
+        },
+        sharedContext
+      )
+      if (!check.available) {
+        continue
+      }
+      await this.updateBookings({ id: hold.id, hold_expires_at: until }, sharedContext)
+      extended.push({ id: hold.id, previous_hold_expires_at: previous, hold_expires_at: until })
+    }
+    return extended
   }
 
   @InjectTransactionManager()
