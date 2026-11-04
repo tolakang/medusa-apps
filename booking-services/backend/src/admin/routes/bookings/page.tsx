@@ -167,7 +167,7 @@ const BookingsPage = () => {
               {(grouped[day] ?? []).length === 0 && <Text size="small" className="text-ui-fg-muted">No bookings</Text>}
               {(grouped[day] ?? []).map((b) => (
                 <div key={b.id} className="rounded-md border border-ui-border-base p-2">
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-1">
                     <Text size="small" weight="plus">{timeRange(b, resource!.timezone)}</Text>
                     <Badge size="2xsmall" color={STATUS_COLOR[b.status] ?? "grey"}>{b.status}</Badge>
                   </div>
