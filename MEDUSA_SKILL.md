@@ -199,6 +199,7 @@ export default defineLink(
 - **Create links in workflows:** `createRemoteLinkStep(linkData)`. Remove them with `dismissRemoteLinkStep` (both from `@medusajs/medusa/core-flows`).
 - `db:migrate` syncs link tables. Removing or changing a link is an **unsafe** change (§11).
 - **Read-only links:** `defineLink({ linkable: Mod.linkable.x.id, field: "<id column>" }, Other.linkable.y, { readOnly: true })` creates **no link table**; it only lets Query follow the stored ID (docs wishlist guide, Step 5). This repo: `src/links/wishlist-*.ts`.
+- **Custom link aliases follow the linkable names, plural on an `isList` side** (verified by the link tests): `pos_register.stock_location` / `stock_location.pos_registers` (P2-02); `booking_resource.product_variants` / `product_variant.booking_resources` (many-to-many, `isList` on both sides) and `booking.order` / `order.bookings` (P3-02). Link table names: `<module>_<model>_<module>_<model>`, e.g. `booking_booking_resource_product_product_variant`. Remove one pair with `link.dismiss({ ... })` (same shape as `link.create`).
 - **Core link field aliases used in this repo** (verified in `@medusajs/link-modules/dist/definitions`): `payment_collection.cart` and `cart.payment_collection` (cart ↔ payment collection); `fulfillment.order` (order ↔ fulfillment); `order.payment_collections` (order ↔ payment collection, a list; `order-payment-collection.js`, used by POS close-shift). Query them like normal fields, e.g. `fields: ["cart.email"]` on `payment_collection`.
 
 ## 5. Query (reading across modules)
