@@ -352,6 +352,8 @@ export const config = { name: "release-expired-holds", schedule: "* * * * *" }
 ```
 
 - **Payloads used in this repo** (docs `resources/references/events`): `order.placed` and `order.canceled` `{ id }` (order ID); `shipment.created` `{ id, no_notification }` and `delivery.created` `{ id }`, where `id` is the **fulfillment** ID (reach the order through `fulfillment.order`, §4).
+- **Several subscribers can listen to one event**, one file each (`booking-services`: `order-placed.ts` for notifications, `booking-order-placed.ts` for bookings). In `medusaIntegrationTestRunner` the local event bus runs them after the request returns, so a test polls for the result (booking P3-07, checkout acceptance P1-07).
+- **Order items keep the cart line item's `metadata`** after `completeCartWorkflow` (verified: `order.items.metadata.booking_id`, booking P3-07).
 - Subscribers and jobs run on the **worker** instance (docs: "a worker instance that processes background tasks. This includes scheduled jobs and subscribers").
 - **Project rule** (BUILD_PLAN §6.5 acceptance, not a documented Medusa guarantee): handlers must be **idempotent**. Guard with a unique key (e.g. `order_id` unique) so a repeated event or a retried job never creates duplicates.
 
