@@ -179,6 +179,59 @@ moduleIntegrationTestRunner<BookingModuleService>({
         expect(await service.listBookings({ resource_id: r.id })).toHaveLength(1)
       })
 
+      it("P3-06: extendCartHolds renews a cart's holds for holdMinutes from now", async () => {
+        const r = await openResource()
+        const hold = await service.createHold({
+          resource_id: r.id,
+          starts_at: MON_09,
+          ends_at: MON_10,
+          cart_id: "cart_pay",
+          now: NOW,
+        })
+        await book(r.id, MON_10, MON_11, { status: "pending", hold_expires_at: at("2026-11-01T00:05:00Z"), cart_id: "cart_other" })
+
+        const later = at("2026-11-01T00:12:00Z")
+        const extended = await service.extendCartHolds({ cart_id: "cart_pay", now: later })
+
+        expect(extended).toEqual([
+          {
+            id: hold.id,
+            previous_hold_expires_at: new Date("2026-11-01T00:20:00Z"),
+            hold_expires_at: new Date("2026-11-01T00:32:00Z"),
+          },
+        ])
+        const [after] = await service.listBookings({ id: hold.id })
+        expect(new Date(after.hold_expires_at!).toISOString()).toEqual("2026-11-01T00:32:00.000Z")
+        // Another cart's hold isn't touched.
+        const [other] = await service.listBookings({ cart_id: "cart_other" })
+        expect(new Date(other.hold_expires_at!).toISOString()).toEqual("2026-11-01T00:05:00.000Z")
+      })
+
+      it("P3-06: renews a hold that ran out only while its slot is still free", async () => {
+        const r = await openResource()
+        await book(r.id, MON_09, MON_10, { status: "pending", hold_expires_at: at("2026-11-01T00:05:00Z"), cart_id: "cart_slow" })
+        await book(r.id, MON_10, MON_11, { status: "pending", hold_expires_at: at("2026-11-01T00:05:00Z"), cart_id: "cart_slow" })
+        // Someone else took 10:00-11:00 after cart_slow's hold ran out.
+        await book(r.id, MON_10, MON_11, { cart_id: "cart_fast" })
+
+        const extended = await service.extendCartHolds({ cart_id: "cart_slow", now: at("2026-11-01T00:30:00Z") })
+
+        expect(extended).toHaveLength(1)
+        const rows = await service.listBookings({ cart_id: "cart_slow" }, { order: { starts_at: "ASC" } })
+        expect(rows.map((b) => new Date(b.hold_expires_at!).toISOString())).toEqual([
+          "2026-11-01T00:50:00.000Z", // 09:00-10:00 renewed
+          "2026-11-01T00:05:00.000Z", // 10:00-11:00 taken: left as it was
+        ])
+      })
+
+      it("P3-06: leaves confirmed bookings and holds already long enough alone", async () => {
+        const r = await openResource(2)
+        await book(r.id, MON_09, MON_10, { cart_id: "cart_done" })
+        await book(r.id, MON_10, MON_11, { status: "pending", hold_expires_at: at("2026-11-01T02:00:00Z"), cart_id: "cart_done" })
+
+        expect(await service.extendCartHolds({ cart_id: "cart_done", now: NOW })).toEqual([])
+      })
+
       it("P3-14: of many holds at once for the last place, exactly one succeeds", async () => {
         const r = await openResource()
         const results = await Promise.allSettled(

@@ -11,6 +11,7 @@ import {
   requireContactBeforePayment,
   validatePhoneFields,
 } from './contact-validation'
+import { extendBookingHoldsBeforePayment } from './booking-payment'
 import { enforceUploadLimits } from './upload-limits'
 import {
   AUTH_LIMITS,
@@ -65,7 +66,8 @@ export default defineMiddlewares({
       // cart from its callback).
       method: ['POST'],
       matcher: '/store/payment-collections/:id/payment-sessions',
-      middlewares: [requireContactBeforePayment],
+      // Then renew the cart's booking holds for the payment (TASKS P3-06).
+      middlewares: [requireContactBeforePayment, extendBookingHoldsBeforePayment],
     },
     {
       // Change password while signed in (current + new, at least 8).
