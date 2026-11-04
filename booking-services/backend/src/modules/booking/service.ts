@@ -36,6 +36,9 @@ export type SlotRequest = {
   ignore_cart_id?: string
   // For tests and jobs; defaults to the current time.
   now?: Date
+  // Admin walk-ins (P3-11) may start now or a little earlier; the booking
+  // must still end in the future.
+  allow_started?: boolean
 }
 
 export type SlotUnavailableReason =
@@ -72,6 +75,9 @@ export type CreateHoldInput = {
   line_item_id?: string | null
   notes?: string | null
   now?: Date
+  // Admin walk-in (P3-11): created `confirmed` with no hold, and may start
+  // up to now (see SlotRequest.allow_started).
+  walk_in?: boolean
 }
 
 const REASON_MESSAGES: Record<SlotUnavailableReason, string> = {
@@ -158,7 +164,13 @@ class BookingModuleService extends MedusaService({
     )
 
     const check = await this.checkSlot_(
-      { resource_id: input.resource_id, starts_at: input.starts_at, ends_at: input.ends_at, now },
+      {
+        resource_id: input.resource_id,
+        starts_at: input.starts_at,
+        ends_at: input.ends_at,
+        now,
+        allow_started: input.walk_in,
+      },
       sharedContext
     )
     if (!check.available) {
@@ -170,8 +182,11 @@ class BookingModuleService extends MedusaService({
         resource_id: input.resource_id,
         starts_at: input.starts_at,
         ends_at: input.ends_at,
-        status: "pending",
-        hold_expires_at: new Date(now.getTime() + this.options_.holdMinutes * 60_000),
+        // A walk-in (P3-11) is booked at the counter: confirmed, no hold.
+        status: input.walk_in ? "confirmed" : "pending",
+        hold_expires_at: input.walk_in
+          ? null
+          : new Date(now.getTime() + this.options_.holdMinutes * 60_000),
         cart_id: input.cart_id ?? null,
         customer_id: input.customer_id ?? null,
         line_item_id: input.line_item_id ?? null,
@@ -365,7 +380,7 @@ class BookingModuleService extends MedusaService({
     if (!(starts.getTime() < ends.getTime())) {
       return no("invalid_range")
     }
-    if (starts.getTime() < now.getTime()) {
+    if (input.allow_started ? ends.getTime() <= now.getTime() : starts.getTime() < now.getTime()) {
       return no("in_past")
     }
 
