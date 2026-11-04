@@ -29,6 +29,17 @@ const databaseDriverOptions =
       ? { connection: { ssl: { rejectUnauthorized: false } } }
       : undefined
 
+// Admin session cookie over plain http (local stack only). With
+// NODE_ENV=production Medusa marks the session cookie Secure, so a browser on
+// http://localhost never gets it and the admin can't stay signed in
+// (@medusajs/framework express-loader resolveSessionCookieSecurity; it spreads
+// projectConfig.cookieOptions over that default, @medusajs/types CookieOptions).
+//   SESSION_COOKIE_SECURE=false -> cookie not Secure (docker-compose.local.yml)
+//   unset or anything else      -> Medusa's default (Secure in production)
+// Never set it on Dokploy: staging and production are served over HTTPS.
+const cookieOptions =
+  process.env.SESSION_COOKIE_SECURE === "false" ? { secure: false } : undefined
+
 type WorkerMode = "shared" | "worker" | "server"
 
 const redisModules = REDIS_URL
@@ -204,6 +215,7 @@ module.exports = defineConfig({
     ...(databaseDriverOptions ? { databaseDriverOptions } : {}),
     redisUrl: REDIS_URL,
     workerMode: (process.env.MEDUSA_WORKER_MODE || "shared") as WorkerMode,
+    ...(cookieOptions ? { cookieOptions } : {}),
     http: {
       storeCors: process.env.STORE_CORS!,
       adminCors: process.env.ADMIN_CORS!,
