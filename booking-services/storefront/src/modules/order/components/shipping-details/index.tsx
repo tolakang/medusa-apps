@@ -1,5 +1,6 @@
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
+import { isServiceOnlyCart } from "@lib/util/booking"
 import { Heading, Text } from "@modules/common/components/ui"
 
 import Divider from "@modules/common/components/divider"
@@ -9,6 +10,10 @@ type ShippingDetailsProps = {
 }
 
 const ShippingDetails = ({ order }: ShippingDetailsProps) => {
+  // Booked services only: nothing is delivered, so no delivery block (P3-13).
+  if (isServiceOnlyCart(order)) {
+    return null
+  }
   return (
     <div>
       <Heading level="h2" className="flex flex-row text-3xl-regular my-6">

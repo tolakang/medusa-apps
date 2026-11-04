@@ -29,11 +29,11 @@ export default function BookingList({
   const [pending, start] = useTransition()
   const [busy, setBusy] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  // Two-step cancel in the page (no browser dialog): Cancel → Yes, cancel.
+  const [confirming, setConfirming] = useState<string | null>(null)
 
   const cancel = (id: string) => {
-    if (!window.confirm("Cancel this booking?")) {
-      return
-    }
+    setConfirming(null)
     setBusy(id)
     start(async () => {
       const result = await cancelMyBooking(id)
@@ -69,15 +69,25 @@ export default function BookingList({
           </div>
           <div className="flex items-center gap-3">
             <Badge>{b.status === "pending" ? "held" : b.status.replace("_", " ")}</Badge>
-            {canCancel && (
+            {canCancel && confirming !== b.id && (
               <Button
                 variant="secondary"
                 isLoading={pending && busy === b.id}
-                onClick={() => cancel(b.id)}
+                onClick={() => setConfirming(b.id)}
                 data-testid="booking-cancel"
               >
                 Cancel
               </Button>
+            )}
+            {canCancel && confirming === b.id && (
+              <>
+                <Button variant="secondary" onClick={() => setConfirming(null)} data-testid="booking-keep">
+                  Keep it
+                </Button>
+                <Button onClick={() => cancel(b.id)} data-testid="booking-cancel-confirm">
+                  Yes, cancel
+                </Button>
+              </>
             )}
           </div>
         </div>

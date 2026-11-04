@@ -19,7 +19,10 @@ export function isServiceProduct(product: HttpTypes.StoreProduct): boolean {
 
 // Every item is a booked service (no item needs shipping): checkout has no
 // address or delivery step, only contact (backend F-048).
-export function isServiceOnlyCart(cart: Pick<HttpTypes.StoreCart, "items"> | null | undefined): boolean {
+// Works for a cart or an order (both have items with requires_shipping).
+export function isServiceOnlyCart(
+  cart: { items?: { requires_shipping?: boolean | null }[] | null } | null | undefined
+): boolean {
   const items = cart?.items ?? []
   return items.length > 0 && items.every((i) => i.requires_shipping === false)
 }

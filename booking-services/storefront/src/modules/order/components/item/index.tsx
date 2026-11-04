@@ -2,6 +2,7 @@ import { HttpTypes } from "@medusajs/types"
 import { Table, Text } from "@modules/common/components/ui"
 
 import LineItemOptions from "@modules/common/components/line-item-options"
+import { formatBookingRange, itemBooking } from "@lib/util/booking"
 import LineItemPrice from "@modules/common/components/line-item-price"
 import LineItemUnitPrice from "@modules/common/components/line-item-unit-price"
 import Thumbnail from "@modules/products/components/thumbnail"
@@ -28,6 +29,15 @@ const Item = ({ item, currencyCode }: ItemProps) => {
           {item.product_title}
         </Text>
         <LineItemOptions variant={item.variant} data-testid="product-variant" />
+        {(() => {
+          const booked = itemBooking(item)
+          return booked ? (
+            <Text className="txt-small text-ui-fg-subtle" data-testid="product-booking">
+              {formatBookingRange(booked.starts_at, booked.ends_at, booked.timezone)}
+              {booked.resource ? ` with ${booked.resource}` : ""}
+            </Text>
+          ) : null
+        })()}
       </Table.Cell>
 
       <Table.Cell className="!pr-0">
