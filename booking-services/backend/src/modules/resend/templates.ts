@@ -14,6 +14,11 @@ import {
   PASSWORD_RESET_TEMPLATE,
   VERIFY_EMAIL_TEMPLATE,
 } from "../../lib/auth-email"
+import {
+  BOOKING_REMINDER_TEMPLATE,
+  bookingReminderEmail,
+  type BookingReminderData,
+} from "../../lib/booking-reminder"
 
 function orderPlaced(order: OrderNotificationData) {
   const rows = (order.items ?? [])
@@ -96,6 +101,10 @@ export function renderEmail(
   }
   if (template === PASSWORD_CHANGED_TEMPLATE) {
     return passwordChanged(auth?.url)
+  }
+  // 24-hour booking reminder (TASKS P3-09).
+  if (template === BOOKING_REMINDER_TEMPLATE && (data as BookingReminderData | null)?.booking) {
+    return bookingReminderEmail(data as BookingReminderData)
   }
   return null
 }
