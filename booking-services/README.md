@@ -1,8 +1,8 @@
 # Booking Services — `booking-services/`
 
-> **Appointments, classes, tickets, rentals.** Planned — Phase 3. Scope: [BUILD_PLAN.md §6.3](../BUILD_PLAN.md).
+> **Appointments, classes, tickets, rentals.** In progress — Phase 3. Scope: [BUILD_PLAN.md §6.3](../BUILD_PLAN.md).
 >
-> The `Dockerfile` and `.env.example` files here are **ready templates**. Application code is added in the build phase; until then a Dokploy build of these folders will fail at `COPY package.json`.
+> `backend/` and `storefront/` are a **full copy of `ecommerce/`** (owner, 2026-11-04; TASKS F-044), moved to Medusa **2.22.2**. They build and run as a working Cambodia shop (PayWay, Telegram, email, contact rules). Booking features are added from P3-01 on. Local stack: `docker-compose.local.yml` (same host ports as the other categories, so run one stack at a time).
 
 This folder is **one complete business project**. Copy the whole folder's setup into one Dokploy project and every piece deploys on its own.
 
