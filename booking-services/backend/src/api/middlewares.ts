@@ -1,4 +1,5 @@
 import {
+  authenticate,
   configureStoreSearch,
   defineMiddlewares,
   validateAndTransformBody,
@@ -12,6 +13,7 @@ import {
   validatePhoneFields,
 } from './contact-validation'
 import { extendBookingHoldsBeforePayment } from './booking-payment'
+import { PostBookingCancel, PostBookingCart } from './store/booking/validators'
 import { enforceUploadLimits } from './upload-limits'
 import {
   AUTH_LIMITS,
@@ -68,6 +70,18 @@ export default defineMiddlewares({
       matcher: '/store/payment-collections/:id/payment-sessions',
       // Then renew the cart's booking holds for the payment (TASKS P3-06).
       middlewares: [requireContactBeforePayment, extendBookingHoldsBeforePayment],
+    },
+    {
+      // A signed-in customer cancels their booking (TASKS P3-10).
+      method: ['POST'],
+      matcher: '/store/booking/cancel',
+      middlewares: [authenticate('customer', ['session', 'bearer']), validateAndTransformBody(PostBookingCancel)],
+    },
+    {
+      // Hold a time and add it to the cart (TASKS P3-10, F-047).
+      method: ['POST'],
+      matcher: '/store/booking/cart',
+      middlewares: [validateAndTransformBody(PostBookingCart)],
     },
     {
       // Change password while signed in (current + new, at least 8).
