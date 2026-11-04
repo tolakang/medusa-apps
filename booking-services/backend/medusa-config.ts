@@ -250,8 +250,12 @@ module.exports = defineConfig({
     { resolve: "./src/modules/telegram-links" },
     // Customer wishlists (TASKS P1-19).
     { resolve: "./src/modules/wishlist" },
-    // Bookable resources, weekly hours and bookings (TASKS P3-01).
-    { resolve: "./src/modules/booking" },
+    // Bookable resources, weekly hours and bookings (TASKS P3-01); a pending
+    // hold blocks its slot for BOOKING_HOLD_MINUTES (default 15, P3-03).
+    {
+      resolve: "./src/modules/booking",
+      options: { holdMinutes: Number(process.env.BOOKING_HOLD_MINUTES) || undefined },
+    },
     // Auth Module with the default email + password provider and two-factor
     // sign-in for admins (TASKS P1-22; docs "Auth Module Options" and
     // "Multi-Factor Authentication", v2.15.5+; the admin's Settings → Profile
