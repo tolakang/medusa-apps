@@ -254,7 +254,14 @@ module.exports = defineConfig({
     // hold blocks its slot for BOOKING_HOLD_MINUTES (default 15, P3-03).
     {
       resolve: "./src/modules/booking",
-      options: { holdMinutes: Number(process.env.BOOKING_HOLD_MINUTES) || undefined },
+      // BOOKING_CANCEL_HOURS: refund window for cancellations (default 24, P3-08).
+      options: {
+        holdMinutes: Number(process.env.BOOKING_HOLD_MINUTES) || undefined,
+        cancelHours:
+          process.env.BOOKING_CANCEL_HOURS === undefined || process.env.BOOKING_CANCEL_HOURS === ""
+            ? undefined
+            : Number(process.env.BOOKING_CANCEL_HOURS),
+      },
     },
     // Auth Module with the default email + password provider and two-factor
     // sign-in for admins (TASKS P1-22; docs "Auth Module Options" and
