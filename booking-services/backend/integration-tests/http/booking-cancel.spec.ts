@@ -108,10 +108,13 @@ medusaIntegrationTestRunner({
         const { data } = await api.post(`/store/carts/${cartId}/complete`, {}, store)
         const orderId = data.order.id as string
 
-        // Wait for the order.placed subscriber (P3-07) to confirm and link.
-        for (let i = 0; i < 40; i++) {
-          const [b] = await booking().listBookings({ id: bookingId })
-          if (b.status === "confirmed") break
+        // Wait for the order.placed subscriber (P3-07) to confirm AND link
+        // (the link is its next step; cancel-booking finds the order by it).
+        for (let i = 0; i < 60; i++) {
+          const {
+            data: [b],
+          } = await query().graph({ entity: "booking", fields: ["status", "order.id"], filters: { id: bookingId } })
+          if (b?.status === "confirmed" && b.order?.id) break
           await new Promise((r) => setTimeout(r, 250))
         }
         const {
