@@ -14,7 +14,8 @@ export const GetBookingSlots = z.object({
   variant_id: z.string().min(1),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "must be YYYY-MM-DD"),
   resource_id: z.string().min(1).optional(),
-  duration_minutes: z.coerce.number().int().min(5).max(720).default(60),
+  // Default: the variant's metadata.duration_minutes, else 60 (P3-12).
+  duration_minutes: z.coerce.number().int().min(5).max(720).optional(),
 })
 
 export const PostBookingCancel = z.object({ booking_id: z.string().min(1) })
