@@ -136,13 +136,19 @@ medusaIntegrationTestRunner({
         expect(second).toMatchObject({ status: 200, data: { type: "order" } })
         expect(second.data.order.id).toEqual(first.data.order.id)
 
-        // Wait for the order.placed subscriber, then: one booking, confirmed,
-        // linked once to that one order.
-        let rows = await slotBookings()
-        for (let i = 0; i < 40 && rows[0]?.status !== "confirmed"; i++) {
+        // Wait for the order.placed subscriber to confirm AND link (its
+        // last step), then: one booking, confirmed, linked once to that order.
+        const query = getContainer().resolve(ContainerRegistrationKeys.QUERY)
+        for (let i = 0; i < 60; i++) {
+          const { data } = await query.graph({
+            entity: "booking",
+            fields: ["status", "order.id"],
+            filters: { resource_id: stylistId, starts_at: new Date(STARTS) },
+          })
+          if (data[0]?.status === "confirmed" && data[0].order?.id) break
           await new Promise((r) => setTimeout(r, 250))
-          rows = await slotBookings()
         }
+        const rows = await slotBookings()
         expect(rows.map((b) => b.status)).toEqual(["confirmed"])
         const { data: orders } = await getContainer()
           .resolve(ContainerRegistrationKeys.QUERY)
