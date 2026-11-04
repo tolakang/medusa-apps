@@ -36,6 +36,8 @@ jobs:
           - pos/backend
           - pos/storefront
           - pos/pos-app
+          - booking-services/backend
+          - booking-services/storefront
     services:
       postgres:
         image: docker.io/library/postgres:15-alpine

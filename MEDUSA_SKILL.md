@@ -30,10 +30,10 @@ When the docs and the installed types disagree, **the installed types win** (the
 
 | Item | Value | Source |
 |---|---|---|
-| Medusa | **Installed here: `2.21.2`** (released 2026-09-28). **npm `latest`: `2.22.1`** (2.22.0 on 2026-10-21, 2.22.1 on 2026-10-23; checked 2026-10-26). Until the update (§1.1, TASKS F-042), rank 1 of §0 is still the 2.21.2 `node_modules`; the docs already describe 2.22.1 | `npm view @medusajs/medusa dist-tags time`; docs `learn/update` ("current version is v2.22.1") |
+| Medusa | **Installed in `ecommerce/` and `pos/`: `2.21.2`** (released 2026-09-28). **Installed in `booking-services/`: `2.22.2`** (npm `latest`, released 2026-10-30; checked 2026-11-04; owner decision F-044). 2.22.0 came on 2026-10-21, 2.22.1 on 2026-10-23. Rank 1 of §0 is **the installed `node_modules` of the app you work in**: 2.21.2 for ecommerce and pos, 2.22.2 for booking-services (§1.1, §1.2) | `npm view @medusajs/medusa dist-tags time`; docs `learn/update` |
 | Node | 2.21.2: `^20.19.0 \|\| >=22.12.0`. **2.22.x: `>=22.22.0`** (Node 20 dropped, medusajs/medusa#17089; docs: "Node.js v22.22.0+ (LTS versions only)", with the Next.js storefront "v24 LTS or lower"). The official starters now set `engines.node` `>=22.23.4`. Project uses **Node 22** (Docker `node:22-bookworm-slim` = newest 22.x; CI `node-version: 22`), so both bounds are met; its backends already declare `>=22.22.0` | `npm view @medusajs/medusa@2.22.1 engines`; docs `learn/installation`; starters' `package.json` |
 | pnpm | `12.6.0` pinned in this repo; supported since Medusa v2.13.0. Newer pnpm exists (`12.11.2` on 2026-10-15); bump only with `scripts/update-medusa.sh` (plan §8 step 2, optional) | `npm view pnpm version`; docs `learn/configurations/pnpm` |
-| Versioning | All `@medusajs/*` packages share one version, **except** design-system packages (`@medusajs/ui` = `4.2.x`). This repo pins `@medusajs/ui` to the version `@medusajs/dashboard@<release>` depends on (`4.2.6` for 2.21.2; `4.2.5` for 2.21.1; **`4.2.8` for 2.22.1**), so the lockfile holds one copy — TASKS.md F-006. The starters still pin `4.2.6` with 2.22.1; our rule follows the dashboard, which is what `scripts/update-medusa.sh` reads | docs `learn/update`; `npm view @medusajs/dashboard@2.22.1 dependencies` |
+| Versioning | All `@medusajs/*` packages share one version, **except** design-system packages (`@medusajs/ui` = `4.2.x`). This repo pins `@medusajs/ui` to the version `@medusajs/dashboard@<release>` depends on (`4.2.6` for 2.21.2; `4.2.5` for 2.21.1; `4.2.8` for 2.22.1; **`4.2.9` for 2.22.2**, also the 2.22.2 starter's pin), so the lockfile holds one copy — TASKS.md F-006. The starters still pin `4.2.6` with 2.22.1; our rule follows the dashboard, which is what `scripts/update-medusa.sh` reads | docs `learn/update`; `npm view @medusajs/dashboard@2.22.1 dependencies` |
 | Minor releases | **May contain breaking changes.** Always read the release notes | docs `learn/update` |
 | Starters | `medusajs/dtc-starter` (the old `medusa-starter-default` and `nextjs-starter-medusa` are deprecated). **Latest commit checked: `6965d8a` (2026-10-26), Medusa 2.22.1.** Since `f677db4`: `a106938` (2.22.0), **`6b95717` storefront migrated to Next.js 16** (`next` `16.3.8`, React `19.0.5`; `.eslintrc.json` → `eslint.config.mjs`; `tsconfig.json`, `next-env.d.ts`, `next.config.js`, `lib/data/cart.ts`, `customer.ts`, `locale-actions.ts`, order-transfer pages and the account `default.tsx` slots changed), `204130a` "make storefront agent-friendly", `6965d8a` (2.22.1); `engines.node` `>=22.23.4`. **`medusajs/b2b-starter`**: `5f54549` (2026-10-26), Medusa **2.22.1**, storefront Next.js `16.3.8` (`ce483a3`). Our storefronts are on Next.js **15.5.27**: syncing the Next.js 16 migration is its own task (plan §4.2 sync rule, TASKS F-042). Earlier history: `f677db4` (2026-10-09): removes `generateStaticParams` from the product, collection and category pages (PR #73), so the starter build no longer calls the backend (this repo's storefront already guards them, plan §4.2 change 5). Before it: `15ef93d` (2026-10-02), Medusa 2.21.2 pins + `engines.node`. **`medusajs/b2b-starter`** (Phase 4): `3ed7131` (2026-10-02), Medusa **2.21.2**, `engines.node` `>=22.22.0`, `packageManager` `pnpm@9.15.0` | starter READMEs; `gh api repos/medusajs/dtc-starter/commits` |
 
@@ -61,6 +61,23 @@ Checked **2026-10-26** in the published 2.22.1 packages (rank 1, unpacked outsid
 **Not fixed in 2.22.1:** the `updateReservationItems` location bug (§6 "Stock, reservations and fulfilment", F-041). `updateReservationItems_` is unchanged between 2.21.2 and 2.22.1 (`@medusajs/inventory` `dist/services/inventory-module.js`, diffed), so the delete-and-recreate workaround stays.
 
 **Starters:** both moved to 2.22.1, and their storefronts to **Next.js 16** (§1 Starters row). Syncing our two storefronts to Next.js 16 is a separate task from the Medusa package update.
+
+### 1.2 2.22.2 (installed in `booking-services/` only)
+
+Released 2026-10-30, npm `latest` on 2026-11-04. Installed in `booking-services/backend` and `booking-services/storefront` with `scripts/update-medusa.sh booking-services 2.22.2` (TASKS F-044). Everything in §1.1 applies too. Checked in the release notes (`medusajs/medusa` v2.22.2, rank 4) and the installed packages (rank 1). **No codemods** listed.
+
+| Change | What it means here | Source |
+|---|---|---|
+| `@medusajs/ui` **4.2.9** (dashboard dependency); Node ≥ 22.22.0 unchanged | Pinned by the update script (§1 Versioning) | `npm view @medusajs/dashboard@2.22.2 dependencies`; `npm view @medusajs/medusa@2.22.2 engines` |
+| The admin builds with **Vite 7.3.7**; "if you have it installed in your project, make sure to update it" | The backend declares `vite` itself: raised to `^7.3.7` (as the 2.22.2 `dtc-starter` backend), so the lockfile holds one Vite | release notes; `booking-services/backend/pnpm-lock.yaml` |
+| `bignumber.js` 11: `BigNumber` / `MathBN` throw on invalid values instead of returning `NaN` | `new BigNumber(NaN)` already threw on 2.21.2 (checked in the installed `pos/backend`). Our only use, the PayWay callback amount, behaves the same | release notes; `node -e` check in both apps |
+| An invalid `bodyParser.sizeLimit` in a route's middleware config throws when the route is called | We set no `sizeLimit` | release notes; `grep` |
+| `@medusajs/ui-preset` no longer ships `@tailwindcss/forms` | Our storefronts load only `tailwindcss-radix` | release notes; `storefront/tailwind.config.js` |
+| Core fix: "don't replace payment sessions with an active payment" (#17536) | Close to our PayWay replaced-session fix (P1 review, 2026-10-05); the copied PayWay HTTP tests pass on 2.22.2 | release notes |
+| New beta **Adyen** payment provider; search improvements | Not used | release notes |
+| Session cookie: `resolveSessionCookieSecurity` and the `...cookieOptions` spread are unchanged | The F-043 `SESSION_COOKIE_SECURE` setting works the same | `@medusajs/framework` `dist/http/express-loader.js` (2.22.2) |
+
+**Still not fixed in 2.22.2:** `updateReservationItems_` is identical to 2.21.2 (`@medusajs/inventory` `dist/services/inventory-module.js`, diffed), so F-041's workaround stays for any app that moves reservations.
 
 ---
 
