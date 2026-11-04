@@ -3,6 +3,7 @@
 import { isManual, isPayway, isStripeLike } from "@lib/constants"
 import { placeOrder, startPaywayPayment } from "@lib/data/cart"
 import { hasRequiredContact } from "@lib/util/contact"
+import { isServiceOnlyCart } from "@lib/util/booking"
 import { HttpTypes } from "@medusajs/types"
 import { Button } from "@modules/common/components/ui"
 import { useElements, useStripe } from "@stripe/react-stripe-js"
@@ -21,11 +22,14 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
 }) => {
   const notReady =
     !cart ||
-    !cart.shipping_address ||
-    !cart.billing_address ||
-    // Phone in Cambodia, email elsewhere (P1-16).
-    !hasRequiredContact(cart) ||
-    (cart.shipping_methods?.length ?? 0) < 1
+    // Booked services only (P3-13): just the contact, no delivery.
+    (isServiceOnlyCart(cart)
+      ? !hasRequiredContact(cart)
+      : !cart.shipping_address ||
+        !cart.billing_address ||
+        // Phone in Cambodia, email elsewhere (P1-16).
+        !hasRequiredContact(cart) ||
+        (cart.shipping_methods?.length ?? 0) < 1)
 
   const paymentSession = cart.payment_collection?.payment_sessions?.[0]
 
