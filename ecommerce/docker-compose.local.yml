@@ -3,6 +3,7 @@
 #
 #   podman compose -f ecommerce/docker-compose.local.yml up -d --build   (or: docker compose …)
 #   admin user:  podman exec ecommerce-local-backend docker-entrypoint.sh medusa user -e admin@example.com -p supersecret
+#   admin:       http://localhost:9000/app (plain http works because SESSION_COOKIE_SECURE=false, TASKS F-043)
 #
 # Host ports are offset to avoid clashing with other local databases.
 name: ecommerce-local
@@ -49,6 +50,8 @@ services:
       MEDUSA_FF_CACHING: "true"
       JWT_SECRET: local-only-jwt-secret
       COOKIE_SECRET: local-only-cookie-secret
+      # Plain http here, so the admin session cookie must not be Secure (local only).
+      SESSION_COOKIE_SECURE: "false"
       STORE_CORS: http://localhost:8000
       ADMIN_CORS: http://localhost:9000
       AUTH_CORS: http://localhost:9000,http://localhost:8000
