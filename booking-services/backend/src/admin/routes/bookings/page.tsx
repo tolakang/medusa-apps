@@ -33,6 +33,8 @@ const BookingsPage = () => {
   const [view, setView] = useState<CalendarView>("day")
   const [date, setDate] = useState("")
   const [walkIn, setWalkIn] = useState({ time: "09:00", minutes: "60", notes: "" })
+  // Two-step cancel in the page (no browser dialog): Cancel → Yes, cancel.
+  const [confirming, setConfirming] = useState<string | null>(null)
 
   const { data: resourcesData, isLoading: loadingResources } = useQuery({
     queryKey: ["booking-resources"],
@@ -176,20 +178,34 @@ const BookingsPage = () => {
                     <Text size="xsmall" className="text-ui-fg-subtle">Order #{b.order.display_id}</Text>
                   )}
                   {b.notes && <Text size="xsmall" className="text-ui-fg-subtle">{b.notes}</Text>}
-                  {(b.status === "confirmed" || b.status === "pending") && (
+                  {(b.status === "confirmed" || b.status === "pending") && confirming !== b.id && (
                     <Button
                       size="small"
                       variant="transparent"
                       className="mt-1 px-0"
                       isLoading={cancel.isPending && cancel.variables === b.id}
-                      onClick={() => {
-                        if (window.confirm("Cancel this booking? The cancellation policy decides any refund.")) {
-                          cancel.mutate(b.id)
-                        }
-                      }}
+                      onClick={() => setConfirming(b.id)}
                     >
                       Cancel
                     </Button>
+                  )}
+                  {confirming === b.id && (
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      <Text size="xsmall" className="text-ui-fg-subtle">The policy decides any refund.</Text>
+                      <Button size="small" variant="secondary" onClick={() => setConfirming(null)}>
+                        Keep
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="danger"
+                        onClick={() => {
+                          setConfirming(null)
+                          cancel.mutate(b.id)
+                        }}
+                      >
+                        Yes, cancel
+                      </Button>
+                    </div>
                   )}
                 </div>
               ))}

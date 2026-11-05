@@ -32,6 +32,9 @@ export const BOOKING_ITEM_METADATA = {
   resource_id: "booking_resource_id",
   starts_at: "booking_starts_at",
   ends_at: "booking_ends_at",
+  // For display in the cart, checkout and order (storefront, P3-13).
+  resource_name: "booking_resource_name",
+  timezone: "booking_timezone",
 } as const
 
 type Prepared = {
@@ -39,6 +42,8 @@ type Prepared = {
   customer_id: string | null
   variant_id: string
   resource_id: string
+  resource_name: string
+  timezone: string
   // ISO strings: step outputs are serialized between steps, so a Date would
   // arrive in the next step as a string anyway.
   starts_at: string
@@ -71,7 +76,7 @@ const prepareBookingStep = createStep(
       data: [resource],
     } = await query.graph({
       entity: "booking_resource",
-      fields: ["id", "is_active", "product_variants.id"],
+      fields: ["id", "name", "timezone", "is_active", "product_variants.id"],
       filters: { id: input.resource_id },
     })
     if (!resource) {
@@ -99,6 +104,8 @@ const prepareBookingStep = createStep(
       customer_id: cart.customer_id ?? null,
       variant_id: input.variant_id,
       resource_id: resource.id,
+      resource_name: resource.name,
+      timezone: resource.timezone,
       starts_at: starts_at.toISOString(),
       ends_at: ends_at.toISOString(),
       notes: input.notes ?? null,
@@ -183,6 +190,8 @@ export const addBookingToCartWorkflow = createWorkflow(
             [BOOKING_ITEM_METADATA.resource_id]: prepared.resource_id,
             [BOOKING_ITEM_METADATA.starts_at]: prepared.starts_at,
             [BOOKING_ITEM_METADATA.ends_at]: prepared.ends_at,
+            [BOOKING_ITEM_METADATA.resource_name]: prepared.resource_name,
+            [BOOKING_ITEM_METADATA.timezone]: prepared.timezone,
           },
         },
       ],

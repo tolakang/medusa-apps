@@ -7,6 +7,7 @@ import CartItemSelect from "@modules/cart/components/cart-item-select"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import DeleteButton from "@modules/common/components/delete-button"
 import LineItemOptions from "@modules/common/components/line-item-options"
+import { formatBookingRange, itemBooking } from "@lib/util/booking"
 import LineItemPrice from "@modules/common/components/line-item-price"
 import LineItemUnitPrice from "@modules/common/components/line-item-unit-price"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
@@ -23,6 +24,7 @@ type ItemProps = {
 const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
   const [updating, setUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const booked = itemBooking(item)
 
   const changeQuantity = async (quantity: number) => {
     setError(null)
@@ -70,12 +72,20 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
           {item.product_title}
         </Text>
         <LineItemOptions variant={item.variant} data-testid="product-variant" />
+        {booked && (
+          <Text className="txt-small text-ui-fg-subtle" data-testid="product-booking">
+            {formatBookingRange(booked.starts_at, booked.ends_at, booked.timezone)}
+            {booked.resource ? ` with ${booked.resource}` : ""}
+          </Text>
+        )}
       </Table.Cell>
 
       {type === "full" && (
         <Table.Cell>
           <div className="flex gap-2 items-center w-28">
             <DeleteButton id={item.id} data-testid="product-delete-button" />
+            {/* A booking is one place (TASKS F-045): no quantity to change. */}
+            {!booked && (
             <CartItemSelect
               value={item.quantity}
               onChange={(value) => changeQuantity(parseInt(value.target.value))}
@@ -98,6 +108,7 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
                 1
               </option>
             </CartItemSelect>
+            )}
             {updating && <Spinner />}
           </div>
           <ErrorMessage error={error} data-testid="product-error-message" />

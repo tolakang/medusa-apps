@@ -12,10 +12,13 @@ import React from "react"
 
 type OrderDetailsTemplateProps = {
   order: HttpTypes.StoreOrder
+  // Statuses of the order's bookings (service orders, P3-13).
+  bookingStatuses?: string[]
 }
 
 const OrderDetailsTemplate: React.FC<OrderDetailsTemplateProps> = ({
   order,
+  bookingStatuses,
 }) => {
   return (
     <div className="flex flex-col justify-center gap-y-4">
@@ -33,7 +36,7 @@ const OrderDetailsTemplate: React.FC<OrderDetailsTemplateProps> = ({
         className="flex flex-col gap-4 h-full bg-white w-full"
         data-testid="order-details-container"
       >
-        <OrderDetails order={order} showStatus />
+        <OrderDetails order={order} showStatus bookingStatuses={bookingStatuses} />
         <Items order={order} />
         <ShippingDetails order={order} />
         <OrderSummary order={order} />

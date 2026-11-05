@@ -52,6 +52,10 @@ services:
       COOKIE_SECRET: local-only-cookie-secret
       # Plain http here, so the admin session cookie must not be Secure (local only).
       SESSION_COOKIE_SECURE: "false"
+      # Booking settings (BUILD_PLAN 6.3): new resources use the shop's zone.
+      BOOKING_DEFAULT_TIMEZONE: Asia/Phnom_Penh
+      # Links in account emails (verification, password reset) point here.
+      STOREFRONT_URL: http://localhost:8000
       STORE_CORS: http://localhost:8000
       ADMIN_CORS: http://localhost:9000
       AUTH_CORS: http://localhost:9000,http://localhost:8000
@@ -84,7 +88,7 @@ services:
         NEXT_PUBLIC_MEDUSA_BACKEND_URL: http://localhost:9000
         NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: ${STOREFRONT_PUBLISHABLE_KEY:-pk_set_me}
         NEXT_PUBLIC_BASE_URL: http://localhost:8000
-        NEXT_PUBLIC_DEFAULT_REGION: dk
+        NEXT_PUBLIC_DEFAULT_REGION: kh
     container_name: booking-services-local-storefront
     network_mode: service:backend
     depends_on:
