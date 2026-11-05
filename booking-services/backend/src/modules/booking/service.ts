@@ -15,9 +15,13 @@ import { fitsWeeklyHours, isValidTimeZone, peakOverlap } from "./utils/slot"
 export type BookingModuleOptions = {
   // Minutes a pending hold blocks its slot (BOOKING_HOLD_MINUTES, plan §6.3).
   holdMinutes?: number
+  // A cancellation at least this many hours before the start is refunded
+  // (BOOKING_CANCEL_HOURS, plan §6.3; P3-08).
+  cancelHours?: number
 }
 
 export const DEFAULT_HOLD_MINUTES = 15
+export const DEFAULT_CANCEL_HOURS = 24
 
 // Statuses that always take a place. `pending` takes one only while its hold
 // hasn't expired; `cancelled` and `expired` never do.
@@ -87,13 +91,20 @@ class BookingModuleService extends MedusaService({
   constructor(container: Record<string, unknown>, options?: BookingModuleOptions) {
     super(...arguments)
     const minutes = Number(options?.holdMinutes)
+    const hours = Number(options?.cancelHours)
     this.options_ = {
       holdMinutes: Number.isInteger(minutes) && minutes > 0 ? minutes : DEFAULT_HOLD_MINUTES,
+      // 0 is allowed: refund any cancellation before the start.
+      cancelHours: Number.isFinite(hours) && hours >= 0 && options?.cancelHours !== undefined ? hours : DEFAULT_CANCEL_HOURS,
     }
   }
 
   get holdMinutes(): number {
     return this.options_.holdMinutes
+  }
+
+  get cancelHours(): number {
+    return this.options_.cancelHours
   }
 
   // Can a booking take one place of this resource from starts_at to ends_at?

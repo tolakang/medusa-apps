@@ -271,7 +271,12 @@
   3. `createRemoteLinkStep` for the confirmed bookings not yet linked.
   **Idempotent:** a repeated event confirms nothing new and makes no second link.
   - Tests `integration-tests/http/booking-order-placed.spec.ts` 4/4, full store checkouts with system payment: one booking confirmed, hold cleared and linked (the order item keeps `metadata.booking_id`); an order with two slots gets both; running the workflow twice more leaves one link and the same status; an order without bookings is left alone. Whole backend: 133 unit + 59 module + 66 HTTP ✅.
-- [ ] P3-08 Workflow `cancel-booking`: policy (`BOOKING_CANCEL_HOURS`) + refund.
+- [x] P3-08 Workflow `cancel-booking`: policy (`BOOKING_CANCEL_HOURS`) + refund. — **done 2026-11-04** (branch `feat/booking-p3-08-cancel`), `src/workflows/cancel-booking.ts`, policy in `src/lib/booking-cancel-policy.ts`. Input `{ booking_id, customer_id?, created_by? }`.
+  - **Policy:** a `pending` hold or a `confirmed` booking can be cancelled until it starts ("This booking has already started." / "This booking can't be cancelled."). A confirmed booking cancelled at least `BOOKING_CANCEL_HOURS` before the start (module option `cancelHours`, default 24, 0 allowed) is refunded; later cancellations aren't. With `customer_id` set, another customer's booking answers "not found".
+  - **Refund:** the booking's order item total, from the order's payment with the most captured-minus-refunded amount, through `refundPaymentWorkflow.runAsStep` with `idempotency_key: booking_cancel_<id>` (a retried refund never moves money twice at the provider). It runs last, after the status change, because money can't be rolled back. Outcomes: `refunded`, `outside_policy`, `no_order` (a hold or walk-in), `not_captured` (nothing captured yet).
+  - **Order totals:** read the order as `entity: "order"` with `total` selected; `booking.order.items.total` comes back empty because the order module computes totals only when a top-level total field is selected (`OrderModuleService.shouldIncludeTotals`).
+  - The slot is free again right away (a cancelled booking doesn't count, P3-03).
+  - Tests: unit `booking-cancel-policy.unit.spec.ts` 5/5; HTTP `booking-cancel.spec.ts` 5/5 with full store checkouts and captured system payments (see P3-16), plus not captured → no refund, a hold without an order, and refusals (another customer, a second cancel, a started booking). Whole backend: 138 unit + 59 module + 71 HTTP ✅.
 - [ ] P3-09 Jobs: release expired holds (every minute); reminders 24 h before.
 - [ ] P3-10 Routes: `GET /store/booking/availability`, `GET /store/booking/slots`, `POST /store/booking/cancel`.
 - [ ] P3-11 Admin: day/week calendar per resource; walk-in booking.
@@ -283,7 +288,7 @@
 **Acceptance tests**
 - [ ] P3-14 **Concurrency:** two customers can't hold the same slot.
 - [ ] P3-15 An abandoned checkout frees the slot automatically (job).
-- [ ] P3-16 Cancellation inside the policy refunds; outside it doesn't.
+- [x] P3-16 Cancellation inside the policy refunds; outside it doesn't. — **done 2026-11-04** with P3-08: `booking-cancel.spec.ts` "P3-16: inside the policy, cancels and refunds the booking's order item" (a week ahead, captured payment: one refund of exactly the item total, booking cancelled, slot free) and "P3-16: outside the policy, cancels without a refund" (starts in 2 hours with a 24-hour window: cancelled, no refund).
 - [ ] P3-17 A retried cart completion doesn't double-book or fail on its own hold.
 - [ ] P3-18 Phase exit checklist.
 
