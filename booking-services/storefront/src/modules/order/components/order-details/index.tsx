@@ -1,13 +1,19 @@
 import { HttpTypes } from "@medusajs/types"
 import { Text } from "@modules/common/components/ui"
 import { formatDate } from "@lib/util/format-date"
+import { bookingStatusLabel, isServiceOnlyCart } from "@lib/util/booking"
 
 type OrderDetailsProps = {
   order: HttpTypes.StoreOrder
   showStatus?: boolean
+  // Statuses of the order's bookings (P3-13).
+  bookingStatuses?: string[]
 }
 
-const OrderDetails = ({ order, showStatus }: OrderDetailsProps) => {
+const OrderDetails = ({ order, showStatus, bookingStatuses }: OrderDetailsProps) => {
+  // A service-only order is never shipped: its booking status matters, not
+  // the fulfilment status ("Not fulfilled") (P3-13).
+  const serviceOnly = isServiceOnlyCart(order)
   const formatStatus = (str: string) => {
     const formatted = str.split("_").join(" ")
 
@@ -46,12 +52,21 @@ const OrderDetails = ({ order, showStatus }: OrderDetailsProps) => {
       <div className="flex items-center text-compact-small gap-x-4 mt-4">
         {showStatus && (
           <>
-            <Text>
-              Order status:{" "}
-              <span className="text-ui-fg-subtle " data-testid="order-status">
-                {formatStatus(order.fulfillment_status)}
-              </span>
-            </Text>
+            {serviceOnly ? (
+              <Text>
+                Booking status:{" "}
+                <span className="text-ui-fg-subtle " data-testid="order-booking-status">
+                  {bookingStatusLabel(bookingStatuses ?? [], order.status)}
+                </span>
+              </Text>
+            ) : (
+              <Text>
+                Order status:{" "}
+                <span className="text-ui-fg-subtle " data-testid="order-status">
+                  {formatStatus(order.fulfillment_status)}
+                </span>
+              </Text>
+            )}
             <Text>
               Payment status:{" "}
               <span

@@ -4,6 +4,7 @@ import {
   durationMinutes,
   formatBookingRange,
   formatSlotTime,
+  bookingStatusLabel,
   isServiceOnlyCart,
   itemBooking,
   localDate,
@@ -51,5 +52,14 @@ describe("booking helpers", () => {
     assert.equal(formatSlotTime("2026-11-09T03:00:00.000Z", PP), "10:00")
     assert.equal(localDate(PP, 0, new Date("2026-11-08T18:00:00Z")), "2026-11-09")
     assert.equal(localDate(PP, 1, new Date("2026-11-08T18:00:00Z")), "2026-11-10")
+  })
+
+  it("labels a service order by its bookings' status", () => {
+    assert.equal(bookingStatusLabel(["confirmed"]), "Confirmed")
+    assert.equal(bookingStatusLabel(["cancelled", "cancelled"]), "Cancelled")
+    assert.equal(bookingStatusLabel(["confirmed", "cancelled"]), "1 confirmed, 1 cancelled")
+    assert.equal(bookingStatusLabel(["no_show"]), "No-show")
+    assert.equal(bookingStatusLabel([]), "Booked")
+    assert.equal(bookingStatusLabel(["confirmed"], "canceled"), "Cancelled")
   })
 })

@@ -77,3 +77,27 @@ export function localDate(timeZone: string | null | undefined, days = 0, now = n
   )
   return `${parts.year}-${parts.month}-${parts.day}`
 }
+
+// One status line for a service order's bookings (P3-13): "Confirmed",
+// "Cancelled", or e.g. "1 confirmed, 1 cancelled" when they differ. A
+// cancelled order counts as cancelled; no bookings known → "Booked".
+export function bookingStatusLabel(statuses: string[], orderStatus?: string | null): string {
+  const label = (s: string) => {
+    const t = s === "no_show" ? "no-show" : s === "pending" ? "held" : s
+    return t.charAt(0).toUpperCase() + t.slice(1)
+  }
+  if (orderStatus === "canceled") {
+    return "Cancelled"
+  }
+  if (!statuses.length) {
+    return "Booked"
+  }
+  const counts = new Map<string, number>()
+  for (const s of statuses) {
+    counts.set(s, (counts.get(s) ?? 0) + 1)
+  }
+  if (counts.size === 1) {
+    return label(statuses[0])
+  }
+  return Array.from(counts.entries()).map(([s, n]) => `${n} ${label(s).toLowerCase()}`).join(", ")
+}

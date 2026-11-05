@@ -1,3 +1,4 @@
+import { listMyBookings } from "@lib/data/booking"
 import { retrieveOrder } from "@lib/data/orders"
 import OrderDetailsTemplate from "@modules/order/templates/order-details-template"
 import { Metadata } from "next"
@@ -29,5 +30,8 @@ export default async function OrderDetailPage(props: Props) {
     notFound()
   }
 
-  return <OrderDetailsTemplate order={order} />
+  // The order's bookings, for their status on a service order (P3-13).
+  const bookings = ((await listMyBookings().catch(() => null)) ?? []).filter((b) => b.order?.id === order.id)
+
+  return <OrderDetailsTemplate order={order} bookingStatuses={bookings.map((b) => b.status)} />
 }
