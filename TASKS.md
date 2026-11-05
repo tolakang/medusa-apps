@@ -306,10 +306,10 @@
 - [ ] P3-13 `booking-services/storefront`: service pages, slot picker, booking management in the account.
 
 **Acceptance tests**
-- [ ] P3-14 **Concurrency:** two customers can't hold the same slot.
+- [x] P3-14 **Concurrency:** two customers can't hold the same slot. — **done 2026-11-04** (branch `feat/booking-p3-acceptance`): `integration-tests/http/booking-acceptance.spec.ts` through the store API on the Cambodia seed + booking demo: six carts add the same Haircut slot through `POST /store/booking/cart` at the same moment → exactly one 200, five 400 "This time is no longer available.", one hold, in the winner's cart, and five empty carts; and a held slot refuses the next customer and is no longer offered by `GET /store/booking/slots`. The guard is the resource row lock of `createHold` (P3-03), whose own race tests (capacity 1 and 3) fail without the lock.
 - [x] P3-15 An abandoned checkout frees the slot automatically (job). — **done 2026-11-04** with P3-09: `booking-jobs.spec.ts` "P3-15: an abandoned checkout frees the slot; the job marks the hold expired" (a hold from add-booking-to-cart runs out, the real job marks it `expired`, another cart then holds the same time; a second job run changes nothing).
 - [x] P3-16 Cancellation inside the policy refunds; outside it doesn't. — **done 2026-11-04** with P3-08: `booking-cancel.spec.ts` "P3-16: inside the policy, cancels and refunds the booking's order item" (a week ahead, captured payment: one refund of exactly the item total, booking cancelled, slot free) and "P3-16: outside the policy, cancels without a refund" (starts in 2 hours with a 24-hour window: cancelled, no refund).
-- [ ] P3-17 A retried cart completion doesn't double-book or fail on its own hold.
+- [x] P3-17 A retried cart completion doesn't double-book or fail on its own hold. — **done 2026-11-04** (branch `feat/booking-p3-acceptance`), `booking-acceptance.spec.ts`: completing the same paid cart again returns the same order (twice more, including after the booking is confirmed), with one booking, `confirmed`, linked once to that one order; two completions at the same moment make one order and one booking; a retry after the hold ran out still completes when nobody took the time. Guards: Medusa's own completion idempotency, the read-only `completeCartWorkflow.validate` that ignores the cart's own hold (P3-05), and the idempotent `order.placed` handler (P3-07).
 - [ ] P3-18 Phase exit checklist.
 
 ---
