@@ -230,6 +230,41 @@ class BookingModuleService extends MedusaService({
     return extended
   }
 
+  // Marks pending holds whose hold_expires_at has passed as `expired`
+  // (TASKS P3-09, every minute). They already stopped blocking their slot
+  // at that moment (P3-03); this tidies their status. At most `limit` per
+  // run; returns the ids so the workflow can restore them on failure.
+  @InjectManager()
+  async releaseExpiredHolds(
+    input: { now?: Date; limit?: number } = {},
+    @MedusaContext() sharedContext: Context<EntityManager> = {}
+  ): Promise<{ id: string; hold_expires_at: Date | null }[]> {
+    return await this.releaseExpiredHolds_(input, sharedContext)
+  }
+
+  @InjectTransactionManager()
+  protected async releaseExpiredHolds_(
+    input: { now?: Date; limit?: number },
+    @MedusaContext() sharedContext: Context<EntityManager> = {}
+  ): Promise<{ id: string; hold_expires_at: Date | null }[]> {
+    const now = input.now ?? new Date()
+    const expired = await this.listBookings(
+      { status: "pending", hold_expires_at: { $lte: now } },
+      { select: ["id", "hold_expires_at"], take: input.limit ?? 500, order: { hold_expires_at: "ASC" } },
+      sharedContext
+    )
+    if (expired.length) {
+      await this.updateBookings(
+        expired.map((b) => ({ id: b.id, status: "expired" as const })),
+        sharedContext
+      )
+    }
+    return expired.map((b) => ({
+      id: b.id,
+      hold_expires_at: b.hold_expires_at ? new Date(b.hold_expires_at) : null,
+    }))
+  }
+
   @InjectTransactionManager()
   protected async checkSlot_(
     input: SlotRequest,

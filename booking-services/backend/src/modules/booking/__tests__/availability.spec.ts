@@ -232,6 +232,32 @@ moduleIntegrationTestRunner<BookingModuleService>({
         expect(await service.extendCartHolds({ cart_id: "cart_done", now: NOW })).toEqual([])
       })
 
+      it("P3-09: releaseExpiredHolds marks only pending holds past their expiry as expired", async () => {
+        const r = await openResource(3)
+        const gone = await book(r.id, MON_09, MON_10, { status: "pending", hold_expires_at: at("2026-11-01T00:05:00Z") })
+        const fresh = await book(r.id, MON_09, MON_10, { status: "pending", hold_expires_at: at("2026-11-01T00:30:00Z") })
+        const paid = await book(r.id, MON_09, MON_10)
+
+        const released = await service.releaseExpiredHolds({ now: at("2026-11-01T00:10:00Z") })
+
+        expect(released.map((b) => b.id)).toEqual([gone.id])
+        const status = async (id: string) => (await service.listBookings({ id }))[0].status
+        expect(await status(gone.id)).toEqual("expired")
+        expect(await status(fresh.id)).toEqual("pending")
+        expect(await status(paid.id)).toEqual("confirmed")
+        // Running again finds nothing new.
+        expect(await service.releaseExpiredHolds({ now: at("2026-11-01T00:10:00Z") })).toEqual([])
+      })
+
+      it("P3-09: releaseExpiredHolds stops at the limit", async () => {
+        const r = await openResource(5)
+        for (let n = 0; n < 4; n++) {
+          await book(r.id, MON_09, MON_10, { status: "pending", hold_expires_at: at(`2026-11-01T00:0${n}:00Z`) })
+        }
+        expect(await service.releaseExpiredHolds({ now: at("2026-11-01T01:00:00Z"), limit: 3 })).toHaveLength(3)
+        expect(await service.releaseExpiredHolds({ now: at("2026-11-01T01:00:00Z"), limit: 3 })).toHaveLength(1)
+      })
+
       it("P3-14: of many holds at once for the last place, exactly one succeeds", async () => {
         const r = await openResource()
         const results = await Promise.allSettled(
