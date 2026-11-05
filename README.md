@@ -2,15 +2,15 @@
 
 Standalone [Medusa](https://medusajs.com) backends, one per commerce scenario, each deployable on its own with Dokploy.
 
-> **Status: Phase 1 (ecommerce) built and running on staging; production deploy is next.** The other categories have deployment templates only (Dockerfile + env per deployable). Progress is tracked in [`TASKS.md`](./TASKS.md); requirements are in [`BUILD_PLAN.md`](./BUILD_PLAN.md).
+> **Status (2026-11-05): Phase 1 (ecommerce) built and running on staging; production deploy is next. Phase 2 (POS) and Phase 3 (booking-services) code is done and passed local Podman smoke + e2e; their staging and exit checklists wait on the owner.** Wholesale, reseller and marketplace have deployment templates only (Dockerfile + env per deployable). Progress is tracked in [`TASKS.md`](./TASKS.md); requirements are in [`BUILD_PLAN.md`](./BUILD_PLAN.md).
 
 Each folder is **one business project** (one Dokploy project). Inside it, every deployable has its own `Dockerfile` and `.env.example` and deploys independently.
 
 | Folder | Scenario | Deployables (Dokploy Build Path) | Status |
 |---|---|---|---|
 | [`ecommerce/`](./ecommerce) | Direct-to-consumer online store | `/ecommerce/backend`, `/ecommerce/storefront` | Built, on staging — Phase 1 (production pending) |
-| [`pos/`](./pos) | Physical shop checkout | `/pos/backend`, `/pos/storefront`, `/pos/pos-app` | In progress — Phase 2 |
-| [`booking-services/`](./booking-services) | Appointments, classes, tickets, rentals | `/booking-services/backend`, `/booking-services/storefront` | In progress — Phase 3 (copy of Ecommerce on Medusa 2.22.2) |
+| [`pos/`](./pos) | Physical shop checkout | `/pos/backend`, `/pos/storefront`, `/pos/pos-app` | Built — Phase 2 (staging deferred by the owner) |
+| [`booking-services/`](./booking-services) | Appointments, classes, tickets, rentals | `/booking-services/backend`, `/booking-services/storefront` | Built — Phase 3 (copy of Ecommerce on Medusa 2.22.2; exit P3-18 pending) |
 | [`wholesale/`](./wholesale) | Sellers buy your products in bulk | `/wholesale/backend`, `/wholesale/storefront` | Planned — Phase 4 |
 | [`reseller/`](./reseller) | Sellers sell your products, you ship | `/reseller/backend`, `/reseller/storefront`, `/reseller/seller-portal` | Planned — Phase 5 |
 | [`marketplace/`](./marketplace) | Vendors sell their own products | `/marketplace/backend`, `/marketplace/storefront`, `/marketplace/vendor-portal` | Planned — Phase 6 |
