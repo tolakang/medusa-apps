@@ -52,6 +52,9 @@ services:
       COOKIE_SECRET: local-only-cookie-secret
       # Plain http here, so the admin session cookie must not be Secure (local only).
       SESSION_COOKIE_SECURE: "false"
+      # Links in account emails (verification, password reset) point here;
+      # without it sign-up emails aren't sent ("Email verification not sent").
+      STOREFRONT_URL: http://localhost:8000
       STORE_CORS: http://localhost:8000
       ADMIN_CORS: http://localhost:9000
       AUTH_CORS: http://localhost:9000,http://localhost:8000
