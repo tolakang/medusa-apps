@@ -52,14 +52,25 @@ export const SHIPPING_PHONE_REQUIRED_MESSAGE =
   "Add a phone number to the delivery address so the courier can reach you."
 export const EMAIL_REQUIRED_MESSAGE =
   "Add an email address so we can send your order confirmation."
+export const SERVICE_CONTACT_MESSAGE =
+  "Add an email address or a phone number so we can reach you about your booking."
 
 // Required contact before the order is placed, by delivery country (owner,
 // 2026-09-29): Cambodia needs the delivery phone (email optional, TASKS P1-16);
 // other countries need the email, as in the starter (phone optional).
+// A cart whose items all need no shipping (booked services, TASKS P3-12)
+// has no delivery: it needs one way to reach the customer, an email or a
+// valid phone on the address.
 export function contactProblem(cart: {
   email?: string | null
   shipping_address?: { country_code?: string | null; phone?: string | null } | null
+  items?: ({ requires_shipping?: boolean | null } | null)[] | null
 }): string | null {
+  const items = (cart.items ?? []).filter(Boolean)
+  if (items.length && items.every((i) => i!.requires_shipping === false)) {
+    const phone = cart.shipping_address?.phone
+    return cart.email || (phone && isValidPhone(phone)) ? null : SERVICE_CONTACT_MESSAGE
+  }
   if (cart.shipping_address?.country_code?.toLowerCase() === "kh") {
     const phone = cart.shipping_address.phone
     return phone && isValidPhone(phone) ? null : SHIPPING_PHONE_REQUIRED_MESSAGE
@@ -90,7 +101,7 @@ export async function requireContact(
     data: [cart],
   } = await query.graph({
     entity: "cart",
-    fields: ["id", "email", "shipping_address.country_code", "shipping_address.phone"],
+    fields: ["id", "email", "shipping_address.country_code", "shipping_address.phone", "items.requires_shipping"],
     filters: { id: req.params.id },
   })
   checkContact(cart, next)
@@ -110,7 +121,12 @@ export async function requireContactBeforePayment(
     data: [collection],
   } = await query.graph({
     entity: "payment_collection",
-    fields: ["cart.email", "cart.shipping_address.country_code", "cart.shipping_address.phone"],
+    fields: [
+      "cart.email",
+      "cart.shipping_address.country_code",
+      "cart.shipping_address.phone",
+      "cart.items.requires_shipping",
+    ],
     filters: { id: req.params.id },
   })
   checkContact((collection as { cart?: ContactCart } | undefined)?.cart, next)

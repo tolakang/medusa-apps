@@ -58,3 +58,9 @@ After the first deploy, every service can be redeployed, rebuilt or rolled back 
 - This project has its **own** Postgres and Redis. Never point two business projects at the same database.
 - A second business of the same type = a second Dokploy project built from the same folder, with its own env.
 - To add another scenario to this business (e.g. POS for a marketplace), add that module to **this** backend; do not deploy a second backend. See `COMPARISON.md` §4.
+
+## Services and tickets (TASKS P3-12)
+
+- **A service** (haircut, massage, lesson) is a product **without a shipping profile** whose variants have **Manage inventory** off: one variant per length or staff level, with its length in the variant's metadata as `duration_minutes`. Its cart items need no shipping, so checkout skips the address and delivery steps. Link it to the resources that offer it (`POST /admin/booking/resources/:id` with `variant_ids`). Try it with `pnpm seed:booking-demo` (a Haircut service and one stylist).
+- **Tickets for fixed-capacity events** (a show, a class with numbered seats, no staff calendar) use Medusa's [Ticket Booking recipe](https://docs.medusajs.com/resources/recipes/ticket-booking) instead: one inventory item per show date and section, its stocked quantity is the number of seats, and `requires_shipping` off on that inventory item. The `booking` module is for time slots of people, rooms and equipment.
+
