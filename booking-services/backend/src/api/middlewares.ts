@@ -14,6 +14,11 @@ import {
 } from './contact-validation'
 import { extendBookingHoldsBeforePayment } from './booking-payment'
 import { PostBookingCancel, PostBookingCart } from './store/booking/validators'
+import {
+  PostAdminBookingResource,
+  PostAdminBookingResourceUpdate,
+  PostAdminWalkIn,
+} from './admin/booking/validators'
 import { enforceUploadLimits } from './upload-limits'
 import {
   AUTH_LIMITS,
@@ -70,6 +75,22 @@ export default defineMiddlewares({
       matcher: '/store/payment-collections/:id/payment-sessions',
       // Then renew the cart's booking holds for the payment (TASKS P3-06).
       middlewares: [requireContactBeforePayment, extendBookingHoldsBeforePayment],
+    },
+    {
+      // Admin booking setup and calendar (TASKS P3-11); /admin is admin-only.
+      method: ['POST'],
+      matcher: '/admin/booking/resources',
+      middlewares: [validateAndTransformBody(PostAdminBookingResource)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/booking/resources/:id',
+      middlewares: [validateAndTransformBody(PostAdminBookingResourceUpdate)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/booking/bookings',
+      middlewares: [validateAndTransformBody(PostAdminWalkIn)],
     },
     {
       // A signed-in customer cancels their booking (TASKS P3-10).
