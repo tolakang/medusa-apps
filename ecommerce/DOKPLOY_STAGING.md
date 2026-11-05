@@ -683,6 +683,16 @@ When sharing a log, filter it first: `grep -v -i "secret\|access-key\|api_key"`.
 ### 9.4 Record
 For releases that matter (phase exit, production), record the result in `TASKS.md`: the date, the commit, and ✅ per line.
 
+### 9.5 Alerts (pre-deploy audit E-A3)
+Dokploy can message you when something goes wrong, so you hear about it before a customer does. Checked against Dokploy **v0.31.0** source (`handle-notifications.tsx`).
+
+1. Dokploy → **Settings → Notifications** → add a **Telegram** notification. Use the staff group: bot token and chat ID as in `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID`, or a separate alerts bot. (Slack, Discord, email, Gotify, ntfy and Lark also work.)
+2. Turn on **App Build Error**, **App Deploy**, **Database Backup**, **Dokploy Restart** (and **Volume Backup** if you use volume backups).
+3. **Check:** the next deploy posts a message to the group, and so does the next database backup (02:00 Cambodia).
+4. **App down:** Dokploy has no "app is down" notification. A health check that fails during a deploy rolls back (`FailureAction: rollback`), but a container that dies later only restarts. For an alert, an outside uptime check must call `https://<api host>/health` and the shop every 1–5 minutes. That is a new service: the owner decides and it is recorded in `TASKS.md` (pre-deploy audit E-A3).
+
+**Reply with** "alerts on" and which events you turned on.
+
 ---
 
 ## 10. Rotating a leaked secret
