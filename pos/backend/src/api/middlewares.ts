@@ -107,6 +107,19 @@ export default defineMiddlewares({
       middlewares: [requireStrongPassword],
     },
     {
+      // Admin sign-in and forgot password (pre-deploy audit E-A1): the same
+      // per-IP limits as the customer routes. The admin dashboard calls the
+      // backend from the browser, so req.ip is the admin's address.
+      method: ['POST'],
+      matcher: '/auth/user/emailpass',
+      middlewares: [limitPerIp('admin_login', AUTH_LIMITS.login, 60)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/auth/user/emailpass/reset-password',
+      middlewares: [limitPerIp('admin_password_reset', AUTH_LIMITS.password_reset, 60)],
+    },
+    {
       // CAPTCHA on customer sign-in and forgot password (sign-up above).
       method: ['POST'],
       matcher: '/auth/customer/emailpass',
