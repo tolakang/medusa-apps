@@ -1,4 +1,12 @@
-import { fitsWeeklyHours, isValidTimeZone, peakOverlap, toLocalTime } from "../slot"
+import {
+  candidateSlots,
+  fitsWeeklyHours,
+  isValidTimeZone,
+  peakOverlap,
+  toLocalTime,
+  weekdayOf,
+  zonedTimeToUtc,
+} from "../slot"
 
 // TASKS P3-03: the pure parts of the slot check.
 const at = (iso: string) => new Date(iso)
@@ -85,5 +93,52 @@ describe("peakOverlap", () => {
   it("counts bookings that overlap each other", () => {
     expect(peakOverlap([i("02:00", "03:30"), i("03:00", "04:00")], from, to)).toBe(2)
     expect(peakOverlap([i("01:00", "05:00"), i("02:30", "03:00"), i("02:45", "03:15")], from, to)).toBe(3)
+  })
+})
+
+describe("zonedTimeToUtc / weekdayOf (P3-10)", () => {
+  it("turns a local time into UTC", () => {
+    expect(zonedTimeToUtc("2026-11-09", "09:00", PP).toISOString()).toEqual("2026-11-09T02:00:00.000Z")
+    expect(zonedTimeToUtc("2026-11-09", "00:00", PP).toISOString()).toEqual("2026-11-08T17:00:00.000Z")
+    expect(zonedTimeToUtc("2026-11-09", "09:00", "UTC").toISOString()).toEqual("2026-11-09T09:00:00.000Z")
+  })
+
+  it("handles daylight saving on the day it changes", () => {
+    // Berlin moves from UTC+1 to UTC+2 at 02:00 on 2026-03-29.
+    expect(zonedTimeToUtc("2026-03-29", "01:00", "Europe/Berlin").toISOString()).toEqual("2026-03-29T00:00:00.000Z")
+    expect(zonedTimeToUtc("2026-03-29", "09:00", "Europe/Berlin").toISOString()).toEqual("2026-03-29T07:00:00.000Z")
+    expect(zonedTimeToUtc("2026-07-01", "09:00", "Europe/Berlin").toISOString()).toEqual("2026-07-01T07:00:00.000Z")
+    expect(zonedTimeToUtc("2026-12-01", "09:00", "Europe/Berlin").toISOString()).toEqual("2026-12-01T08:00:00.000Z")
+  })
+
+  it("knows the weekday of a calendar date", () => {
+    expect(weekdayOf("2026-11-08")).toEqual(0)
+    expect(weekdayOf("2026-11-09")).toEqual(1)
+    expect(weekdayOf("2026-11-14")).toEqual(6)
+  })
+})
+
+describe("candidateSlots (P3-10)", () => {
+  const hours = [
+    { weekday: 1, start_time: "13:00", end_time: "15:00" },
+    { weekday: 1, start_time: "09:00", end_time: "11:30" },
+    { weekday: 2, start_time: "09:00", end_time: "17:00" },
+  ]
+  const iso = (slots: { starts_at: Date; ends_at: Date }[]) =>
+    slots.map((x) => `${x.starts_at.toISOString().slice(11, 16)}-${x.ends_at.toISOString().slice(11, 16)}`)
+
+  it("fills each range of that weekday back to back, in order", () => {
+    // 09:00-11:30 → 09-10, 10-11 (11:00-12:00 doesn't fit); 13:00-15:00 → 13-14, 14-15. UTC = local - 7 h.
+    expect(iso(candidateSlots("2026-11-09", PP, hours, 60))).toEqual([
+      "02:00-03:00",
+      "03:00-04:00",
+      "06:00-07:00",
+      "07:00-08:00",
+    ])
+  })
+
+  it("uses the slot length given, and gives nothing on a closed day", () => {
+    expect(iso(candidateSlots("2026-11-09", PP, hours, 90))).toEqual(["02:00-03:30", "06:00-07:30"])
+    expect(candidateSlots("2026-11-08", PP, hours, 60)).toEqual([])
   })
 })

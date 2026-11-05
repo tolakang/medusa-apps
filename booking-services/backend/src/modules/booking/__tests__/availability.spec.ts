@@ -258,6 +258,43 @@ moduleIntegrationTestRunner<BookingModuleService>({
         expect(await service.releaseExpiredHolds({ now: at("2026-11-01T01:00:00Z"), limit: 3 })).toHaveLength(1)
       })
 
+      it("P3-10: listFreeSlots offers the free hours of a day, per resource", async () => {
+        const a = await openResource()
+        const b = await openResource(2)
+        const off = await openResource(1, false)
+        // a: 10:00-11:00 taken; b: one of two places taken at 09:00-10:00.
+        await book(a.id, MON_10, MON_11)
+        await book(b.id, MON_09, MON_10)
+
+        const slots = await service.listFreeSlots({
+          resource_ids: [a.id, b.id, off.id],
+          date: "2026-11-09",
+          duration_minutes: 60,
+          now: NOW,
+        })
+        const of = (id: string) =>
+          slots.filter((s) => s.resource_id === id).map((s) => `${s.starts_at.toISOString().slice(11, 16)}/${s.remaining}`)
+
+        // Hours 09-12 and 13-17 local = 02-05 and 06-10 UTC.
+        expect(of(a.id)).toEqual(["02:00/1", "04:00/1", "06:00/1", "07:00/1", "08:00/1", "09:00/1"])
+        expect(of(b.id)).toEqual(["02:00/1", "03:00/2", "04:00/2", "06:00/2", "07:00/2", "08:00/2", "09:00/2"])
+        expect(of(off.id)).toEqual([])
+      })
+
+      it("P3-10: listFreeSlots leaves out slots that already started and counts expired holds as free", async () => {
+        const a = await openResource()
+        await book(a.id, MON_11, at("2026-11-09T05:00:00Z"), { status: "pending", hold_expires_at: at("2026-11-09T03:10:00Z") })
+
+        const slots = await service.listFreeSlots({
+          resource_ids: [a.id],
+          date: "2026-11-09",
+          duration_minutes: 60,
+          now: at("2026-11-09T03:30:00Z"), // 10:30 local
+        })
+        // 09:00 and 10:00 have started; the 11:00 hold has run out.
+        expect(slots[0].starts_at.toISOString()).toEqual("2026-11-09T04:00:00.000Z")
+      })
+
       it("P3-14: of many holds at once for the last place, exactly one succeeds", async () => {
         const r = await openResource()
         const results = await Promise.allSettled(

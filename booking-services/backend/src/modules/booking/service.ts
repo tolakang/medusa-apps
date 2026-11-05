@@ -10,7 +10,7 @@ import {
 import { Booking } from "./models/booking"
 import { BookingResource } from "./models/booking-resource"
 import { BookingSchedule } from "./models/booking-schedule"
-import { fitsWeeklyHours, isValidTimeZone, peakOverlap } from "./utils/slot"
+import { candidateSlots, fitsWeeklyHours, isValidTimeZone, peakOverlap } from "./utils/slot"
 
 export type BookingModuleOptions = {
   // Minutes a pending hold blocks its slot (BOOKING_HOLD_MINUTES, plan §6.3).
@@ -49,6 +49,13 @@ export type SlotUnavailableReason =
 export type SlotCheck =
   | { available: true; capacity: number; remaining: number }
   | { available: false; reason: SlotUnavailableReason; capacity: number; remaining: number }
+
+export type FreeSlot = {
+  resource_id: string
+  starts_at: Date
+  ends_at: Date
+  remaining: number
+}
 
 export type ExtendedHold = {
   id: string
@@ -263,6 +270,81 @@ class BookingModuleService extends MedusaService({
       id: b.id,
       hold_expires_at: b.hold_expires_at ? new Date(b.hold_expires_at) : null,
     }))
+  }
+
+  // Free slots of these resources on a local calendar date (TASKS P3-10,
+  // GET /store/booking/slots): back-to-back slots of duration_minutes inside
+  // each resource's weekly hours for that weekday, in its own time zone,
+  // that start after `now` and still have a place. One read of that day's
+  // bookings per resource, then the same peak-overlap rule as checkSlot.
+  @InjectManager()
+  async listFreeSlots(
+    input: { resource_ids: string[]; date: string; duration_minutes: number; now?: Date },
+    @MedusaContext() sharedContext: Context<EntityManager> = {}
+  ): Promise<FreeSlot[]> {
+    return await this.listFreeSlots_(input, sharedContext)
+  }
+
+  @InjectTransactionManager()
+  protected async listFreeSlots_(
+    input: { resource_ids: string[]; date: string; duration_minutes: number; now?: Date },
+    @MedusaContext() sharedContext: Context<EntityManager> = {}
+  ): Promise<FreeSlot[]> {
+    const now = input.now ?? new Date()
+    if (!input.resource_ids.length) {
+      return []
+    }
+    const resources = await this.listBookingResources(
+      { id: input.resource_ids, is_active: true },
+      { relations: ["schedules"] },
+      sharedContext
+    )
+    const free: FreeSlot[] = []
+    for (const resource of resources) {
+      if (!isValidTimeZone(resource.timezone)) {
+        continue
+      }
+      const slots = candidateSlots(
+        input.date,
+        resource.timezone,
+        resource.schedules ?? [],
+        input.duration_minutes
+      ).filter((s) => s.starts_at.getTime() >= now.getTime())
+      if (!slots.length) {
+        continue
+      }
+      const from = slots[0].starts_at
+      const to = slots[slots.length - 1].ends_at
+      const bookings = await this.listBookings(
+        {
+          resource_id: resource.id,
+          status: BLOCKING_STATUSES as ("pending" | "confirmed" | "completed" | "no_show")[],
+          starts_at: { $lt: to },
+          ends_at: { $gt: from },
+        },
+        { select: ["id", "starts_at", "ends_at", "status", "hold_expires_at"] },
+        sharedContext
+      )
+      const taking = bookings
+        .filter(
+          (b) =>
+            !(
+              b.status === "pending" &&
+              b.hold_expires_at &&
+              new Date(b.hold_expires_at).getTime() <= now.getTime()
+            )
+        )
+        .map((b) => ({ starts_at: new Date(b.starts_at), ends_at: new Date(b.ends_at) }))
+      for (const slot of slots) {
+        const remaining = resource.capacity - peakOverlap(taking, slot.starts_at, slot.ends_at)
+        if (remaining > 0) {
+          free.push({ resource_id: resource.id, starts_at: slot.starts_at, ends_at: slot.ends_at, remaining })
+        }
+      }
+    }
+    return free.sort(
+      (a, b) => a.starts_at.getTime() - b.starts_at.getTime() || a.resource_id.localeCompare(b.resource_id)
+    )
   }
 
   @InjectTransactionManager()

@@ -96,3 +96,48 @@ export function peakOverlap(intervals: Interval[], from: Date, to: Date): number
   }
   return peak
 }
+
+// "YYYY-MM-DD" + "HH:MM" local to the time zone → that instant in UTC
+// (TASKS P3-10). Two passes, so a daylight-saving change on that day is
+// handled: the first guess uses the zone's offset at the naive UTC time, the
+// second the offset at the corrected time.
+export function zonedTimeToUtc(date: string, time: string, timeZone: string): Date {
+  const [y, mo, d] = date.split("-").map(Number)
+  const [h, mi] = time.split(":").map(Number)
+  const naive = Date.UTC(y, mo - 1, d, h, mi)
+  const offsetAt = (at: number) => {
+    const l = toLocalTime(new Date(at), timeZone)
+    const [ly, lmo, ld] = l.date.split("-").map(Number)
+    const [lh, lmi] = l.time.split(":").map(Number)
+    return Date.UTC(ly, lmo - 1, ld, lh, lmi) - at
+  }
+  const first = naive - offsetAt(naive)
+  const second = naive - offsetAt(first)
+  return new Date(second)
+}
+
+// Weekday (0 = Sunday) of a calendar date, independent of any time zone.
+export function weekdayOf(date: string): number {
+  const [y, mo, d] = date.split("-").map(Number)
+  return new Date(Date.UTC(y, mo - 1, d)).getUTCDay()
+}
+
+// Back-to-back slots of `minutes` inside each opening range of that weekday,
+// as UTC instants. A range shorter than one slot gives none.
+export function candidateSlots(
+  date: string,
+  timeZone: string,
+  hours: WeeklyHours[],
+  minutes: number
+): Interval[] {
+  const weekday = weekdayOf(date)
+  const slots: Interval[] = []
+  for (const h of hours.filter((x) => x.weekday === weekday).sort((a, b) => a.start_time.localeCompare(b.start_time))) {
+    const open = zonedTimeToUtc(date, h.start_time, timeZone).getTime()
+    const close = zonedTimeToUtc(date, h.end_time, timeZone).getTime()
+    for (let s = open; s + minutes * 60_000 <= close; s += minutes * 60_000) {
+      slots.push({ starts_at: new Date(s), ends_at: new Date(s + minutes * 60_000) })
+    }
+  }
+  return slots
+}
