@@ -319,6 +319,19 @@
 
 ---
 
+## Pre-deploy audit fixes · `PRE_DEPLOY_AUDIT.md`
+
+First audit: `ecommerce/AUDIT-2026-11-05.md` (ecommerce @ `e2d8090`, verdict NO-GO until E-A5). Each fix covers every app with the same code (ecommerce, pos, booking-services).
+
+- [x] E-A5 **Blocker.** Next.js `15.5.27` → `15.5.28` in the three storefronts and `pos/pos-app` (critical RCE in Image Optimization, high DoS in Server Actions; `sharp` → `0.35.5`). — branch `fix/next-15.5.28`; verify PASS ×4; `pnpm audit --prod`: 0 critical. The storefronts set `images.unoptimized`, so the RCE was likely unreachable there; `pos-app` uses the default. Left: `postcss@8.4.31` / `source-map-js` pinned inside `next` (build-time on the repo's own CSS) → accepted RISK.
+- [x] E-A1 Per-IP limits on admin sign-in `POST /auth/user/emailpass` and admin forgot password `…/reset-password` (`limitPerIp`, same limits as customers). — branch `fix/admin-auth-rate-limit`; `anti-abuse.spec.ts` new case passes ×3; admin-mfa, account-auth and captcha specs pass (11/11).
+- [x] E-A2 Storefront `error.tsx` under `[countryCode]` + root `global-error.tsx`; `poweredByHeader: false`. — branch `fix/storefront-errors`; verify PASS ×3.
+- [x] E-A4 Storefront `medusa-error.ts` logs status + path only, not the backend's response body and headers. — same branch.
+- [~] E-A3 Alerts. — Dokploy Telegram notifications added to both runbooks (`ecommerce/DOKPLOY_STAGING.md` §9.5, `pos/DOKPLOY_STAGING.md` Step 9), checked against Dokploy v0.31.0 source. **Waits on the owner:** turn them on in Dokploy, and decide the "app down" monitor (recommended: a hosted uptime monitor outside the Dokploy server, alerting the staff Telegram).
+- [ ] E-A6 Backend `pnpm audit` highs, all through `@medusajs/*`. Recommended (owner to confirm): refresh the lockfiles within Medusa's own ranges (tried on a scratch copy: 11 → 4 high, `@medusajs/*` pins unchanged; fixes `body-parser`, `multer`, `follow-redirects`, `vite`, `source-map-js`), then accept the rest as RISK: `lodash` + `@graphql-tools/utils` (only via `@graphql-codegen`, build-time types) and `zod 4.2.0` (pinned by the official dtc-starter even on Medusa 2.22.3; request bodies are size-limited). Recheck on every Medusa update.
+
+---
+
 ## Phase 4: Wholesale · plan §6.4
 
 **Backend (from `medusajs/b2b-starter` `apps/backend`)**
