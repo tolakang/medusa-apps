@@ -36,4 +36,4 @@ Outside `ecommerce/`, the `Dockerfile`s and `.env.example`s are committed **read
 3. **Not a monorepo.** Every deployable (backend, storefront, portal, app) is independent: own `package.json`, lockfile, `Dockerfile`, `.env.example`. Nothing is shared; clients reach their backend only over HTTP.
 4. **One business = one app.** Combine scenarios by adding modules to one app, never by syncing two apps.
 
-Versions (2026-11-06): Medusa 2.22.3 in every app (npm `latest`, as the starters), Node `>=22.23.4`, Next.js 15.5.28, pnpm 12.6.0. Starter storefronts are on Next.js 16 (TASKS V-04). Details and update plan: `BUILD_PLAN.md` Revision 8. Starters: `medusajs/dtc-starter`, `medusajs/b2b-starter`.
+Versions (2026-11-06): Medusa 2.22.3 in every app (npm `latest`, as the starters), Node `>=22.23.4`, Next.js 15.5.28, pnpm 12.17.0. Starter storefronts are on Next.js 16 (TASKS V-04). Details and update plan: `BUILD_PLAN.md` Revision 8. Starters: `medusajs/dtc-starter`, `medusajs/b2b-starter`.
