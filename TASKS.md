@@ -336,7 +336,7 @@ First audit: `ecommerce/AUDIT-2026-11-05.md` (ecommerce @ `e2d8090`, verdict NO-
 
 Checked 2026-11-06. Each item is its own branch and PR, through `scripts/update-medusa.sh` / DEV_FLOW gates.
 
-- [ ] V-01 Medusa **2.22.3** (npm `latest`, 2026-11-04): first verify its release notes and installed `.d.ts` into `MEDUSA_SKILL.md` §1; then `ecommerce/` and `pos/` 2.21.2 → 2.22.3 and `booking-services/` 2.22.2 → 2.22.3; Node `>=22.23.4` as both starters. Re-check F-041 (`updateReservationItems_`).
+- [x] V-01 Medusa **2.22.3** (npm `latest`, 2026-11-04). — **done 2026-11-06** (branch `chore/medusa-2.22.3`): release notes and installed packages checked into `MEDUSA_SKILL.md` §1.3; `scripts/update-medusa.sh all 2.22.3` (ecommerce and pos from 2.21.2, booking-services from 2.22.2; `@medusajs/ui` 4.2.10); Node engines `>=22.23.4` in all 7 apps; `verify: PASS (all)` (ecommerce 114/32/46, pos 126/36/75, booking 153/63/95; every client builds). `pnpm audit --prod` backends 4 → 1 high (`zod` only). F-041 re-checked: still not fixed, POS workaround stays.
 - [ ] V-02 Next.js 15.5.28 → **15.5.29** (2026-11-03) in the three storefronts and `pos/pos-app`.
 - [ ] V-03 pnpm 12.6.0 → **12.18.0** (`packageManager` in every app, Dockerfiles install it).
 - [ ] V-04 **Next.js 16** starter sync (plan §8.1, D7): the starters' storefronts are on 16.3.8. Owner decides; one category per PR.
@@ -415,7 +415,7 @@ Current position (updated 2026-11-04): **Phase 1 (Ecommerce) built and running o
 
 **Staging (Dokploy project `ecommerce-staging`):** backend `https://api.staging.example.com` (admin `/app`), storefront `https://shop.staging.example.com` (`/kh`), worker; Medusa 2.21.2. Live there: Cambodia seed, ABA PayWay **sandbox** (order #11 captured), order email (Resend), staff and customer Telegram bots, RustFS files, cache refresh, daily database backups (restore test passed 2026-10-04). Setup and every variable: `ecommerce/DOKPLOY_STAGING.md` (§2.5 Phase 1 variables, §7 backups, §8 go-live steps).
 
-**Phase 3 (Booking services) started 2026-11-04** (owner, F-044): `booking-services/` is a full copy of Ecommerce on Medusa **2.22.2** (the only app on 2.22.x; `ecommerce/` and `pos/` stay on 2.21.2). P3-01 to P3-17 merged by 2026-11-05 (last PR #114); next: **P3-18** phase exit checklist. Staging and production items (P1-08, P1-09, P2-14) are left for later by the owner.
+**Phase 3 (Booking services) started 2026-11-04** (owner, F-044): `booking-services/` is a full copy of Ecommerce, started on Medusa **2.22.2**; since 2026-11-06 every app is on **2.22.3** (V-01). P3-01 to P3-17 merged by 2026-11-05 (last PR #114); next: **P3-18** phase exit checklist. Staging and production items (P1-08, P1-09, P2-14) are left for later by the owner.
 
 **Phase 1 status:** done P1-01 to P1-07 and P1-10 to P1-17. Phase 1 review (2026-10-05) found two medium issues and some small ones, fixed in:
 1. `fix/ecommerce-payway-replaced-session` (merged): a PayWay payment made on a page left open was lost when Pay was pressed again (now refused / closed); contact rule checked before payment. Re-tested on staging 2026-10-05: one order (#12).
