@@ -24,7 +24,7 @@ Outside `ecommerce/`, the `Dockerfile`s and `.env.example`s are committed **read
 - [`COMPARISON.md`](./COMPARISON.md) — side-by-side comparison of all scenarios and when each fits.
 - [`BUILD_PLAN.md`](./BUILD_PLAN.md) — requirements, repo rules, app standard, Dokploy plan, per-scenario plans, **recommended build order**, update process. **Frozen.**
 - [`TASKS.md`](./TASKS.md) — development phases with a checklist per task (the living tracker).
-- [`MEDUSA_SKILL.md`](./MEDUSA_SKILL.md) — verified Medusa 2.21.2 reference with sources; the only Medusa knowledge builders may use without a fresh lookup.
+- [`MEDUSA_SKILL.md`](./MEDUSA_SKILL.md) — verified Medusa reference (2.21.2, plus 2.22.2 for `booking-services/`) with sources; the only Medusa knowledge builders may use without a fresh lookup.
 - [`DEV_FLOW.md`](./DEV_FLOW.md) — build → verify → test → evidence-based fix cycle → commit → push.
 - [`CLAUDE.md`](./CLAUDE.md) — builder entry point: reading order and non-negotiable rules.
 - [`docs/PLAN_LOCK.md`](./docs/PLAN_LOCK.md) — owner's note: the commands to unlock and lock `BUILD_PLAN.md` for Claude.
@@ -36,4 +36,4 @@ Outside `ecommerce/`, the `Dockerfile`s and `.env.example`s are committed **read
 3. **Not a monorepo.** Every deployable (backend, storefront, portal, app) is independent: own `package.json`, lockfile, `Dockerfile`, `.env.example`. Nothing is shared; clients reach their backend only over HTTP.
 4. **One business = one app.** Combine scenarios by adding modules to one app, never by syncing two apps.
 
-Baseline (checked 2026-09-25 against docs.medusajs.com, updated 2026-10-01): Medusa 2.21.2, pnpm 12.6.0, Node 22 LTS. Starters: `medusajs/dtc-starter`.
+Versions (checked 2026-11-06): Medusa 2.21.2 (`ecommerce/`, `pos/`) and 2.22.2 (`booking-services/`), Next.js 15.5.28, pnpm 12.6.0, Node `>=22.22.0`. Upstream: Medusa 2.22.3 (npm `latest`, starters on it, Node `>=22.23.4`), starter storefronts on Next.js 16. Details and update plan: `BUILD_PLAN.md` Revision 8. Starters: `medusajs/dtc-starter`, `medusajs/b2b-starter`.

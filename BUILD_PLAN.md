@@ -1,8 +1,9 @@
 # Build Plan — Medusa Apps (Pre-Build)
 
-> **Status (2026-10-04): building.** Phase 0 (foundation, staging on Dokploy) is complete. Phase 1 (Ecommerce) is built and running on staging; the production deploy (P1-08) is next. Progress, decisions and evidence live in `TASKS.md`. Every deployable folder has its `Dockerfile` and `.env.example`, and every category has a Dokploy guide in `<category>/README.md`.
-> Baseline checked 2026-09-25: **Medusa 2.21.1**, **pnpm 12.6.0**, **Node 22 LTS**. **Current pin: Medusa 2.21.2** (updated 2026-10-01 with `scripts/update-medusa.sh`; still npm `latest` on 2026-10-15). Medusa 2.22.0 (in preview) requires **Node ≥ 22.22.0**; the backends already declare it.
-> Re-check these versions on the day Phase 0 starts.
+> **Status (2026-11-06): building.** Phase 0 (foundation, staging on Dokploy) is complete. Phase 1 (Ecommerce) is built and running on staging; the production deploy (P1-08) waits on the owner. Phase 2 (POS) and Phase 3 (Booking services) code is done and passed local Podman smoke and end-to-end tests; their Dokploy staging and exit checklists (P2-14, P3-18) wait on the owner. Progress, decisions and evidence live in `TASKS.md`. Every deployable folder has its `Dockerfile` and `.env.example`, and every category has a Dokploy guide in `<category>/README.md`.
+> **Versions (checked 2026-11-06).** In this repo: Medusa **2.21.2** (`ecommerce/`, `pos/`) and **2.22.2** (`booking-services/`), Node `>=22.22.0`, Next.js **15.5.28** (every web client), pnpm **12.6.0**. Upstream: Medusa **2.22.3** is npm `latest` (2026-11-04); both official starters are on 2.22.3 with Node `>=22.23.4` and their storefronts on **Next.js 16.3.8**; Next.js 15.5.29 and pnpm 12.18.0 are out. Updates are separate tasks (§8, `TASKS.md`); the plan records what the code uses.
+>
+> **Revision 8 (2026-11-06, owner):** brings the plan in line with the work after Revision 7 (TASKS F-036 to F-054 and the first pre-deploy audit): versions above; apps may sit on different Medusa versions, each with its own exact pins (§3.2, F-044); the plan lock is a hook with an owner-only switch (§3.4, F-054); local Podman stacks and storefront changes from Phase 2–3 testing (§4.1–§4.3, F-043, F-050 to F-052); POS details (§6.2, F-036 to F-041); booking services built as a full copy of Ecommerce on Medusa 2.22.2 (§6.3, F-044 to F-049); pre-deploy audit, alerts and `pnpm audit` triage (§5, §8, `PRE_DEPLOY_AUDIT.md`); new open decisions (§10). Changed sections: header, 2, 3.2, 3.4 (new), 4.1, 4.2, 4.3, 5, 6.1, 6.2, 6.3, 6.4, 7, 8, 8.1, 10.
 >
 > **Revision 7 (2026-10-15, owner):** re-check of Medusa and the official starters (TASKS F-035, F-034): 2.21.2 is still `latest`, 2.22.0 needs Node ≥ 22.22.0; the admin RBAC API is now in the JS SDK reference but still flag-only, so cashiers, vendors and sellers stay custom actor types; `dtc-starter` dropped `generateStaticParams` upstream (§4.2 change 5 only matters for older copies; `ecommerce/storefront` and `pos` follow the starter); `b2b-starter` is on 2.21.2. Phase 2 (POS) started before the ecommerce production deploy, with `pos/backend` copied from `ecommerce/backend` (§7).
 >
@@ -53,13 +54,20 @@ medusa-apps/                        <- plain git repo, NOT a workspace
 ├── README.md
 ├── COMPARISON.md                   <- side-by-side comparison (R5)
 ├── BUILD_PLAN.md                   <- this file (R6)
+├── PRE_DEPLOY_AUDIT.md             <- 10-check audit before staging/production (§8; Revision 8)
+├── docs/                           <- owner notes, e.g. PLAN_LOCK.md (§3.4; Revision 8)
+├── .claude/                        <- builder settings and the plan lock hook (§3.4)
 ├── .github/                        <- (Phase 0) CI matrix, one entry per deployable + weekly Medusa update check (§8)
 ├── scripts/                        <- (Phase 0) plain shell scripts, no package.json
 │   ├── update-medusa.sh
-│   └── verify.sh
+│   ├── verify.sh
+│   ├── guard.sh                    <- repo guardrails (DEV_FLOW Gate 5)
+│   └── test-plan-lock.sh           <- tests the plan lock (§3.4)
 │
 ├── ecommerce/                      <- one business project = one Dokploy project
 │   ├── README.md                   <- Dokploy guide for this project
+│   ├── DOKPLOY_STAGING.md          <- click-by-click runbook (also pos/)
+│   ├── AUDIT-<date>.md             <- pre-deploy audit reports (§8)
 │   ├── backend/                    <- Medusa (server + worker)   Dockerfile, .env.example
 │   └── storefront/                 <- Next.js shop               Dockerfile, .env.example
 ├── pos/
@@ -99,6 +107,8 @@ Names are lowercase kebab-case because they become Dokploy build paths, image na
 - Duplicated boilerplate is intentional; it is the price of independent deploys.
 - Any sub-folder can be copied into its own repo and still build.
 - The backend image is deployed twice per project (server + worker); everything else once.
+- A category copied from another (POS and Booking from Ecommerce) is a full copy that then lives on its own; nothing is shared afterwards (F-034, F-044). The starter's eight generic `backend/src/*/README.md` guides are not kept (F-053).
+
 ## 3. Upstream compatibility strategy
 
 ### 3.1 Allowed extension points (official, versioned APIs)
@@ -117,14 +127,21 @@ Names are lowercase kebab-case because they become Dokploy build paths, image na
 
 ### 3.2 Version policy
 
-- All `@medusajs/*` packages that follow the Medusa release line pinned to the **exact same version** (no `^`/`~`). Exception: **`@medusajs/ui` has its own version line** (4.x while Medusa is 2.21.x); pin it to the exact version that `@medusajs/dashboard@<medusa version>` depends on, so the lockfile holds one copy (owner decision, F-006: for 2.21.1 the dashboard needs 4.2.5 while `dtc-starter` pins 4.2.4). `update-medusa.sh` reads it from the dashboard and falls back to the starter's pin. For 2.21.2 the dashboard needs 4.2.6.
+- All `@medusajs/*` packages that follow the Medusa release line pinned to the **exact same version** (no `^`/`~`). Exception: **`@medusajs/ui` has its own version line** (4.x while Medusa is 2.21.x); pin it to the exact version that `@medusajs/dashboard@<medusa version>` depends on, so the lockfile holds one copy (owner decision, F-006: for 2.21.1 the dashboard needs 4.2.5 while `dtc-starter` pins 4.2.4). `update-medusa.sh` reads it from the dashboard and falls back to the starter's pin. For 2.21.2 the dashboard needs 4.2.6; for 2.22.2 (`booking-services/backend`) 4.2.9.
 - `packageManager: "pnpm@<exact>"` in each `package.json`; the Dockerfile installs exactly that version.
 - `pnpm install --frozen-lockfile` everywhere (local CI and Docker). A build never resolves new versions on its own.
 - Only public imports: `@medusajs/framework/*`, `@medusajs/medusa/*`, `@medusajs/medusa/core-flows`, `@medusajs/admin-sdk`, `@medusajs/ui`. Never import from `dist/` paths.
+- **Each app has its own Medusa version** (Revision 8, F-044). Apps may sit on different releases (2026-11-06: `ecommerce/` and `pos/` on 2.21.2, `booking-services/` on 2.22.2); inside one app every `@medusajs/*` pin is the same exact version. A new category starts on the newest release; older apps move with `scripts/update-medusa.sh <category> <version>`, one branch each.
+- **Licensed Medusa features are not used.** Since 2.22 the RBAC module and the `auth-oidc` provider need a `MEDUSA_LICENSE_KEY` (F-042); cashiers, vendors and sellers stay custom actor types.
+- **Security updates of a dependency** (`pnpm audit --prod`): first refresh the lockfile within the ranges Medusa and the starters already allow; a `pnpm.overrides` entry is a deviation that needs owner approval and a `TASKS.md` entry (pre-deploy audit E-A6).
 
 ### 3.3 Tests that protect updates
 
 Every backend keeps a small test suite that exercises its custom code against real Medusa (integration tests via `@medusajs/test-utils`); every client must at least build against the updated backend. An update is accepted only if these pass (see §8).
+
+### 3.4 Plan lock (Revision 8, F-054)
+
+This file is frozen for the builder. `.claude/hooks/protect-build-plan.sh` (wired in `.claude/settings.json`) blocks Claude's file tools and shell writes on `BUILD_PLAN.md`, `.build-plan.sha256`, the hook and `.claude/settings.json`, unless the owner has created the git-ignored switch `.claude/plan-unlocked` in that checkout. Only the owner creates or removes it, from their own terminal (`docs/PLAN_LOCK.md`); Claude never does. `scripts/test-plan-lock.sh` tests the lock and runs in `scripts/guard.sh`; CI still fails until `.build-plan.sha256` matches, so a revision is always recorded.
 
 ---
 
@@ -197,6 +214,8 @@ allowBuilds:                 # pnpm blocks install scripts unless allowed
 | `S3_*` set | Enables `file` + `file-s3` provider (S3 and S3-compatible servers: R2, MinIO, RustFS, SeaweedFS). Containers are ephemeral, so uploads must go to S3 in production. One bucket per shop and environment (no key prefix: F-025). |
 | `S3_ACL` | Empty = Medusa's default per-file ACL; `false` = send no ACL header (needed for AWS buckets with Object Ownership "Bucket owner enforced", F-025). |
 | `STORE_CORS`, `ADMIN_CORS`, `AUTH_CORS`, `JWT_SECRET`, `COOKIE_SECRET` | Standard Medusa settings |
+| `SESSION_COOKIE_SECURE` | `false` only in the local Podman/Docker stack (plain http), so the admin session cookie isn't marked Secure; never set on Dokploy (Revision 8, F-043) |
+| `STOREFRONT_URL` | Links in account emails (verification, password reset) and the storefront cache refresh; without it sign-up emails aren't sent. Set in every environment, local stacks included (F-050) |
 
 Variable names match the official deployment guide (`MEDUSA_WORKER_MODE`, `DISABLE_MEDUSA_ADMIN`, `MEDUSA_BACKEND_URL`). Migrations run only on the server instance, like the guide's `predeploy` step; the worker never migrates.
 
@@ -274,6 +293,11 @@ Scenario-specific variables are listed in each scenario plan in §6.
   7. **Product pages render dynamically:** `export const dynamic = "force-dynamic"` on `products/[handle]/page.tsx`. The starter's `cookies()` helper swallows Next's `DynamicServerError`, so product pages returned 500 in the production image (F-015).
   8. **`outputFileTracingRoot: __dirname`** in `next.config.js`, so `server.js` lands at the standalone root on any machine (F-010).
   9. **Admin changes reach the shop without a redeploy:** the starter caches catalog fetches forever (`force-cache`). Add an on-demand route `/api/revalidate` (secret header, `revalidatePath("/", "layout")`), called by a backend subscriber on catalog events, plus `revalidate: 600` on catalog fetches as a safety net for changes without events, e.g. price lists (Ecommerce P1-10; reuse in every storefront).
+  10. **Orders are never cached:** the starter reads the customer's orders with `cache: "force-cache"`, and nothing revalidates them when staff capture, refund or cancel; `retrieveOrder` and `listOrders` use `cache: "no-store"` (Revision 8, F-052).
+  11. **No locale calls without translations:** the starter's nav calls `GET /store/locales` on every page; call it only when `STOREFRONT_LOCALES=true` (the Translation module is a feature flag we don't enable; F-051).
+  12. **Friendly errors:** `src/app/[countryCode]/error.tsx` and `src/app/global-error.tsx` show a short "Something went wrong" page; `poweredByHeader: false`; `src/lib/util/medusa-error.ts` logs status and path only, never the backend's response body or headers (pre-deploy audit E-A2, E-A4).
+- **Next.js version:** every web client is on **15.5.28** (2026-11-06; 15.5.27 had a critical Image Optimization RCE). The `dtc-starter` storefront moved to **Next.js 16** (16.3.8); moving ours is a separate starter-sync task (§8.1, §10).
+- **POS app talks to its backend server-side:** the browser calls the app's own `/api/pos/*` routes, and the app calls the backend with the cashier's token kept in an encrypted cookie (`COOKIE_SECRET`); the backend URL never reaches the browser (F-040).
 - **Dockerfile design:** same fully-qualified multi-arch base image as the backend; `pnpm install --frozen-lockfile`; `pnpm build`; runtime stage copies only `.next/standalone`, `.next/static`, `public`; runs `node server.js` as `node` user. Storefront port 8000, portals / POS app 3000.
 - **Env split:** `NEXT_PUBLIC_*` (and anything read by `next.config.js`) = **Dokploy Build-time Arguments** (declared as `ARG` in the Dockerfile); secrets and server-side URLs = **runtime variables**. Build-time URLs must be public; runtime `MEDUSA_BACKEND_URL` can be the internal Dokploy hostname (after change 6).
 
@@ -285,6 +309,9 @@ Scenario-specific variables are listed in each scenario plan in §6.
 ### 4.3 Local testing
 
 Phase 0 adds a `docker-compose.local.yml` per category (Postgres + Redis + backend + clients) for running the whole business locally. Dokploy ignores it.
+
+Revision 8 (F-043, F-050): the stacks run with Podman (`podman compose -f <category>/docker-compose.local.yml up -d --build`) or Docker. They serve plain http, so the backend sets `SESSION_COOKIE_SECURE=false`, and they set `STOREFRONT_URL` so account emails work. The storefront shares the backend's network namespace, so `localhost:9000` is the backend in the browser and in the container; host ports are the same in every category, so run one category's stack at a time. POS and Booking passed a smoke test and a browser end-to-end run in these stacks (2026-11-04/05).
+
 ## 5. Dokploy deployment plan
 
 **One category folder = one Dokploy project.** Each category README (`<category>/README.md`) has the exact service table and first-deploy order for that project.
@@ -303,6 +330,7 @@ Phase 0 adds a `docker-compose.local.yml` per category (Postgres + Redis + backe
 | **Watch paths** | Each app watches only `<category>/<app>/**`; the **worker watches `<category>/backend/**`** too (an empty box redeploys it on every push, F-019). A storefront change never rebuilds the backend, and nothing in `marketplace/` touches `pos/`. |
 | **Database backups** | Postgres → **Backups**: daily (`0 19 * * *` = 02:00 Cambodia), keep 14, to a **private** S3 bucket used only for backups, with its own access key; one prefix per project. Before go-live, restore the newest backup into a throwaway Postgres service and check that orders and products match (runbook §7). RustFS older than 1.0.0 needs the destination flag `--streaming-upload-cutoff=200M` (rustfs/rustfs#6135). |
 | **Server access** | Before production: SSH-key login only, no password login for root or any uid-0 account; no public Postgres port; OS updates applied and restarted at a quiet time. |
+| **Alerts** (Revision 8, audit E-A3) | Dokploy **Settings → Notifications** → Telegram to the staff group: **App Build Error**, **App Deploy**, **Database Backup**, **Dokploy Restart** (checked against Dokploy v0.31.0). Dokploy has no "app down" event: an uptime monitor **outside** the Dokploy server checks the backend `/health` and the shop every 1–5 minutes (owner decision pending; runbook §9.5 / Step 9). |
 
 Small projects may run one `shared` backend instance instead of server + worker.
 
@@ -327,7 +355,8 @@ Each scenario lists: custom modules (tables are prefixed to avoid collisions), l
   - Admin image uploads: SVG refused, size limit (default 0.8 MB) that admins change in **Settings → Store** up to a ceiling (default 5 MB, set by env); the admin's own in-browser check is built with the ceiling; the rules are shown on the product pages (P1-11 to P1-13, F-026, F-027).
   - Order alerts and emails list each item with its variant (e.g. `Medusa T-Shirt (L / White)`).
   - Search: the starter's `resolve-product-ids` helper is fixed for shared product options (F-023).
-  - **Contact rules (P1-14, P1-16):** Cambodia (`kh`): shipping phone required, email optional. Other countries: email required, as before. Optional Telegram contact (`@username` or phone), saved in the order's metadata (`telegram_contact`) and shown to staff. Checked in the browser and by store API middlewares, including when the cart is completed.
+  - **Abuse limits (P1-21; admin added in Revision 8, audit E-A1):** per-IP limits on customer sign-in, sign-up, forgot password, verification email and password change, and on **admin** sign-in and admin forgot password; optional CAPTCHA (`CAPTCHA_PROVIDER`) on customer sign-in and sign-up.
+  - **Contact rules (P1-14, P1-16):** Cambodia (`kh`): shipping phone required, email optional. Other countries: email required, as before. A cart with no item that needs shipping (booked services) asks only for email or phone, no address (F-048; copied into `booking-services/`). Optional Telegram contact (`@username` or phone), saved in the order's metadata (`telegram_contact`) and shown to staff. Checked in the browser and by store API middlewares, including when the cart is completed.
   - **Order updates on Telegram (P1-17):** a second, customer-facing bot. The order confirmation page offers "Get order updates on Telegram" through a signed deep link, because a bot can't message first. After the customer presses Start, the bot sends confirmed, shipped, delivered and canceled updates. Staff alerts also cover shipped, delivered and canceled.
 - **Scenario env (backend):** `UPLOAD_MAX_FILE_SIZE_MB`, `UPLOAD_MAX_FILE_SIZE_CEILING_MB` (also a **build arg**, it sets the admin's check), `RESEND_API_KEY`, `RESEND_FROM`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `STOREFRONT_URL` + `REVALIDATE_SECRET` (change 9); `TELEGRAM_CUSTOMER_BOT_TOKEN`, `TELEGRAM_CUSTOMER_BOT_USERNAME`, `TELEGRAM_CUSTOMER_WEBHOOK_SECRET`, `PAYWAY_MERCHANT_ID`, `PAYWAY_API_KEY`, `PAYWAY_API_URL` (empty = sandbox), `PAYWAY_RETURN_URL`; `STOREFRONT_URL` also sends PayWay customers back to the shop. Storefront: `REVALIDATE_SECRET`.
 - **Search (MVP, built in):** since 2.21.1 the **Search Module** is registered by default with the PostgreSQL provider. The starter already ships `src/search/product.ts` and the storefront's `@medusajs/instantsearch-adapter`, so product search needs no extra service. Move to another provider only if Postgres search is outgrown.
@@ -344,28 +373,36 @@ Each scenario lists: custom modules (tables are prefixed to avoid collisions), l
 
 ### 6.2 POS — `pos/`
 
-- **Custom module `pos`:** `pos_register` (name, code, is_active), `pos_shift` (status open/closed, opened_by, closed_by, opened_at, closed_at, currency_code, opening_cash, counted_cash, expected_cash, notes).
+- **Custom module `pos`:** `pos_register` (name, code, is_active), `pos_shift` (status open/closed, opened_by, closed_by, opened_at, closed_at, currency_code, opening_cash, counted_cash, expected_cash, notes), `pos_cashier` (name, email, is_active; the cashier actor's record, Revision 8, F-036).
+- **As built (Phase 2, Revision 8):**
+  - **Cashier sign-up is invite-only:** an admin creates the cashier first, and the registered email must match an active invitation (F-036).
+  - **Payments** all go through `pp_system_default`; each POS payment session carries `metadata.pos_payment_method` = `cash`, `card` or `qr`, and close-shift counts only `cash` (F-037, F-038). The cashier takes the money (drawer, card terminal, KHQR stand) and the sale records it.
+  - **Shifts:** any active cashier can sell on and close any open shift; the shift records who opened and closed it, and each sale its cashier (`pos_cashier_id`). Barcode lookup is an exact match on barcode, EAN, UPC or SKU (F-039).
+  - **Stock at the counter:** Medusa takes stock only on fulfilment, which needs a shipping option, so each register location gets a hidden "In store (POS)" option; stock is reserved at the register's location only. A reservation is never moved by changing its `location_id` (upstream `@medusajs/inventory` bug, still in 2.22): it is deleted and created again (F-041).
 - **Links:** register ↔ stock location (many → one), register ↔ sales channel (many → one), shift → orders (one → many).
 - **Workflows:** `open-shift` (one open shift per register), `close-shift` (compute expected cash from cash payments, store variance), `pos-checkout` — follows the official POS recipe: creates the sale as a **draft order** in the POS sales channel (core draft-order workflows; the `@medusajs/draft-order` plugin ships with the starter), applies promotions, records payment, converts it to an order and links the order to the shift.
-- **Cashier auth:** Medusa 2.21.x has **no usable admin roles**: the admin RBAC API is in the JS SDK reference (since v2.15.5), but it only works behind the flag `MEDUSA_FF_RBAC`, enabling it is not documented, and the dashboard still shows pages a role can't open (medusajs/medusa#15945), so any admin user can do everything. Cashiers are therefore a custom actor type **`cashier`** (same pattern as vendors, §6.6: `/auth/cashier/emailpass`, `authenticate("cashier", ["session", "bearer"])`), and the POS app only calls `/pos/*` routes, which run core workflows on the server. Revisit when RBAC ships.
+- **Cashier auth:** Medusa 2.21.x has **no usable admin roles**: the admin RBAC API is in the JS SDK reference (since v2.15.5), but it only works behind the flag `MEDUSA_FF_RBAC`, enabling it is not documented, and the dashboard still shows pages a role can't open (medusajs/medusa#15945), so any admin user can do everything. Cashiers are therefore a custom actor type **`cashier`** (same pattern as vendors, §6.6: `/auth/cashier/emailpass`, `authenticate("cashier", ["session", "bearer"])`), and the POS app only calls `/pos/*` routes, which run core workflows on the server. Since 2.22 RBAC needs a paid Medusa licence key (F-042), so cashiers stay a custom actor type.
 - **API routes:** `/pos/registers`, `/pos/shifts/open|close`, `/pos/checkout`, `/pos/customers` (cashier), `/admin/pos/*` (reports, register setup), barcode lookup on the variant's `barcode` / `ean` / `upc` / `sku` fields (recipe: custom route).
 - **Admin:** shift report page (per register / per cashier / per day).
 - **Client apps:** `pos/storefront` (online shop on the same stock) and `pos/pos-app` (Next.js PWA for tablets): login, barcode scan, cart, customer lookup, payment (cash / card / QR), receipt.
 - **Env:** `POS_CORS` (POS app origin, applied by a CORS middleware on `/pos/*`, which the built-in CORS settings don't cover). `AUTH_CORS` also includes the POS app. `ADMIN_CORS` stays admin-only.
-- **Card payments:** the recipe suggests a terminal provider (e.g. Stripe Terminal) as a payment provider; decided under D1.
+- **Card payments:** the recipe suggests a terminal provider (e.g. Stripe Terminal) as a payment provider; decided under D1. Until then card and QR sales are recorded as above (F-038).
+- **POS app ↔ backend:** server-side only, through the app's `/api/pos/*` (§4.2, F-040).
 - **Later:** offline queue in the POS app, click-and-collect, in-store returns of online orders.
 - **Acceptance:** a sale at a register reduces stock at that shop's location only; a shift closes with a correct cash variance.
 
 ### 6.3 Booking services — `booking-services/`
 
-- **Custom module `booking`:** `booking_resource` (name, type staff/room/equipment/venue, capacity, timezone, is_active), `booking_schedule` (weekday, start_time, end_time), `booking` (starts_at, ends_at in UTC, status pending/confirmed/cancelled/expired/completed/no_show, hold_expires_at, customer_id, cart_id, line_item_id, notes).
+- **Built as a full copy of Ecommerce** (`ecommerce/backend` and `ecommerce/storefront`, with PayWay, Resend, Telegram, Cambodia rules) on **Medusa 2.22.2**, the newest release at the start of Phase 3 (owner, F-044). Code done 2026-11-05 (P3-01 to P3-17).
+- **Custom module `booking`:** `booking_resource` (name, type staff/room/equipment/venue, capacity, timezone, is_active), `booking_schedule` (weekday, start_time, end_time), `booking` (starts_at, ends_at in UTC, status pending/confirmed/cancelled/expired/completed/no_show, hold_expires_at, customer_id, cart_id, line_item_id, notes). As built (Revision 8): each booking also has its `resource_id` and a nullable `reminder_sent_at`; one booking takes one place of the resource's capacity; schedule times are zero-padded `"HH:MM"` text with database checks, weekday 0–6 with 0 = Sunday (F-045, F-046).
 - **Links:** resource ↔ product variant (many ↔ many: which services a resource offers), booking → order (many → one).
 - **Service methods:** `isSlotAvailable` (overlap + capacity; pending holds count only until they expire), `createHold`.
 - **Hooks / workflows:** `addToCartWorkflow` `validate` hook → slot must be available; `add-booking-to-cart` workflow creates the hold and the line item together (compensation removes the hold); `completeCartWorkflow` `validate` hook re-checks the hold — read-only (the reference forbids mutating the cart in this hook) and a hold owned by the same cart counts as valid, so a retried completion stays idempotent; subscriber `order.placed` → confirm bookings and link to order; `cancel-booking` workflow applies the cancellation policy and triggers the refund.
 - **Line-item changes:** `updateLineItemInCartWorkflow` `validate` hook blocks quantity changes on booking items above the slot's capacity (or blocks them outright). Removing the item leaves the hold to expire.
 - **Hold vs. payment:** extend the hold when the payment session is created, so a slow card payment doesn't expire mid-checkout. If the hold still expires, the `completeCartWorkflow` validation fails and the docs guarantee the authorized payment is reverted automatically.
 - **Jobs:** release expired holds (every minute); reminders 24 h before.
-- **API routes:** `GET /store/booking/availability`, `GET /store/booking/slots` (free slots for service + date), `POST /store/booking/cancel`.
+- **API routes:** `GET /store/booking/availability`, `GET /store/booking/slots` (free slots for service + date), `POST /store/booking/cancel`; added in Revision 8: `POST /store/booking/cart` (puts a chosen slot in the cart through `add-booking-to-cart`, since the core line-item route can't create a hold; F-047) and `GET /store/customers/me/bookings` (the account's booking list; F-049).
+- **Contact for service-only carts:** email or phone, no address (§6.1, F-048).
 - **Admin:** day/week calendar per resource; walk-in booking.
 - **Client app:** `booking-services/storefront` — starter + service pages, slot picker, booking management in the customer account.
 - **Env:** `BOOKING_HOLD_MINUTES` (default 15), `BOOKING_DEFAULT_TIMEZONE`, `BOOKING_CANCEL_HOURS`.
@@ -375,7 +412,7 @@ Each scenario lists: custom modules (tables are prefixed to avoid collisions), l
 
 ### 6.4 Wholesale — `wholesale/`
 
-- **Start from the official B2B starter** (`medusajs/b2b-starter`, on Medusa 2.21.2, Node ≥ 22.22.0): copy its `apps/backend` into `wholesale/backend` (modules `company`, `quote`, `approval`) and its `apps/storefront` into `wholesale/storefront`, applying the same starter changes as §4.2. Extend its modules; don't rebuild them.
+- **Start from the official B2B starter** (`medusajs/b2b-starter`; on 2026-11-06 at Medusa **2.22.3**, Node `>=22.23.4`, storefront on Next.js 16.3.8; record the commit copied): copy its `apps/backend` into `wholesale/backend` (modules `company`, `quote`, `approval`) and its `apps/storefront` into `wholesale/storefront`, applying the same starter changes as §4.2. Extend its modules; don't rebuild them.
 - **Modules (from the starter, extended):** `company` + `employee` (add payment_terms prepaid/net_15/net_30/net_60, credit_limit, tax_id, status), `quote` and `approval` in the **MVP** (they come with the starter).
 - **Links:** employee ↔ customer (one ↔ one), company ↔ customer group (the price tier).
 - **Catalog scope (recipe):** a B2B **sales channel** + its own publishable key, so the B2B storefront only sees B2B products.
@@ -432,6 +469,10 @@ Rules for the order:
 - **Inside each phase, build backend first, then storefront, then portal / app.** A client is only started once the backend API it needs exists.
 - **Each phase ends with:** CI gate green for every deployable in the category; the whole category deployed to a Dokploy staging project using only its committed `Dockerfile`s and `.env.example`s; one Medusa update done with `scripts/update-medusa.sh`; each app redeployed alone once to prove independence.
 - **Do not start two "L" phases at the same time.**
+- **Staging may wait (owner, Revision 8; F-034, F-044):** Phases 2 and 3 started before Phase 1's production deploy. A phase's code can be finished and merged while its Dokploy staging run and exit checklist wait for the owner; those items stay open in `TASKS.md` (P1-08/P1-09, P2-14, P3-18) and are done before that category goes live.
+
+**Status 2026-11-06:** Phase 0 done; Phase 1 on staging, production waiting; Phase 2 and Phase 3 code done (local Podman tests passed), staging and exit waiting; Phases 4–6 not started.
+
 ## 8. Update and release process
 
 ```
@@ -453,6 +494,7 @@ Per deployable, the script will:
 
 Release:
 
+0. **Pre-deploy audit** (Revision 8): before a category's first staging or production deploy, run `PRE_DEPLOY_AUDIT.md` for it (10 checks: authorization, reset tokens, input, CORS, rate limits, errors, indexes, logging, secrets, rollback, plus `pnpm audit --prod`). The report goes in `<category>/AUDIT-<date>.md`; every FIX becomes a `TASKS.md` task; the category goes live only when every row is PASS, N/A or an owner-accepted RISK (first report: `ecommerce/AUDIT-2026-11-05.md`).
 1. Read the Medusa release notes for every version skipped (breaking changes are called out there) and run any codemod they list (e.g. `replace-zod-imports` for v2.13).
 2. **Back up the app's database.** The docs' official revert is `medusa db:rollback <module…>` for each module that migrated, then reinstall the old versions; the backup is the fallback when a rollback isn't clean. The daily backups (§5) run regardless; this is an extra backup taken right before the release.
 3. If the release removes or changes links or search indexes, run `medusa db:sync-links --execute-all` / `medusa db:migrate:search --execute-all-search` by hand from the Dokploy terminal after reviewing the plan they print (the entrypoint only applies safe changes).
@@ -467,6 +509,8 @@ Automation (Phase 0): Dependabot supports pnpm v7–v10 only and this repo pins 
 ### 8.1 Storefront / portal starter updates
 
 The `dtc-starter` (backend and storefront) is copied, not installed. Each client's README records the starter commit it was copied from. To take upstream starter improvements: diff the starter between the recorded commit and its latest commit, apply the relevant parts by hand, update the recorded commit. Medusa package updates for clients go through the normal update script.
+
+**Pending starter syncs (Revision 8):** the `dtc-starter` and `b2b-starter` storefronts moved to **Next.js 16** (16.3.8), and both starters to Medusa 2.22.3 with Node `>=22.23.4`. Ours stay on Next.js 15.5.x until that sync is done as its own task, one category at a time (§10 D7). Next.js security patches on the 15.5 line are applied as they come (15.5.28 on 2026-11-06).
 ## 9. Verified technical notes (from a prototype spike)
 
 A throwaway prototype was built on Medusa 2.21.1 + pnpm 12.6.0 to test this plan. The code was not kept (this repo is plan-only), but these findings are confirmed and must be followed in Phase 0:
@@ -505,7 +549,11 @@ A throwaway prototype was built on Medusa 2.21.1 + pnpm 12.6.0 to test this plan
 | R-c | Duplicated boilerplate drifts between folders → Phase 0 `verify.sh` also diffs the standard files across folders | ongoing |
 | R-d | Client built against an old publishable key or backend URL → keys and URLs are build args; changing them means rebuilding that client (documented in each `.env.example`) | ongoing |
 | R-f | Official starters/recipes change (e.g. the v2.14 move to `dtc-starter`) → re-check docs.medusajs.com and the starter repos at the start of every phase, not only Medusa package versions | every phase |
-| R-g | No usable admin roles in 2.21.x → every admin user has full access; cashiers, vendors and sellers never get admin users (custom actor types instead). RBAC exists behind the flag `MEDUSA_FF_RBAC` and its admin API is in the JS SDK reference, but enabling it is not documented; re-evaluate when Medusa documents enabling it (F-001, F-035) | Phase 2 |
+| R-g | No usable admin roles in 2.21.x → every admin user has full access; cashiers, vendors and sellers never get admin users (custom actor types instead). RBAC exists behind the flag `MEDUSA_FF_RBAC` and its admin API is in the JS SDK reference, but enabling it is not documented; since 2.22 it also needs a paid `MEDUSA_LICENSE_KEY` (F-001, F-035, F-042) | Phase 2 |
+| D7 | Next.js 16 for our web clients: follow the starters' move (§8.1) as one task per category, or stay on 15.5.x with security patches (Revision 8) | before Phase 4 |
+| D8 | "App down" alerts: which uptime monitor runs outside the Dokploy server (§5 Alerts; recommended: a hosted monitor alerting the staff Telegram) | before production |
+| R-i | Dependency advisories inside `@medusajs/*` that Medusa's own ranges can't fix yet (2026-11-06: `zod` 4.2.0 pinned by the starter, `lodash` and `@graphql-tools/utils` via the build-time `@graphql-codegen`) → accepted as low risk and re-checked on every Medusa update (§3.2, audit E-A6) | every update |
+| R-j | Apps on different Medusa versions drift apart (2.21.2 vs 2.22.2) → `MEDUSA_SKILL.md` records facts per version; move older apps forward with `scripts/update-medusa.sh` (§3.2) | ongoing |
 | R-h | Two server replicas migrating at once (only per-module advisory locks, F-004) → scale to 1 during deploys | every deploy |
 | R-e | Worker and server accidentally both run migrations → worker env always has `RUN_MIGRATIONS=false` (in every backend `.env.example`) | every deploy |
 
