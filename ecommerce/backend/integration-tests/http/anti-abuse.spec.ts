@@ -64,6 +64,27 @@ medusaIntegrationTestRunner({
           delete process.env.SHOPPER_IP_SECRET
         }
       })
+
+      it("limits admin sign-in and admin forgot password per IP (audit E-A1)", async () => {
+        const login = (ip: string) => post("/auth/user/emailpass", { email: "nobody@example.com", password: "wrong-pass-1" }, ip)
+        for (let i = 0; i < AUTH_LIMITS.login; i++) {
+          expect((await login("203.0.113.30")).status).toEqual(401)
+        }
+        const blocked = await login("203.0.113.30")
+        expect(blocked.status).toEqual(429)
+        expect(Number(blocked.headers["retry-after"])).toBeGreaterThan(0)
+        expect((await login("203.0.113.31")).status).toEqual(401)
+
+        const reset = (ip: string) =>
+          api
+            .post("/auth/user/emailpass/reset-password", { identifier: "nobody@example.com" }, { headers: { "x-test-ip": ip, accept: "text/plain" } })
+            .then((r) => r.status)
+            .catch((e) => e.response.status)
+        for (let i = 0; i < AUTH_LIMITS.password_reset; i++) {
+          expect(await reset("203.0.113.40")).toBeLessThan(300)
+        }
+        expect(await reset("203.0.113.40")).toEqual(429)
+      })
     })
 
     describe("Cleanup of never-verified sign-ups (TASKS P1-21)", () => {
