@@ -49,6 +49,15 @@ MARKERS=$(git grep -nE '^(<<<<<<<|>>>>>>>|\|\|\|\|\|\|\|)( |$)' -- . 2>/dev/null
 [ -z "$MARKERS" ] && pass "no merge conflict markers" || fail "merge conflict markers:
 $MARKERS"
 
+# 3a. The plan lock still works: locked by default, unlocked only by the
+#     owner's .claude/plan-unlocked switch (owner, 2026-11-06).
+if LOCK_OUT=$(bash scripts/test-plan-lock.sh 2>&1); then
+  pass "plan lock ($(printf '%s\n' "$LOCK_OUT" | tail -n 1 | sed 's/^-* *//'))"
+else
+  fail "plan lock test failed:
+$(printf '%s\n' "$LOCK_OUT" | grep -E '^FAIL')"
+fi
+
 DEPLOYABLES=$(list_deployables)
 [ -n "$DEPLOYABLES" ] || { echo "no deployables with package.json for '$TARGET'"; exit $FAILED; }
 

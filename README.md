@@ -27,6 +27,7 @@ Outside `ecommerce/`, the `Dockerfile`s and `.env.example`s are committed **read
 - [`MEDUSA_SKILL.md`](./MEDUSA_SKILL.md) — verified Medusa 2.21.2 reference with sources; the only Medusa knowledge builders may use without a fresh lookup.
 - [`DEV_FLOW.md`](./DEV_FLOW.md) — build → verify → test → evidence-based fix cycle → commit → push.
 - [`CLAUDE.md`](./CLAUDE.md) — builder entry point: reading order and non-negotiable rules.
+- [`docs/PLAN_LOCK.md`](./docs/PLAN_LOCK.md) — owner's note: the commands to unlock and lock `BUILD_PLAN.md` for Claude.
 
 ## Principles
 

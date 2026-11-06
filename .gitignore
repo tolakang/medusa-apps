@@ -1,2 +1,5 @@
 # macOS
 .DS_Store
+
+# Owner-only switch that lets Claude edit the frozen plan (.claude/hooks/protect-build-plan.sh). Local only.
+.claude/plan-unlocked
