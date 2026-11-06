@@ -332,6 +332,18 @@ First audit: `ecommerce/AUDIT-2026-11-05.md` (ecommerce @ `e2d8090`, verdict NO-
 
 ---
 
+## Version updates · plan Revision 8 (§3.2, §8, §8.1)
+
+Checked 2026-11-06. Each item is its own branch and PR, through `scripts/update-medusa.sh` / DEV_FLOW gates.
+
+- [ ] V-01 Medusa **2.22.3** (npm `latest`, 2026-11-04): first verify its release notes and installed `.d.ts` into `MEDUSA_SKILL.md` §1; then `ecommerce/` and `pos/` 2.21.2 → 2.22.3 and `booking-services/` 2.22.2 → 2.22.3; Node `>=22.23.4` as both starters. Re-check F-041 (`updateReservationItems_`).
+- [ ] V-02 Next.js 15.5.28 → **15.5.29** (2026-11-03) in the three storefronts and `pos/pos-app`.
+- [ ] V-03 pnpm 12.6.0 → **12.18.0** (`packageManager` in every app, Dockerfiles install it).
+- [ ] V-04 **Next.js 16** starter sync (plan §8.1, D7): the starters' storefronts are on 16.3.8. Owner decides; one category per PR.
+- [ ] V-05 = E-A6 (lockfile refresh within Medusa's ranges), owner to confirm.
+
+---
+
 ## Phase 4: Wholesale · plan §6.4
 
 **Backend (from `medusajs/b2b-starter` `apps/backend`)**
@@ -399,7 +411,7 @@ First audit: `ecommerce/AUDIT-2026-11-05.md` (ecommerce @ `e2d8090`, verdict NO-
 
 ## Session handoff (2026-10-05): start here in a new session
 
-Current position (updated 2026-11-04): **Phase 1 (Ecommerce) built and running on staging; production (P1-08) waits on the owner's values (`ecommerce/DOKPLOY_STAGING.md` §11). Phase 2 (POS) started in parallel (F-034): P2-01 to P2-13 done; P2-14 repo part done, waiting on the owner's `pos-staging` run (`pos/DOKPLOY_STAGING.md`, start at Step 0), which the owner deferred on 2026-11-04 ("I will do it later"); local Podman smoke and e2e passed the same day (see P2-14).** Every merge first gets the skill check of DEV_FLOW §7.1. Phase 0 is complete (P0-01 to P0-20). Plan: `BUILD_PLAN.md` **Revision 7** (2026-10-15, owner-approved; Revision 6 was 2026-10-04) matches this file; the plan lock is on (locked unless the owner creates `.claude/plan-unlocked`, F-054).
+Current position (updated 2026-11-04): **Phase 1 (Ecommerce) built and running on staging; production (P1-08) waits on the owner's values (`ecommerce/DOKPLOY_STAGING.md` §11). Phase 2 (POS) started in parallel (F-034): P2-01 to P2-13 done; P2-14 repo part done, waiting on the owner's `pos-staging` run (`pos/DOKPLOY_STAGING.md`, start at Step 0), which the owner deferred on 2026-11-04 ("I will do it later"); local Podman smoke and e2e passed the same day (see P2-14).** Every merge first gets the skill check of DEV_FLOW §7.1. Phase 0 is complete (P0-01 to P0-20). Plan: `BUILD_PLAN.md` **Revision 8** (2026-11-06, owner-approved; takes in F-036 to F-054 and the pre-deploy audit; Revision 7 was 2026-10-15) matches this file; the plan lock is on (locked unless the owner creates `.claude/plan-unlocked`, F-054).
 
 **Staging (Dokploy project `ecommerce-staging`):** backend `https://api.staging.example.com` (admin `/app`), storefront `https://shop.staging.example.com` (`/kh`), worker; Medusa 2.21.2. Live there: Cambodia seed, ABA PayWay **sandbox** (order #11 captured), order email (Resend), staff and customer Telegram bots, RustFS files, cache refresh, daily database backups (restore test passed 2026-10-04). Setup and every variable: `ecommerce/DOKPLOY_STAGING.md` (§2.5 Phase 1 variables, §7 backups, §8 go-live steps).
 
