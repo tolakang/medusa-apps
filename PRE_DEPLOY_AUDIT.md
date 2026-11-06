@@ -138,7 +138,7 @@ Check:
 - A database backup ran successfully before the production deploy, and one restore has been tested (README "Database backups", runbook §7).
 - Versioning: the deploy is a known git commit on `main` (CI `ci-ok` green). Production promotes **the same commit** that passed staging. Record the previous good commit so a redeploy of it is one click.
 - `@medusajs/*` pins are exact and identical across the deployable; `pnpm install --frozen-lockfile` works (guard check 4, Gate 1).
-- Dependency vulnerabilities: run `pnpm audit --prod` in each deployable. Any high or critical item → FIX (an update through `scripts/update-medusa.sh` or a pinned bump) or a recorded RISK.
+- Dependency vulnerabilities: run `pnpm audit --prod` in each deployable. Any high or critical item → FIX or a recorded RISK, in this order (plan §3.2): (1) a direct dependency of ours → bump its exact pin; (2) a transitive one → refresh the lockfile within the ranges Medusa and the starter already allow (`pnpm update <pkg…> --depth 99`, `@medusajs/*` pins unchanged; done for E-A6 on 2026-11-06); (3) still open → a Medusa update (`scripts/update-medusa.sh`) or an owner-accepted RISK in plan §10 (R-i). A `pnpm.overrides` entry is a deviation that needs owner approval.
 
 ---
 

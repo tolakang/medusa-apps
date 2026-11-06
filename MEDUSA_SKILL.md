@@ -69,7 +69,7 @@ Released 2026-10-30, npm `latest` on 2026-11-04. Installed in `booking-services/
 | Change | What it means here | Source |
 |---|---|---|
 | `@medusajs/ui` **4.2.9** (dashboard dependency); Node ≥ 22.22.0 unchanged | Pinned by the update script (§1 Versioning) | `npm view @medusajs/dashboard@2.22.2 dependencies`; `npm view @medusajs/medusa@2.22.2 engines` |
-| The admin builds with **Vite 7.3.7**; "if you have it installed in your project, make sure to update it" | The backend declares `vite` itself: raised to `^7.3.7` (as the 2.22.2 `dtc-starter` backend), so the lockfile holds one Vite | release notes; `booking-services/backend/pnpm-lock.yaml` |
+| The admin builds with **Vite 7.3.7**; "if you have it installed in your project, make sure to update it" | The backend declares `vite` itself: raised to `^7.3.7` (as the 2.22.2 `dtc-starter` backend), so the lockfile holds one Vite. `ecommerce/` and `pos/` (2.21.2) moved to `^7.3.7` too on 2026-11-06 (the 7.3.7 patch is a `pnpm audit` fix, TASKS E-A6) | release notes; the three backends' `pnpm-lock.yaml` |
 | `bignumber.js` 11: `BigNumber` / `MathBN` throw on invalid values instead of returning `NaN` | `new BigNumber(NaN)` already threw on 2.21.2 (checked in the installed `pos/backend`). Our only use, the PayWay callback amount, behaves the same | release notes; `node -e` check in both apps |
 | An invalid `bodyParser.sizeLimit` in a route's middleware config throws when the route is called | We set no `sizeLimit` | release notes; `grep` |
 | `@medusajs/ui-preset` no longer ships `@tailwindcss/forms` | Our storefronts load only `tailwindcss-radix` | release notes; `storefront/tailwind.config.js` |

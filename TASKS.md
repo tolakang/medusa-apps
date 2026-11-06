@@ -328,7 +328,7 @@ First audit: `ecommerce/AUDIT-2026-11-05.md` (ecommerce @ `e2d8090`, verdict NO-
 - [x] E-A2 Storefront `error.tsx` under `[countryCode]` + root `global-error.tsx`; `poweredByHeader: false`. — branch `fix/storefront-errors`; verify PASS ×3.
 - [x] E-A4 Storefront `medusa-error.ts` logs status + path only, not the backend's response body and headers. — same branch.
 - [~] E-A3 Alerts. — Dokploy Telegram notifications added to both runbooks (`ecommerce/DOKPLOY_STAGING.md` §9.5, `pos/DOKPLOY_STAGING.md` Step 9), checked against Dokploy v0.31.0 source. **Waits on the owner:** turn them on in Dokploy, and decide the "app down" monitor (recommended: a hosted uptime monitor outside the Dokploy server, alerting the staff Telegram).
-- [ ] E-A6 Backend `pnpm audit` highs, all through `@medusajs/*`. Recommended (owner to confirm): refresh the lockfiles within Medusa's own ranges (tried on a scratch copy: 11 → 4 high, `@medusajs/*` pins unchanged; fixes `body-parser`, `multer`, `follow-redirects`, `vite`, `source-map-js`), then accept the rest as RISK: `lodash` + `@graphql-tools/utils` (only via `@graphql-codegen`, build-time types) and `zod 4.2.0` (pinned by the official dtc-starter even on Medusa 2.22.3; request bodies are size-limited). Recheck on every Medusa update.
+- [x] E-A6 Backend `pnpm audit` highs, all through `@medusajs/*`. — **done 2026-11-06** (owner: "go E-A6"; branch `fix/backend-lockfile-advisories`): lockfiles of the three backends refreshed within Medusa's own ranges (`pnpm update body-parser multer follow-redirects vite source-map-js --depth 99`); `vite` range `^7.3.6` → `^7.3.7` in ecommerce and pos (as booking-services already had); every `@medusajs/*` pin unchanged; `pnpm install --frozen-lockfile` OK. `pnpm audit --prod`: **11 → 4 high** in ecommerce and pos, **9 → 4** in booking-services. Verify gate: ecommerce PASS (114 unit, 32 module, 46 HTTP), booking-services PASS (153, 63, 95), pos 126 unit + 36 module + 74/75 HTTP: `search.spec.ts` timed out waiting for the search index under full-suite load (passes 2/2 alone; no index package changed). The 4 left are accepted RISK (plan §10 R-i): `lodash` + `@graphql-tools/utils` (only via `@graphql-codegen`, build-time types) and `zod 4.2.0` (pinned by the official dtc-starter even on Medusa 2.22.3; request bodies are size-limited). Recheck on every Medusa update (V-01).
 
 ---
 
@@ -340,7 +340,7 @@ Checked 2026-11-06. Each item is its own branch and PR, through `scripts/update-
 - [ ] V-02 Next.js 15.5.28 → **15.5.29** (2026-11-03) in the three storefronts and `pos/pos-app`.
 - [ ] V-03 pnpm 12.6.0 → **12.18.0** (`packageManager` in every app, Dockerfiles install it).
 - [ ] V-04 **Next.js 16** starter sync (plan §8.1, D7): the starters' storefronts are on 16.3.8. Owner decides; one category per PR.
-- [ ] V-05 = E-A6 (lockfile refresh within Medusa's ranges), owner to confirm.
+- [x] V-05 = E-A6 (lockfile refresh within Medusa's ranges). — done 2026-11-06, see E-A6.
 
 ---
 
