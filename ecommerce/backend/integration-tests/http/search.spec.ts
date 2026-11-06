@@ -49,7 +49,7 @@ medusaIntegrationTestRunner({
       // Indexing runs on events, so wait until the index has caught up.
       const searchUntil = async (q: string, done: (hits: Hit[]) => boolean) => {
         let hits: Hit[] = []
-        for (let attempt = 0; attempt < 40; attempt++) {
+        for (let attempt = 0; attempt < 60; attempt++) {
           hits = await search(q)
           if (done(hits)) {
             return hits
@@ -105,7 +105,7 @@ medusaIntegrationTestRunner({
           input: { id: otherKey.id, add: [emptyChannel.id] },
         })
         expect(await search("", otherKey.token)).toHaveLength(0)
-        expect(await search("")).toHaveLength(4)
+        expect(await searchUntil("", (h) => h.length >= 4)).toHaveLength(4)
 
         // Drafts are never returned.
         const {
