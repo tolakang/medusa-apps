@@ -64,7 +64,7 @@ export async function addBookingToCart(input: {
   } catch (e) {
     return { error: (e as { message?: string })?.message ?? "This time can't be booked." }
   }
-  revalidateTag(await getCacheTag("carts"))
+  revalidateTag(await getCacheTag("carts"), { expire: 0 })
   return {}
 }
 
@@ -98,7 +98,7 @@ export async function setServiceContact(_state: unknown, formData: FormData): Pr
   } catch (e) {
     return (e as { message?: string })?.message ?? "Could not save your details."
   }
-  revalidateTag(await getCacheTag("carts"))
+  revalidateTag(await getCacheTag("carts"), { expire: 0 })
   redirect(`/${String(formData.get("country_code") ?? "")}/checkout?step=payment`)
 }
 

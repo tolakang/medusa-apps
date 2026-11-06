@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@medusajs/js-sdk": "2.22.3",
-    "next": "15.5.28",
+    "next": "16.4.5",
     "react": "19.0.5",
     "react-dom": "19.0.5",
     "server-only": "0.0.1"
