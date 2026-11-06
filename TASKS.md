@@ -338,7 +338,7 @@ Checked 2026-11-06. Each item is its own branch and PR, through `scripts/update-
 
 - [x] V-01 Medusa **2.22.3** (npm `latest`, 2026-11-04). — **done 2026-11-06** (branch `chore/medusa-2.22.3`): release notes and installed packages checked into `MEDUSA_SKILL.md` §1.3; `scripts/update-medusa.sh all 2.22.3` (ecommerce and pos from 2.21.2, booking-services from 2.22.2; `@medusajs/ui` 4.2.10); Node engines `>=22.23.4` in all 7 apps; `verify: PASS (all)` (ecommerce 114/32/46, pos 126/36/75, booking 153/63/95; every client builds). `pnpm audit --prod` backends 4 → 1 high (`zod` only). F-041 re-checked: still not fixed, POS workaround stays.
 - [ ] V-02 Next.js 15.5.28 → **15.5.29** (2026-11-03) in the three storefronts and `pos/pos-app`.
-- [ ] V-03 pnpm 12.6.0 → **12.18.0** (`packageManager` in every app, Dockerfiles install it).
+- [x] V-03 pnpm 12.6.0 → **12.17.0** (`packageManager` in all 7 apps; Dockerfiles and CI read it). — **done 2026-11-06** (branch `chore/pnpm-12.17`): every app installs with `--frozen-lockfile` (the lockfiles change only pnpm's own `packageManager` entries); backend build, POS app build, ecommerce and booking storefront verify PASS. 12.18.0 (released 2026-11-05) was skipped on purpose: a package manager runs every install, so take a release once it is about a week old.
 - [ ] V-04 **Next.js 16** starter sync (plan §8.1, D7): the starters' storefronts are on 16.3.8. Owner decides; one category per PR.
 - [x] V-05 = E-A6 (lockfile refresh within Medusa's ranges). — done 2026-11-06, see E-A6.
 
