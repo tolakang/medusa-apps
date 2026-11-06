@@ -13,10 +13,9 @@ export default function medusaError(error: unknown): never {
   const err = error as MedusaError
   if (err.response) {
     const u = new URL(err.config?.url ?? "", err.config?.baseURL ?? "")
-    console.error("Resource:", u.toString())
-    console.error("Response data:", err.response.data)
-    console.error("Status code:", err.response.status)
-    console.error("Headers:", err.response.headers)
+    // Status and path only: the response body and headers can carry
+    // personal data or cookies (pre-deploy audit E-A4).
+    console.error(`Medusa request failed: ${err.response.status} ${u.pathname}`)
 
     const data = err.response.data
     const message =

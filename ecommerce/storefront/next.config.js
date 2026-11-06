@@ -19,6 +19,8 @@ const nextConfig = {
   // standalone root even if a parent folder holds another lockfile.
   outputFileTracingRoot: __dirname,
   reactStrictMode: true,
+  // No X-Powered-By header (pre-deploy audit E-A2).
+  poweredByHeader: false,
   logging: {
     fetches: {
       fullUrl: true,
