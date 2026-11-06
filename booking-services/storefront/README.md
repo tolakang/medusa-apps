@@ -4,7 +4,7 @@ Customer storefront for the booking services business project (BUILD_PLAN §6.3)
 
 **Copied from `ecommerce/storefront` at `main` `26c3d97`** (TASKS Phase 3, owner 2026-11-04: full copy of Ecommerce, on the latest Medusa; F-044). It talks to `booking-services/backend`, which has the same store routes, so PayWay checkout, the Cambodia address and phone rules, Telegram contact, CAPTCHA, wishlist, account emails and revalidation work the same here. Changes from the copy:
 - Package name `booking-services-storefront`; the Dockerfile, `.env.example` and comments name `booking-services/*`.
-- `@medusajs/*` packages moved to **2.22.2** with `scripts/update-medusa.sh booking-services 2.22.2`. Next.js stays **15.5.27** (the 2.22.2 starter is on Next.js 16.3.8; moving is a separate decision, F-044).
+- `@medusajs/*` packages moved to **2.22.2** with `scripts/update-medusa.sh booking-services 2.22.2`. Since 2026-11-06 on **2.22.3** (`scripts/update-medusa.sh all 2.22.3`, TASKS V-01) and Next.js **16.4.5** (the ecommerce README's Next.js 16 sync applies here too, TASKS V-04).
 - `.guard-baseline` is `159252e ecommerce/storefront`: the starter's type suppressions came with the copy, and `scripts/guard.sh` compares against that app at the starter import.
 
 Service pages, the slot picker and booking management come in P3-13. The ecommerce notes below apply unchanged.

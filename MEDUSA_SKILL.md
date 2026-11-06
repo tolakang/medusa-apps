@@ -60,7 +60,7 @@ Checked **2026-10-26** in the published 2.22.1 packages (rank 1, unpacked outsid
 
 **Not fixed in 2.22.1:** the `updateReservationItems` location bug (§6 "Stock, reservations and fulfilment", F-041). `updateReservationItems_` is unchanged between 2.21.2 and 2.22.1 (`@medusajs/inventory` `dist/services/inventory-module.js`, diffed), so the delete-and-recreate workaround stays.
 
-**Starters:** both moved to 2.22.1, and their storefronts to **Next.js 16** (§1 Starters row). Syncing our two storefronts to Next.js 16 is a separate task from the Medusa package update.
+**Starters:** both moved to 2.22.1, and their storefronts to **Next.js 16** (§1 Starters row). Our storefronts followed on 2026-11-06: Next.js 16.4.5 with the starter's `6b95717` migration (TASKS V-04).
 
 ### 1.2 2.22.2 (booking-services 2026-11-04 to 2026-11-06; everything here still applies on 2.22.3)
 

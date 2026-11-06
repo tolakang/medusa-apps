@@ -337,9 +337,9 @@ First audit: `ecommerce/AUDIT-2026-11-05.md` (ecommerce @ `e2d8090`, verdict NO-
 Checked 2026-11-06. Each item is its own branch and PR, through `scripts/update-medusa.sh` / DEV_FLOW gates.
 
 - [x] V-01 Medusa **2.22.3** (npm `latest`, 2026-11-04). — **done 2026-11-06** (branch `chore/medusa-2.22.3`): release notes and installed packages checked into `MEDUSA_SKILL.md` §1.3; `scripts/update-medusa.sh all 2.22.3` (ecommerce and pos from 2.21.2, booking-services from 2.22.2; `@medusajs/ui` 4.2.10); Node engines `>=22.23.4` in all 7 apps; `verify: PASS (all)` (ecommerce 114/32/46, pos 126/36/75, booking 153/63/95; every client builds). `pnpm audit --prod` backends 4 → 1 high (`zod` only). F-041 re-checked: still not fixed, POS workaround stays.
-- [ ] V-02 Next.js 15.5.28 → **15.5.29** (2026-11-03) in the three storefronts and `pos/pos-app`.
+- [x] V-02 Next.js 15.5.28 → 15.5.29. — superseded by V-04 (16.4.5 carries the same 2026-11-03 fixes).
 - [x] V-03 pnpm 12.6.0 → **12.17.0** (`packageManager` in all 7 apps; Dockerfiles and CI read it). — **done 2026-11-06** (branch `chore/pnpm-12.17`): every app installs with `--frozen-lockfile` (the lockfiles change only pnpm's own `packageManager` entries); backend build, POS app build, ecommerce and booking storefront verify PASS. 12.18.0 (released 2026-11-05) was skipped on purpose: a package manager runs every install, so take a release once it is about a week old.
-- [ ] V-04 **Next.js 16** starter sync (plan §8.1, D7): the starters' storefronts are on 16.3.8. Owner decides; one category per PR.
+- [x] V-04 **Next.js 16** starter sync (plan §8.1, D7). — **done 2026-11-06** (owner: "update all … to the latest"; branch `chore/nextjs-16`): `dtc-starter` `6b95717` applied to the three storefronts (ESLint flat config, `default.tsx` slots, async `params`, `revalidateTag(tag, { expire: 0 })` (110 calls in the three storefronts), tsconfig) and `next` 16.4.5 in them and `pos/pos-app`. `verify` PASS ×4. Podman: booking-services stack rebuilt from its Dockerfiles on Medusa 2.22.3 + Next.js 16.4.5, smoke 17/17, account sign-in page and service booking picker render, no console errors. `pnpm lint` now runs ESLint 9 flat config and reports existing starter-code issues (not a gate).
 - [x] V-05 = E-A6 (lockfile refresh within Medusa's ranges). — done 2026-11-06, see E-A6.
 
 ---
