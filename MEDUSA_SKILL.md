@@ -1,6 +1,6 @@
 # Medusa v2 Skill: Verified Reference for This Project
 
-> **What this is:** the only Medusa knowledge the builder may use without looking it up again. Every rule below was checked on **2026-09-25** against **Medusa 2.21.1** and re-checked on **2026-10-01** against **2.21.2** and on **2026-10-05** and **2026-10-15** against the current docs (2.21.2 is still npm `latest` on 2026-10-15), and on **2026-10-26** against the **2.22.0 / 2.22.1** release (now npm `latest`; this repo still runs 2.21.2 until `scripts/update-medusa.sh` moves it, see §1.1). `booking-services/` runs **2.22.2** (§1.2). **2.22.3** is npm `latest` since 2026-11-04 and is **not verified here yet**: verify it (release notes, installed `.d.ts`) in the update task before using anything new from it (the official docs at docs.medusajs.com, the published `@medusajs/*` packages, and the official `dtc-starter` / `b2b-starter` repos). Each section cites its source.
+> **What this is:** the only Medusa knowledge the builder may use without looking it up again. Every rule below was checked on **2026-09-25** against **Medusa 2.21.1** and re-checked on **2026-10-01** against **2.21.2** and on **2026-10-05** and **2026-10-15** against the current docs (2.21.2 is still npm `latest` on 2026-10-15), and on **2026-10-26** against the **2.22.0 / 2.22.1** release (now npm `latest`; and on **2026-11-06** against **2.22.3**, which every app in this repo now runs (§1.3; earlier: 2.21.2 in ecommerce and pos, 2.22.2 in booking-services) (the official docs at docs.medusajs.com, the published `@medusajs/*` packages, and the official `dtc-starter` / `b2b-starter` repos). Each section cites its source.
 >
 > **Reading order for the builder:** `CLAUDE.md` → `BUILD_PLAN.md` (frozen) → this file → `DEV_FLOW.md` → `TASKS.md`.
 >
@@ -30,14 +30,14 @@ When the docs and the installed types disagree, **the installed types win** (the
 
 | Item | Value | Source |
 |---|---|---|
-| Medusa | **Installed in `ecommerce/` and `pos/`: `2.21.2`** (released 2026-09-28). **Installed in `booking-services/`: `2.22.2`** (npm `latest`, released 2026-10-30; checked 2026-11-04; owner decision F-044). 2.22.0 came on 2026-10-21, 2.22.1 on 2026-10-23. Rank 1 of §0 is **the installed `node_modules` of the app you work in**: 2.21.2 for ecommerce and pos, 2.22.2 for booking-services (§1.1, §1.2) | `npm view @medusajs/medusa dist-tags time`; docs `learn/update` |
-| Node | 2.21.2: `^20.19.0 \|\| >=22.12.0`. **2.22.x: `>=22.22.0`** (Node 20 dropped, medusajs/medusa#17089; docs: "Node.js v22.22.0+ (LTS versions only)", with the Next.js storefront "v24 LTS or lower"). The official starters now set `engines.node` `>=22.23.4`. Project uses **Node 22** (Docker `node:22-bookworm-slim` = newest 22.x; CI `node-version: 22`), so both bounds are met; its backends already declare `>=22.22.0` | `npm view @medusajs/medusa@2.22.1 engines`; docs `learn/installation`; starters' `package.json` |
-| pnpm | `12.6.0` pinned in this repo; supported since Medusa v2.13.0. Newer pnpm exists (`12.11.2` on 2026-10-15); bump only with `scripts/update-medusa.sh` (plan §8 step 2, optional) | `npm view pnpm version`; docs `learn/configurations/pnpm` |
-| Versioning | All `@medusajs/*` packages share one version, **except** design-system packages (`@medusajs/ui` = `4.2.x`). This repo pins `@medusajs/ui` to the version `@medusajs/dashboard@<release>` depends on (`4.2.6` for 2.21.2; `4.2.5` for 2.21.1; `4.2.8` for 2.22.1; **`4.2.9` for 2.22.2**, also the 2.22.2 starter's pin), so the lockfile holds one copy — TASKS.md F-006. The starters still pin `4.2.6` with 2.22.1; our rule follows the dashboard, which is what `scripts/update-medusa.sh` reads | docs `learn/update`; `npm view @medusajs/dashboard@2.22.1 dependencies` |
+| Medusa | **Installed in every app: `2.22.3`** (npm `latest`, released 2026-11-04; installed 2026-11-06 with `scripts/update-medusa.sh all 2.22.3`, TASKS V-01). History: 2.21.2 (2026-09-28) in ecommerce and pos until 2026-11-06; 2.22.2 (2026-10-30) in booking-services from 2026-11-04 (F-044); 2.22.0 came on 2026-10-21, 2.22.1 on 2026-10-23. Rank 1 of §0 is **the installed `node_modules` of the app you work in** (§1.1 to §1.3) | `npm view @medusajs/medusa dist-tags time`; docs `learn/update` |
+| Node | 2.21.2: `^20.19.0 \|\| >=22.12.0`. **2.22.x: `>=22.22.0`** (Node 20 dropped, medusajs/medusa#17089; docs: "Node.js v22.22.0+ (LTS versions only)", with the Next.js storefront "v24 LTS or lower"). The official starters set `engines.node` `>=22.23.4`, and so does every app here since 2026-11-06. Project uses **Node 22** (Docker `node:22-bookworm-slim` = newest 22.x; CI `node-version: 22`), so the bound is met | `npm view @medusajs/medusa@2.22.1 engines`; docs `learn/installation`; starters' `package.json` |
+| pnpm | `12.6.0` pinned in this repo; supported since Medusa v2.13.0. Newer pnpm exists (`12.18.0` on 2026-11-06; TASKS V-03); bump only with `scripts/update-medusa.sh` (plan §8 step 2, optional) | `npm view pnpm version`; docs `learn/configurations/pnpm` |
+| Versioning | All `@medusajs/*` packages share one version, **except** design-system packages (`@medusajs/ui` = `4.2.x`). This repo pins `@medusajs/ui` to the version `@medusajs/dashboard@<release>` depends on (`4.2.6` for 2.21.2; `4.2.5` for 2.21.1; `4.2.8` for 2.22.1; `4.2.9` for 2.22.2; **`4.2.10` for 2.22.3**, while the 2.22.3 starter still pins `4.2.9`), so the lockfile holds one copy — TASKS.md F-006. The starters still pin `4.2.6` with 2.22.1; our rule follows the dashboard, which is what `scripts/update-medusa.sh` reads | docs `learn/update`; `npm view @medusajs/dashboard@2.22.1 dependencies` |
 | Minor releases | **May contain breaking changes.** Always read the release notes | docs `learn/update` |
 | Starters | `medusajs/dtc-starter` (the old `medusa-starter-default` and `nextjs-starter-medusa` are deprecated). **Latest commit checked: `6965d8a` (2026-10-26), Medusa 2.22.1.** Since `f677db4`: `a106938` (2.22.0), **`6b95717` storefront migrated to Next.js 16** (`next` `16.3.8`, React `19.0.5`; `.eslintrc.json` → `eslint.config.mjs`; `tsconfig.json`, `next-env.d.ts`, `next.config.js`, `lib/data/cart.ts`, `customer.ts`, `locale-actions.ts`, order-transfer pages and the account `default.tsx` slots changed), `204130a` "make storefront agent-friendly", `6965d8a` (2.22.1); `engines.node` `>=22.23.4`. **`medusajs/b2b-starter`**: `5f54549` (2026-10-26), Medusa **2.22.1**, storefront Next.js `16.3.8` (`ce483a3`). Our storefronts are on Next.js **15.5.27**: syncing the Next.js 16 migration is its own task (plan §4.2 sync rule, TASKS F-042). Earlier history: `f677db4` (2026-10-09): removes `generateStaticParams` from the product, collection and category pages (PR #73), so the starter build no longer calls the backend (this repo's storefront already guards them, plan §4.2 change 5). Before it: `15ef93d` (2026-10-02), Medusa 2.21.2 pins + `engines.node`. **`medusajs/b2b-starter`** (Phase 4): `3ed7131` (2026-10-02), Medusa **2.21.2**, `engines.node` `>=22.22.0`, `packageManager` `pnpm@9.15.0` | starter READMEs; `gh api repos/medusajs/dtc-starter/commits` |
 
-### 1.1 2.22.0 / 2.22.1 (released; not installed here yet)
+### 1.1 2.22.0 / 2.22.1 (checked 2026-10-26; superseded by 2.22.3, §1.3, but everything here still applies)
 
 Checked **2026-10-26** in the published 2.22.1 packages (rank 1, unpacked outside the repo), the package changelogs in `medusajs/medusa` (`packages/*/CHANGELOG.md`, rank 4) and the docs (rank 2). Until `scripts/update-medusa.sh` installs 2.22.1 (TASKS F-042), code here still follows 2.21.2. **No codemods** are listed for 2.22 (docs `learn/codemods`).
 
@@ -62,7 +62,7 @@ Checked **2026-10-26** in the published 2.22.1 packages (rank 1, unpacked outsid
 
 **Starters:** both moved to 2.22.1, and their storefronts to **Next.js 16** (§1 Starters row). Syncing our two storefronts to Next.js 16 is a separate task from the Medusa package update.
 
-### 1.2 2.22.2 (installed in `booking-services/` only)
+### 1.2 2.22.2 (booking-services 2026-11-04 to 2026-11-06; everything here still applies on 2.22.3)
 
 Released 2026-10-30, npm `latest` on 2026-11-04. Installed in `booking-services/backend` and `booking-services/storefront` with `scripts/update-medusa.sh booking-services 2.22.2` (TASKS F-044). Everything in §1.1 applies too. Checked in the release notes (`medusajs/medusa` v2.22.2, rank 4) and the installed packages (rank 1). **No codemods** listed.
 
@@ -78,6 +78,24 @@ Released 2026-10-30, npm `latest` on 2026-11-04. Installed in `booking-services/
 | Session cookie: `resolveSessionCookieSecurity` and the `...cookieOptions` spread are unchanged | The F-043 `SESSION_COOKIE_SECURE` setting works the same | `@medusajs/framework` `dist/http/express-loader.js` (2.22.2) |
 
 **Still not fixed in 2.22.2:** `updateReservationItems_` is identical to 2.21.2 (`@medusajs/inventory` `dist/services/inventory-module.js`, diffed), so F-041's workaround stays for any app that moves reservations.
+
+### 1.3 2.22.3 (installed in every app)
+
+Released 2026-11-04 (npm `latest` on 2026-11-06). Installed in all three backends, all three storefronts and `pos/pos-app` with `scripts/update-medusa.sh all 2.22.3` (TASKS V-01); `verify: PASS (all)`: ecommerce 114 unit + 32 module + 46 HTTP, pos 126 + 36 + 75, booking-services 153 + 63 + 95, every client builds. Checked in the release notes (`medusajs/medusa` v2.22.3, rank 4) and the installed packages (rank 1). **No codemods** listed. Everything in §1.1 and §1.2 still applies.
+
+| Change | What it means here | Source |
+|---|---|---|
+| `@medusajs/ui` **4.2.10** (dashboard dependency); the 2.22.3 starter still pins 4.2.9 | Pinned to the dashboard's 4.2.10 by the update script (F-006 rule) | `npm view @medusajs/dashboard@2.22.3 dependencies`; update script output |
+| Starters: `engines.node` `>=22.23.4` | Every app here declares `>=22.23.4` too; Docker `node:22` and CI meet it | `medusajs/dtc-starter`, `b2b-starter` `apps/backend/package.json` |
+| **End-to-end RBAC** (#15620, "Requires Enterprise License"): dashboard roles, `/rbac` routes, a `@medusajs/rbac` module | Not loaded unless a project registers it: `defineConfig` only adds `http.rbacActorTypes` (default `["user"]`). We register nothing, so cashiers, vendors and sellers stay custom actor types (plan §3.2) | `@medusajs/utils` `dist/common/define-config.js` (`DEFAULT_RBAC_ACTOR_TYPES`) |
+| `createCustomerAccountWorkflow` gains a **`validate` hook**, and skips the customer-email check when the auth identity has no email (#17608) | New option for sign-up rules; our sign-up still passes the email check (§1.1). Not used yet | `@medusajs/core-flows` `dist/customer/workflows/create-customer-account.js` (`createHook("validate", …)`) |
+| `graphql` 17 and new `@graphql-tools` / codegen majors (#17592) | `pnpm audit --prod` in the backends drops from 4 high to 1 (only `zod 4.2.0` left, plan §10 R-i) | `@medusajs/utils` `package.json` (`graphql ^17.0.2`); `pnpm audit` |
+| `event-bus-redis`: kept events are no longer lost in `clearGroupedEvents` (#17600) | Production and staging use the Redis event bus; no code change | release notes |
+| `@medusajs/ui` / `ui-preset` support Tailwind CSS 4 (#17631) | Our storefronts stay on Tailwind 3 and build unchanged | release notes; storefront builds |
+| Dependency updates: MikroORM 6.6.17, jest 30 in Medusa's own repo, Stripe 23, babel 8, awilix 13, chokidar 6 | Our test setup keeps jest 29 (as the 2.22.3 starter); all suites pass | release notes; starter `package.json` |
+| Session cookie: `resolveSessionCookieSecurity` unchanged (Secure + `SameSite=lax` in production or staging) | The F-043 `SESSION_COOKIE_SECURE` setting works the same | `@medusajs/framework` `dist/http/express-loader.js` (2.22.3) |
+
+**Still not fixed in 2.22.3:** `updateReservationItems_` loads the levels only for `data.location_id ?? reservation.location_id`, so the old location's `reserved_quantity` is never reduced (F-041). The POS workaround stays.
 
 ---
 

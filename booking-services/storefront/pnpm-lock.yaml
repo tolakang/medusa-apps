@@ -175,17 +175,17 @@ importers:
         specifier: ^2.2.0
         version: 2.2.10(react-dom@19.0.5(react@19.0.5))(react@19.0.5)
       '@medusajs/icons':
-        specifier: 2.22.2
-        version: 2.22.2(react@19.0.5)
+        specifier: 2.22.3
+        version: 2.22.3(react@19.0.5)
       '@medusajs/instantsearch-adapter':
-        specifier: 2.22.2
-        version: 2.22.2
+        specifier: 2.22.3
+        version: 2.22.3
       '@medusajs/js-sdk':
-        specifier: 2.22.2
-        version: 2.22.2
+        specifier: 2.22.3
+        version: 2.22.3
       '@medusajs/ui-preset':
-        specifier: 2.22.2
-        version: 2.22.2(tailwindcss@3.4.19)
+        specifier: 2.22.3
+        version: 2.22.3(tailwindcss@3.4.19)
       '@radix-ui/react-accordion':
         specifier: ^1.2.3
         version: 1.2.20(@types/react-dom@19.0.5(@types/react@19.0.5))(@types/react@19.0.5)(react-dom@19.0.5(react@19.0.5))(react@19.0.5)
@@ -239,8 +239,8 @@ importers:
         specifier: ^7.17.5
         version: 7.29.7(supports-color@8.1.1)
       '@medusajs/types':
-        specifier: 2.22.2
-        version: 2.22.2
+        specifier: 2.22.3
+        version: 2.22.3
       '@types/lodash':
         specifier: ^4.14.195
         version: 4.17.25
@@ -865,35 +865,38 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@medusajs/icons@2.22.2':
-    resolution: {integrity: sha512-IeBrOtLZSwS3/UwVo/zBklUalD5s9cHXJf0bJfrsz0f28SPkyBhMmDmBh8alDloDwbRni+IhtuQOAfEzNSKoYw==}
+  '@medusajs/icons@2.22.3':
+    resolution: {integrity: sha512-V/kTzn1GLgBGD3MrqalD1dZl8DK1u+0Vekt2Zte9oQucsEDlJLQOVp+Piu+MvNsX5gWU0j/wPsKoaTLvFJ1KVg==}
     peerDependencies:
       react: ^18.3.1 || ^19.0.0
 
-  '@medusajs/instantsearch-adapter@2.22.2':
-    resolution: {integrity: sha512-GnWKIhy3jji6iadT5sa37i3iqTtaYJQF9xiWHIlIjS9FSqf58Mi5xe/YikeXcNOBOuWNZJs0v8Qpl55KZtDIHQ==}
+  '@medusajs/instantsearch-adapter@2.22.3':
+    resolution: {integrity: sha512-Ry8n1XgefHAEBq/Yt0QqKRIsU4QwM3RvbxDWD3Qpzb6rv263iNPQmVF2FZCXiiXJqBC1o/xSjjU2uhbyG9CcVQ==}
     engines: {node: '>=22.22.0'}
 
-  '@medusajs/js-sdk@2.22.2':
-    resolution: {integrity: sha512-xGcYhuBhpM49YnlkvzMOoAtum3BujULbiOY9zwsWYPJ4LgDXPYM9e6gvCdWFt5Nd+XqDN90Ezaf8b5meGedspQ==}
+  '@medusajs/js-sdk@2.22.3':
+    resolution: {integrity: sha512-U6yAfcSUYKdUP62anCsOYPBz6iKCt9cBnZ/CC18UdsDEigmWlxFg8WHuR//sAZ8BkEzi+gbdu4toybQqbAaDzg==}
     engines: {node: '>=22.22.0'}
 
-  '@medusajs/types@2.22.2':
-    resolution: {integrity: sha512-+AoP8Ql37D30c4qQWG09Q9fNJVKU2cyYFN1aeP3rb+PQcTMq+Sg+Fbltbcdlp/kya3mI7X+IDWgcFovfos4k1g==}
+  '@medusajs/types@2.22.3':
+    resolution: {integrity: sha512-oE/wAwrqBSThEOx0rdaSmPSD4CfuOL9h6VdsoiIfx3SgQ8yLjSkjMh96twmPcH/h5ol+ZkXEkpHNW4YDUaAiRA==}
     engines: {node: '>=22.22.0'}
     peerDependencies:
+      express: ^4.21.0
       ioredis: ^5.11.1
       vite: '>=5'
     peerDependenciesMeta:
+      express:
+        optional: true
       ioredis:
         optional: true
       vite:
         optional: true
 
-  '@medusajs/ui-preset@2.22.2':
-    resolution: {integrity: sha512-V4JKrDDNET6KkHssaKDAfm9JMjHEwOqh8wns7NVXdkiXEKIWg90QExPX1pzzPnz5qEBBq7Zdx00/a9wIBx0Hqg==}
+  '@medusajs/ui-preset@2.22.3':
+    resolution: {integrity: sha512-0WqtsbFJ/Bprb3cg/Kwy4zVjHpPFI/PYq7rA9f345mPQiv80nmKTgB1z2eORxh90J4ES67XPpf+NGvlANh+KAw==}
     peerDependencies:
-      tailwindcss: ^3.4.3
+      tailwindcss: ^3.4.3 || ^4.0.0
 
   '@napi-rs/wasm-runtime@1.2.4':
     resolution: {integrity: sha512-AJxoUD2/15ESHbvpcyjU274nsAPLuOtPHCk0vKJM5pj//Fg/B1FXNWjPnXTT9PymCYYiHo4zPj0ZomXBKhoy7g==}
@@ -3100,6 +3103,9 @@ packages:
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
+  tw-animate-css@1.4.0:
+    resolution: {integrity: sha512-7bziOlRqH0hJx80h/3mbicLW7o8qLsH5+RaLR2t+OHM3D0JlWGODQKQ4cxbK7WlvmUxpcj6Kgu6EKqjrGFe3QQ==}
+
   type-check@0.4.0:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
     engines: {node: '>= 0.8.0'}
@@ -3758,25 +3764,26 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  '@medusajs/icons@2.22.2(react@19.0.5)':
+  '@medusajs/icons@2.22.3(react@19.0.5)':
     dependencies:
       react: 19.0.5
 
-  '@medusajs/instantsearch-adapter@2.22.2': {}
+  '@medusajs/instantsearch-adapter@2.22.3': {}
 
-  '@medusajs/js-sdk@2.22.2':
+  '@medusajs/js-sdk@2.22.3':
     dependencies:
       fetch-event-stream: 0.1.6
       qs: 6.17.1
 
-  '@medusajs/types@2.22.2':
+  '@medusajs/types@2.22.3':
     dependencies:
       bignumber.js: 11.1.5
 
-  '@medusajs/ui-preset@2.22.2(tailwindcss@3.4.19)':
+  '@medusajs/ui-preset@2.22.3(tailwindcss@3.4.19)':
     dependencies:
       tailwindcss: 3.4.19
       tailwindcss-animate: 1.0.7(tailwindcss@3.4.19)
+      tw-animate-css: 1.4.0
 
   '@napi-rs/wasm-runtime@1.2.4(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
     dependencies:
@@ -6216,6 +6223,8 @@ snapshots:
       strip-bom: 3.0.0
 
   tslib@2.8.1: {}
+
+  tw-animate-css@1.4.0: {}
 
   type-check@0.4.0:
     dependencies:
