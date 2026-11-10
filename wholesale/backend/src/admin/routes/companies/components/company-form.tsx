@@ -3,6 +3,19 @@ import { AdminUpdateCompany } from "../../../../types";
 import { useState } from "react";
 import { useRegions } from "../../../hooks/api";
 
+const PAYMENT_TERMS = [
+  { value: "prepaid", label: "Prepaid" },
+  { value: "net_15", label: "Net 15" },
+  { value: "net_30", label: "Net 30" },
+  { value: "net_60", label: "Net 60" },
+];
+
+const STATUSES = [
+  { value: "pending", label: "Pending" },
+  { value: "approved", label: "Approved" },
+  { value: "suspended", label: "Suspended" },
+];
+
 export function CompanyForm({
   company,
   handleSubmit,
@@ -33,6 +46,15 @@ export function CompanyForm({
 
   const handleCountryChange = (value: string) => {
     setFormData({ ...formData, country: value });
+  };
+
+  // P4-02: an empty credit limit means "no limit set" (null).
+  const handleCreditLimitChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData({
+      ...formData,
+      credit_limit: value === "" ? null : Number(value),
+    });
   };
 
   return (
@@ -143,6 +165,73 @@ export function CompanyForm({
               </Select>
             </div>
           </div>
+          <Label size="xsmall">Tax ID</Label>
+          <Input
+            type="text"
+            name="tax_id"
+            value={formData.tax_id || ""}
+            onChange={handleChange}
+            placeholder="VAT / TIN"
+          />
+          <div className="flex gap-4 w-full">
+            <div className="flex flex-col gap-2 w-1/2">
+              <Label size="xsmall">Payment Terms</Label>
+              <Select
+                name="payment_terms"
+                value={formData.payment_terms || "prepaid"}
+                onValueChange={(value) =>
+                  setFormData({
+                    ...formData,
+                    payment_terms: value as AdminUpdateCompany["payment_terms"],
+                  })
+                }
+              >
+                <Select.Trigger>
+                  <Select.Value />
+                </Select.Trigger>
+                <Select.Content className="z-50">
+                  {PAYMENT_TERMS.map((terms) => (
+                    <Select.Item key={terms.value} value={terms.value}>
+                      {terms.label}
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-2 w-1/2">
+              <Label size="xsmall">Status</Label>
+              <Select
+                name="status"
+                value={formData.status || "approved"}
+                onValueChange={(value) =>
+                  setFormData({
+                    ...formData,
+                    status: value as AdminUpdateCompany["status"],
+                  })
+                }
+              >
+                <Select.Trigger>
+                  <Select.Value />
+                </Select.Trigger>
+                <Select.Content className="z-50">
+                  {STATUSES.map((status) => (
+                    <Select.Item key={status.value} value={status.value}>
+                      {status.label}
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select>
+            </div>
+          </div>
+          <Label size="xsmall">Credit Limit (empty = no limit set)</Label>
+          <Input
+            type="number"
+            min={0}
+            name="credit_limit"
+            value={formData.credit_limit ?? ""}
+            onChange={handleCreditLimitChange}
+            placeholder="5000"
+          />
           {/* TODO: Add logo upload */}
           <Label size="xsmall">Company Logo URL</Label>
           <Input

@@ -23,6 +23,9 @@ export const StoreCreateCompany = z
       .enum(["never", "daily", "weekly", "monthly", "yearly"])
       .optional()
       .nullable(),
+    // P4-02: buyers may give their tax ID; payment_terms, credit_limit and
+    // status are admin-only, so `.strict()` rejects them here.
+    tax_id: z.string().optional().nullable(),
   })
   .strict();
 
@@ -43,6 +46,9 @@ export const StoreUpdateCompany = z
       .enum(["never", "daily", "weekly", "monthly", "yearly"])
       .optional()
       .nullable(),
+    // P4-02: buyers may give their tax ID; payment_terms, credit_limit and
+    // status are admin-only, so `.strict()` rejects them here.
+    tax_id: z.string().optional().nullable(),
   })
   .strict();
 

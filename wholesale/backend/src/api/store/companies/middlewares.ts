@@ -15,6 +15,7 @@ import {
   StoreGetCompanyParams,
   StoreGetEmployeeParams,
   StoreUpdateApprovalSettings,
+  StoreUpdateCompany,
   StoreUpdateEmployee,
 } from "./validators";
 
@@ -60,6 +61,10 @@ export const storeCompaniesMiddlewares: MiddlewareRoute[] = [
     method: ["POST"],
     matcher: "/store/companies/:id",
     middlewares: [
+      // P4-02: the starter didn't validate this body, so a buyer could write
+      // any company field (payment_terms, credit_limit, status). The strict
+      // schema allows only the buyer-editable fields.
+      validateAndTransformBody(StoreUpdateCompany),
       validateAndTransformQuery(
         StoreGetCompanyParams,
         storeCompanyQueryConfig.retrieve
