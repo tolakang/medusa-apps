@@ -7,7 +7,7 @@ Customer storefront for the reseller business project (BUILD_PLAN §6.5). Standa
 - `.env.example` gains `SELLER_RESOLVE_MODE` and `DEFAULT_SELLER_HANDLE` (plan §6.5, read from P5-07 on).
 - `.guard-baseline` is `159252e ecommerce/storefront`: the starter's type suppressions came with the copy, and `scripts/guard.sh` compares against that app at the starter import.
 
-Multi-tenant serving (one deployment for every seller domain, the seller's publishable key per request) comes in P5-07. The ecommerce notes below apply unchanged.
+**P5-07, multi-tenant:** one deployment serves every seller's domain. `src/lib/data/seller.ts` maps the request's `Host` (or the `path` cookie from `/api/seller/<handle>`) to the seller's publishable key through the backend's `GET /store/sellers/resolve` (cached 300 s); `src/lib/config.ts` sends it with every request (server side from the host, browser side from the `<meta>` the root layout writes). No seller → your own channel (`NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY`). Browser search on a seller's domain needs that origin in the backend's `STORE_CORS`. The ecommerce notes below apply unchanged.
 
 ---
 

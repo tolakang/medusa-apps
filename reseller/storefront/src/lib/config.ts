@@ -1,3 +1,4 @@
+import { getSellerPublishableKey } from "@lib/data/seller"
 import { getShopperIp } from "@lib/data/shopper-ip"
 import { getLocaleHeader } from "@lib/util/get-locale-header"
 import Medusa, { FetchArgs, FetchInput } from "@medusajs/js-sdk"
@@ -40,6 +41,23 @@ async function shopperIpHeaders(input: FetchInput): Promise<Record<string, strin
   return ip ? { "x-shopper-ip": ip, "x-shopper-ip-secret": secret } : {}
 }
 
+// The seller's publishable key for this request (TASKS P5-07): on this
+// server from the request's host (lib/data/seller.ts); in the browser from
+// the <meta> the root layout writes. Next's data cache keys include the
+// headers, so each seller's catalog is cached apart.
+export const SELLER_KEY_META = "x-seller-publishable-key"
+
+async function sellerKeyHeader(headers: Record<string, unknown>): Promise<Record<string, string>> {
+  if (Object.keys(headers).some((name) => name.toLowerCase() === "x-publishable-api-key")) {
+    return {}
+  }
+  const key =
+    typeof window === "undefined"
+      ? await getSellerPublishableKey()
+      : document.querySelector(`meta[name="${SELLER_KEY_META}"]`)?.getAttribute("content")
+  return key ? { "x-publishable-api-key": key } : {}
+}
+
 sdk.client.fetch = async <T>(
   input: FetchInput,
   init?: FetchArgs
@@ -54,6 +72,7 @@ sdk.client.fetch = async <T>(
   const newHeaders = {
     ...localeHeader,
     ...(await shopperIpHeaders(input)),
+    ...(await sellerKeyHeader(headers)),
     ...headers,
   }
   init = {
