@@ -10,9 +10,7 @@ export const POST = async (
   res: MedusaResponse
 ) => {
   const { id: cartId } = req.params;
-  const { customer_id } = req.auth_context.app_metadata as {
-    customer_id: string;
-  };
+  const customer_id = req.auth_context.actor_id;
 
   const { result: approvals, errors } = await createApprovalsWorkflow.run({
     input: {

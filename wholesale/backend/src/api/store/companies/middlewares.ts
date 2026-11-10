@@ -1,128 +1,46 @@
-import {
-  MiddlewareRoute,
-  validateAndTransformBody,
-  validateAndTransformQuery,
-} from "@medusajs/framework";
+import { MiddlewareRoute, validateAndTransformBody } from "@medusajs/framework";
 import { authenticate } from "@medusajs/medusa";
-import { ensureRole } from "../../middlewares/ensure-role";
-import {
-  storeCompanyQueryConfig,
-  storeEmployeeQueryConfig,
-} from "./query-config";
 import {
   StoreCreateCompany,
   StoreCreateEmployee,
-  StoreGetCompanyParams,
-  StoreGetEmployeeParams,
   StoreUpdateApprovalSettings,
   StoreUpdateCompany,
   StoreUpdateEmployee,
 } from "./validators";
 
+// P4-07 (F-058): the starter's `/store/companies/:id…` routes took the
+// company from the URL and are gone. `/store/companies/me…` takes it from
+// the signed-in customer's employee record; the routes check membership and
+// the admin flag themselves (src/utils/b2b-access.ts).
 export const storeCompaniesMiddlewares: MiddlewareRoute[] = [
-  /* Company middlewares */
   {
     method: "ALL",
     matcher: "/store/companies*",
     middlewares: [authenticate("customer", ["session", "bearer"])],
   },
   {
-    method: ["GET"],
-    matcher: "/store/companies",
-    middlewares: [
-      validateAndTransformQuery(
-        StoreGetCompanyParams,
-        storeCompanyQueryConfig.list
-      ),
-    ],
-  },
-  {
     method: ["POST"],
     matcher: "/store/companies",
-    middlewares: [
-      validateAndTransformBody(StoreCreateCompany),
-      validateAndTransformQuery(
-        StoreGetCompanyParams,
-        storeCompanyQueryConfig.retrieve
-      ),
-    ],
-  },
-  {
-    method: ["GET"],
-    matcher: "/store/companies/:id",
-    middlewares: [
-      validateAndTransformQuery(
-        StoreGetCompanyParams,
-        storeCompanyQueryConfig.retrieve
-      ),
-    ],
+    middlewares: [validateAndTransformBody(StoreCreateCompany)],
   },
   {
     method: ["POST"],
-    matcher: "/store/companies/:id",
-    middlewares: [
-      // P4-02: the starter didn't validate this body, so a buyer could write
-      // any company field (payment_terms, credit_limit, status). The strict
-      // schema allows only the buyer-editable fields.
-      validateAndTransformBody(StoreUpdateCompany),
-      validateAndTransformQuery(
-        StoreGetCompanyParams,
-        storeCompanyQueryConfig.retrieve
-      ),
-    ],
-  },
-
-  /* Employee middlewares */
-  {
-    method: ["GET"],
-    matcher: "/store/companies/:id/employees",
-    middlewares: [
-      validateAndTransformQuery(
-        StoreGetEmployeeParams,
-        storeEmployeeQueryConfig.list
-      ),
-    ],
+    matcher: "/store/companies/me",
+    middlewares: [validateAndTransformBody(StoreUpdateCompany)],
   },
   {
     method: ["POST"],
-    matcher: "/store/companies/:id/employees",
-    middlewares: [
-      ensureRole("company_admin"),
-      validateAndTransformBody(StoreCreateEmployee),
-      validateAndTransformQuery(
-        StoreGetEmployeeParams,
-        storeEmployeeQueryConfig.list
-      ),
-    ],
-  },
-  {
-    method: ["GET"],
-    matcher: "/store/companies/:id/employees/:employee_id",
-    middlewares: [
-      validateAndTransformQuery(
-        StoreGetEmployeeParams,
-        storeEmployeeQueryConfig.retrieve
-      ),
-    ],
+    matcher: "/store/companies/me/employees",
+    middlewares: [validateAndTransformBody(StoreCreateEmployee)],
   },
   {
     method: ["POST"],
-    matcher: "/store/companies/:id/employees/:employee_id",
-    middlewares: [
-      ensureRole("company_admin"),
-      validateAndTransformBody(StoreUpdateEmployee),
-      validateAndTransformQuery(
-        StoreGetEmployeeParams,
-        storeEmployeeQueryConfig.retrieve
-      ),
-    ],
+    matcher: "/store/companies/me/employees/:employeeId",
+    middlewares: [validateAndTransformBody(StoreUpdateEmployee)],
   },
   {
     method: ["POST"],
-    matcher: "/store/companies/:id/approval-settings",
-    middlewares: [
-      ensureRole("company_admin"),
-      validateAndTransformBody(StoreUpdateApprovalSettings),
-    ],
+    matcher: "/store/companies/me/approval-settings",
+    middlewares: [validateAndTransformBody(StoreUpdateApprovalSettings)],
   },
 ];

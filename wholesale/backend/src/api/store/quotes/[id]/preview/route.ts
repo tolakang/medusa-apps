@@ -23,7 +23,8 @@ export const GET = async (
     {
       entity: "quote",
       fields: req.queryConfig.fields,
-      filters: { id },
+      // P4-07: only the quote's own customer (404 otherwise).
+      filters: { id, customer_id: req.auth_context.actor_id },
     },
     { throwIfKeyNotFound: true }
   );

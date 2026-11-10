@@ -108,28 +108,7 @@ medusaIntegrationTestRunner({
     });
 
     it("P4-02: a buyer can give a tax ID but not set terms, credit or status", async () => {
-      const { data } = await api.post(
-        "/store/companies",
-        { ...companyInput, tax_id: "KH-987654321" },
-        storeHeaders
-      );
-      const companyId = data.companies[0].id;
-
-      // The store response doesn't carry the admin-only fields (P4-07 adds
-      // them to the buyer's own company); read them as an admin.
-      expect(data.companies[0]).not.toHaveProperty("credit_limit");
-      const adminRead = async () =>
-        (await api.get(`/admin/companies/${companyId}`, adminHeaders)).data
-          .company;
-      expect(await adminRead()).toEqual(
-        expect.objectContaining({
-          tax_id: "KH-987654321",
-          payment_terms: "prepaid",
-          status: "approved",
-          credit_limit: null,
-        })
-      );
-
+      // Admin-only fields are refused at sign-up (strict schema).
       for (const body of [
         { ...companyInput, payment_terms: "net_60" },
         { ...companyInput, credit_limit: 1000000 },
@@ -141,25 +120,40 @@ medusaIntegrationTestRunner({
         expect(res.status).toEqual(400);
       }
 
-      // The starter's update route used the raw body; it is validated now.
+      const { data } = await api.post(
+        "/store/companies",
+        { ...companyInput, tax_id: "KH-987654321" },
+        storeHeaders
+      );
+      // P4-07: the buyer sees their own company's terms.
+      expect(data.company).toEqual(
+        expect.objectContaining({
+          tax_id: "KH-987654321",
+          payment_terms: "prepaid",
+          status: "approved",
+          credit_limit: null,
+        })
+      );
+
+      // And on update (P4-07: `/store/companies/me`).
       for (const body of [
         { payment_terms: "net_60" },
         { credit_limit: 1000000 },
         { status: "approved" },
       ]) {
         const res = await api
-          .post(`/store/companies/${companyId}`, body, storeHeaders)
+          .post("/store/companies/me", body, storeHeaders)
           .catch((e) => e.response);
         expect(res.status).toEqual(400);
       }
 
       const updated = await api.post(
-        `/store/companies/${companyId}`,
+        "/store/companies/me",
         { tax_id: "KH-111" },
         storeHeaders
       );
       expect(updated.status).toEqual(200);
-      expect(await adminRead()).toEqual(
+      expect(updated.data.company).toEqual(
         expect.objectContaining({
           tax_id: "KH-111",
           payment_terms: "prepaid",

@@ -1,4 +1,8 @@
-/* Store Company Query Config */
+// P4-07 (F-058): the store company routes return fixed field lists for the
+// buyer's own company. No `?fields`, so nothing else can be pulled through
+// these routes.
+
+/* The buyer's own company, with its terms (P4-02) */
 export const storeCompanyFields = [
   "id",
   "name",
@@ -11,66 +15,30 @@ export const storeCompanyFields = [
   "zip",
   "country",
   "currency_code",
-  "*employees",
-  "*approval_settings",
+  "spending_limit_reset_frequency",
+  "payment_terms",
+  "credit_limit",
+  "tax_id",
+  "status",
+  "employees.id",
+  "employees.spending_limit",
+  "employees.is_admin",
+  "employees.company_id",
+  "approval_settings.id",
+  "approval_settings.requires_admin_approval",
+  "approval_settings.requires_sales_manager_approval",
+  "approval_settings.approval_threshold",
 ];
 
-export const storeCompanyQueryConfig = {
-  list: {
-    defaults: storeCompanyFields,
-    isList: true,
-  },
-  retrieve: {
-    defaults: storeCompanyFields,
-    isList: false,
-  },
-};
-
-/* Store Employee Query Config */
+/* An employee of the buyer's own company */
 export const storeEmployeeFields = [
   "id",
   "spending_limit",
   "is_admin",
-  "customer_id",
-  "*customer",
   "company_id",
-  "*company",
+  "customer.id",
+  "customer.email",
+  "customer.first_name",
+  "customer.last_name",
+  "customer.phone",
 ];
-
-export const storeEmployeeQueryConfig = {
-  list: {
-    defaults: storeEmployeeFields,
-    isList: true,
-  },
-  retrieve: {
-    defaults: storeEmployeeFields,
-    isList: false,
-  },
-};
-
-/* Store Approval Settings Query Config */
-type ApprovalSettingsField =
-  | "id"
-  | "company_id"
-  | "requires_admin_approval"
-  | "requires_sales_manager_approval"
-  | "created_at"
-  | "updated_at"
-  | "deleted_at";
-
-export const storeApprovalSettingsFields: ApprovalSettingsField[] = [
-  "id",
-  "company_id",
-  "requires_admin_approval",
-  "requires_sales_manager_approval",
-  "created_at",
-  "updated_at",
-  "deleted_at",
-];
-
-export const storeApprovalSettingsQueryConfig = {
-  retrieve: {
-    defaults: storeApprovalSettingsFields,
-    isList: false,
-  },
-};

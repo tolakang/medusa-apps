@@ -3,6 +3,7 @@ import type {
   MedusaResponse,
 } from "@medusajs/framework";
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
+import { requireOwnQuote } from "../../../../../utils/b2b-access";
 import { customerAcceptQuoteWorkflow } from "../../../../../workflows/quote/workflows";
 import { AcceptQuoteType } from "../../validators";
 
@@ -12,6 +13,9 @@ export const POST = async (
 ) => {
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
   const { id } = req.params;
+
+  // P4-07: only the quote's own customer.
+  await requireOwnQuote(req.scope, id, req.auth_context.actor_id);
 
   await customerAcceptQuoteWorkflow(req.scope).run({
     input: {

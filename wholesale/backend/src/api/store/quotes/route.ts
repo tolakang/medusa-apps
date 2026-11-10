@@ -3,7 +3,9 @@ import {
   MedusaResponse,
 } from "@medusajs/framework";
 import { RemoteQueryFunction } from "@medusajs/framework/types";
-import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
+import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils";
+import { assertApprovedCompanyBuyer } from "../../../utils/b2b-cart-rules";
+import { loadBuyer } from "../../../utils/load-b2b-buyer";
 import { createRequestForQuoteWorkflow } from "../../../workflows/quote/workflows/create-request-for-quote";
 import { CreateQuoteType, GetQuoteParamsType } from "./validators";
 
@@ -43,6 +45,21 @@ export const POST = async (
   const query = req.scope.resolve<RemoteQueryFunction>(
     ContainerRegistrationKeys.QUERY
   );
+
+  // P4-07: a quote is asked for the customer's own cart, by an employee of
+  // an approved company (the starter took any cart id).
+  const customerId = req.auth_context.actor_id;
+  const {
+    data: [cart],
+  } = await query.graph({
+    entity: "cart",
+    fields: ["id", "customer_id"],
+    filters: { id: req.validatedBody.cart_id },
+  });
+  if (!cart || cart.customer_id !== customerId) {
+    throw new MedusaError(MedusaError.Types.NOT_FOUND, "Cart not found");
+  }
+  assertApprovedCompanyBuyer(await loadBuyer(req.scope, customerId));
 
   const {
     result: { quote: createdQuote },
