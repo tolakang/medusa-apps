@@ -20,6 +20,7 @@ import {
   requireStrongPassword,
 } from './auth-guards'
 import { requireSeller, sellerCors } from './seller-auth'
+import { PostSellerProducts } from './sellers/validators'
 import { PostAdminSeller, PostAdminSellerPayout } from './admin/sellers/validators'
 
 // The product index declares filterable `status` and `sales_channel_ids`, so
@@ -112,6 +113,11 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/admin/sellers',
       middlewares: [validateAndTransformBody(PostAdminSeller)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/sellers/me/products',
+      middlewares: [validateAndTransformBody(PostSellerProducts)],
     },
     {
       method: ['POST'],
