@@ -23,3 +23,10 @@ export const PostAdminSeller = z
   .strict()
 
 export type PostAdminSellerType = z.infer<typeof PostAdminSeller>
+
+// POST /admin/sellers/:id/payouts (TASKS P5-05): optionally one currency.
+export const PostAdminSellerPayout = z
+  .object({ currency_code: z.string().trim().toLowerCase().length(3).optional() })
+  .strict()
+
+export type PostAdminSellerPayoutType = z.infer<typeof PostAdminSellerPayout>

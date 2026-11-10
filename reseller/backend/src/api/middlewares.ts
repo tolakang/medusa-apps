@@ -20,7 +20,7 @@ import {
   requireStrongPassword,
 } from './auth-guards'
 import { requireSeller, sellerCors } from './seller-auth'
-import { PostAdminSeller } from './admin/sellers/validators'
+import { PostAdminSeller, PostAdminSellerPayout } from './admin/sellers/validators'
 
 // The product index declares filterable `status` and `sales_channel_ids`, so
 // the route narrows it to published products in the key's sales channels.
@@ -112,6 +112,11 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/admin/sellers',
       middlewares: [validateAndTransformBody(PostAdminSeller)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/sellers/:id/payouts',
+      middlewares: [validateAndTransformBody(PostAdminSellerPayout)],
     },
     {
       // Customer passwords: at least 8 characters at sign-up and reset.
