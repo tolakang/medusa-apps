@@ -3,6 +3,7 @@ import {
   adminHeaders,
   createAdminUser,
   createStoreUser,
+  makeCompanyBuyer,
 } from "../../utils/admin";
 import {
   cartSeeder,
@@ -30,6 +31,7 @@ medusaIntegrationTestRunner({
       const publishableKey = await generatePublishableKey(container);
       storeHeaders = generateStoreHeaders({ publishableKey });
       const res = await createStoreUser({ api, storeHeaders });
+      await makeCompanyBuyer({ api, customerId: res.customer.id });
       customerToken = res.token;
       console.log("vic logs customerToken", customerToken);
       storeHeaders.headers["Authorization"] = `Bearer ${customerToken}`;
