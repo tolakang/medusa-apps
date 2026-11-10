@@ -3,6 +3,7 @@ import {
   adminHeaders,
   createAdminUser,
   createStoreUser,
+  makeCompanyBuyer,
 } from "../../../utils/admin";
 import {
   cartSeeder,
@@ -30,6 +31,7 @@ medusaIntegrationTestRunner({
       const publishableKey = await generatePublishableKey(container);
       storeHeaders = generateStoreHeaders({ publishableKey });
       const res = await createStoreUser({ api, storeHeaders });
+      await makeCompanyBuyer({ api, customerId: res.customer.id });
       customerToken = res.token;
       storeHeaders.headers["Authorization"] = `Bearer ${customerToken}`;
       region = await regionSeeder({ api, adminHeaders, data: {} });

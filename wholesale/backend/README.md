@@ -13,9 +13,10 @@ Medusa **2.22.6** backend for the wholesale (B2B) business project. One image, d
 - Not copied: `.env.template`, `.npmrc`, `.vscode/`, `static/` (demo images; the seed uses Medusa's public image URLs), the generic `README.md` guides under `src/` and `integration-tests/http/` (F-053).
 - P4-02: `company` gains `payment_terms`, `credit_limit`, `tax_id`, `status` (admin API and admin form; buyers may set only `tax_id`); `POST /store/companies/:id` now validates its body (F-058).
 - P4-03: `src/scripts/seed-b2b.ts` (`seed:b2b`): the B2B sales channel and its publishable key; with `demo-pricing`, Gold / Silver customer groups, price lists on `customer.groups.id` and quantity tiers. A company gets a tier by joining a customer group (admin: company → customer group).
+- P4-04: B2B cart rules (`src/utils/b2b-cart-rules.ts`, hooks in `src/workflows/hooks/`): only employees of an approved company add to cart or check out; minimum order quantity from `metadata.min_order_quantity` (variant, else product); spending limit over the company's reset window with past orders; credit limit for net-terms companies (unpaid orders count until captured).
 - Scripts added: `typecheck`, `predeploy` (safe migrate flags), `seed:initial`, `--passWithNoTests` on module and unit tests.
 
-Known starter behaviour left for later tasks: **the store company routes don't check that the company is the buyer's own (F-058, P4-07, must be fixed before any deploy)**; the cart-completion hook reads only `employee.spending_limit`, so the spend window and past orders are not counted yet (P4-04); hooks throw plain `Error` (lint warnings; P4-04); module tables have no prefix (`company`, `quote`, `message`, …; F-055).
+Known starter behaviour left for later tasks: **the store company routes don't check that the company is the buyer's own (F-058, P4-07, must be fixed before any deploy)**; module tables have no prefix (`company`, `quote`, `message`, …; F-055).
 
 ## Run locally
 ```bash

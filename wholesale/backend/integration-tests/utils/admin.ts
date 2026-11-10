@@ -88,3 +88,25 @@ export const createStoreUser = async ({ api, storeHeaders }) => {
 
   return { customer, token };
 };
+
+// P4-04: only employees of an approved company may put items in a cart, so
+// specs that create carts with items make their customer one first.
+export const makeCompanyBuyer = async ({ api, customerId }) => {
+  const {
+    data: {
+      companies: [company],
+    },
+  } = await api.post(
+    "/admin/companies",
+    { name: "Buyer Company", email: "buyer@company.test", currency_code: "usd" },
+    adminHeaders
+  );
+  const {
+    data: { employee },
+  } = await api.post(
+    `/admin/companies/${company.id}/employees`,
+    { customer_id: customerId },
+    adminHeaders
+  );
+  return { company, employee };
+};
