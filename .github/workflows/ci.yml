@@ -42,6 +42,7 @@ jobs:
           - wholesale/backend
           - reseller/backend
           - reseller/storefront
+          - reseller/seller-portal
     services:
       postgres:
         image: docker.io/library/postgres:15-alpine

@@ -1,0 +1,35 @@
+{
+  "name": "reseller-seller-portal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Seller portal (Next.js) for the reseller business project (TASKS P5-08)",
+  "packageManager": "pnpm@12.17.0",
+  "engines": {
+    "node": ">=22.23.4"
+  },
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test src/lib/__tests__/*.test.ts"
+  },
+  "dependencies": {
+    "@medusajs/js-sdk": "2.22.6",
+    "next": "16.4.5",
+    "react": "19.0.5",
+    "react-dom": "19.0.5",
+    "server-only": "0.0.1"
+  },
+  "devDependencies": {
+    "@medusajs/types": "2.22.6",
+    "@medusajs/ui-preset": "2.22.6",
+    "@types/node": "22.20.5",
+    "@types/react": "19.0.5",
+    "@types/react-dom": "19.0.5",
+    "autoprefixer": "10.6.1",
+    "postcss": "8.5.28",
+    "tailwindcss": "3.4.19",
+    "typescript": "5.9.3"
+  }
+}
