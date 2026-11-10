@@ -1,8 +1,8 @@
 # Reseller — `reseller/`
 
-> **Sellers sell your products; you ship.** Planned — Phase 5. Scope: [BUILD_PLAN.md §6.5](../BUILD_PLAN.md).
+> **Sellers sell your products; you ship.** Phase 5, in progress (started 2026-11-10). Scope: [BUILD_PLAN.md §6.5](../BUILD_PLAN.md).
 >
-> The `Dockerfile` and `.env.example` files here are **ready templates**. Application code is added in the build phase; until then a Dokploy build of these folders will fail at `COPY package.json`.
+> `backend/` and `storefront/` are a **full copy of Ecommerce** (PayWay, Resend, Telegram, Cambodia rules; TASKS F-061), on Medusa 2.22.6; see [backend/README.md](backend/README.md) and [storefront/README.md](storefront/README.md). The seller features come with P5-01 to P5-07. `seller-portal/` still holds only the **template** `Dockerfile` and `.env.example`; its code comes with P5-08, and until then a Dokploy build of that folder fails at `COPY package.json`. Local stack: `docker-compose.local.yml`.
 
 This folder is **one complete business project**. Copy the whole folder's setup into one Dokploy project and every piece deploys on its own.
 
