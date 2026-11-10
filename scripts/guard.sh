@@ -113,7 +113,9 @@ for D in $DEPLOYABLES; do
   #     app had the same line at that commit.
   REF="$BASE_REF"; FROM=""
   [ -f "$D/.guard-baseline" ] && read -r REF FROM < "$D/.guard-baseline"
-  SUPPRESS="@ts-ignore|@ts-nocheck|as any\b"
+  # No "\b": macOS git's ERE has no word boundary (TASKS F-057), so the
+  # boundary is spelled out and grep and git grep match the same lines.
+  SUPPRESS="@ts-ignore|@ts-nocheck|as any([^A-Za-z0-9_]|\$)"
   if ! git rev-parse --verify --quiet "$REF^{commit}" >/dev/null; then
     echo "  skip: new-suppression check (ref '$REF' not found; set GUARD_BASE_REF)"
   elif [ -n "$FROM" ]; then
