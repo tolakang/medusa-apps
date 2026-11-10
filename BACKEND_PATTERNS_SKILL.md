@@ -186,5 +186,5 @@ Medusa already implements most of these patterns. **Use its extension point**, c
 
 ## 6. Sources
 - "10 Backend Design Patterns" (video, 2026; slides and transcript provided by the owner, 2026-10-27): the problems, examples and cautions in §1–§2.
-- This repo's code and `MEDUSA_SKILL.md` (verified Medusa reference: 2.22.3 in every app) for §3.
+- This repo's code and `MEDUSA_SKILL.md` (verified Medusa reference: 2.22.6 in every app) for §3.
 - Library names (Resilience4j, Polly, opossum, Istio) are pointers only. Adopting one in this repo goes through the evidence ladder, exact pins and an owner decision.

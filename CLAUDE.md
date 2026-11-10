@@ -4,7 +4,7 @@ Six standalone Medusa v2 business projects (ecommerce, pos, booking-services, wh
 
 ## Read before every task (in this order)
 1. `BUILD_PLAN.md`: the requirements. **Frozen. Never edit it.** (`.claude/hooks/protect-build-plan.sh`, wired in `.claude/settings.json`, blocks Claude's file tools and shell writes on it, its checksum and the lock's own files; `scripts/guard.sh` checks the checksum and the lock in CI. Only the owner unlocks it for an approved revision, from their own terminal: `touch .claude/plan-unlocked`, then `rm .claude/plan-unlocked` to lock again (owner's how-to: `docs/PLAN_LOCK.md`). Never create, change or delete that switch file, and never ask a tool to.)
-2. `MEDUSA_SKILL.md`: the only allowed Medusa reference (verified for 2.22.3 in every app), with its evidence ladder in §0.
+2. `MEDUSA_SKILL.md`: the only allowed Medusa reference (verified for 2.22.6 in every app), with its evidence ladder in §0.
 3. `DEV_FLOW.md`: the mandatory cycle: research → implement → gates → evidence-based fix cycle → review → record → commit → push.
 4. `TASKS.md`: pick the next task, and tick it with evidence when done.
 5. `COMPARISON.md` and `<category>/README.md`: scenario context and Dokploy setup.
