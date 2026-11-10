@@ -171,8 +171,8 @@ importers:
   .:
     dependencies:
       '@medusajs/js-sdk':
-        specifier: 2.22.3
-        version: 2.22.3
+        specifier: 2.22.6
+        version: 2.22.6
       next:
         specifier: 16.4.5
         version: 16.4.5(@types/node@22.20.5)(react-dom@19.0.5(react@19.0.5))(react@19.0.5)
@@ -187,11 +187,11 @@ importers:
         version: 0.0.1
     devDependencies:
       '@medusajs/types':
-        specifier: 2.22.3
-        version: 2.22.3
+        specifier: 2.22.6
+        version: 2.22.6
       '@medusajs/ui-preset':
-        specifier: 2.22.3
-        version: 2.22.3(tailwindcss@3.4.19)
+        specifier: 2.22.6
+        version: 2.22.6(tailwindcss@3.4.19)
       '@types/node':
         specifier: 22.20.5
         version: 22.20.5
@@ -398,12 +398,12 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@medusajs/js-sdk@2.22.3':
-    resolution: {integrity: sha512-U6yAfcSUYKdUP62anCsOYPBz6iKCt9cBnZ/CC18UdsDEigmWlxFg8WHuR//sAZ8BkEzi+gbdu4toybQqbAaDzg==}
+  '@medusajs/js-sdk@2.22.6':
+    resolution: {integrity: sha512-YGYUytnY9GaRyaNVKTrwq68y98GYMqrdEqmobp4N0+Iym9fV/LLUZNCQ3TQViTi/MVLBSpgf50oN6Plhc3ahdg==}
     engines: {node: '>=22.22.0'}
 
-  '@medusajs/types@2.22.3':
-    resolution: {integrity: sha512-oE/wAwrqBSThEOx0rdaSmPSD4CfuOL9h6VdsoiIfx3SgQ8yLjSkjMh96twmPcH/h5ol+ZkXEkpHNW4YDUaAiRA==}
+  '@medusajs/types@2.22.6':
+    resolution: {integrity: sha512-SNPY7Scxsq7N4PK63bSCfCjbPm4glkYmqGNLHXu+F5P9vjPtd3hAL790nvk/JyWgAf6dOHrVp22261391q0bVw==}
     engines: {node: '>=22.22.0'}
     peerDependencies:
       express: ^4.21.0
@@ -417,8 +417,8 @@ packages:
       vite:
         optional: true
 
-  '@medusajs/ui-preset@2.22.3':
-    resolution: {integrity: sha512-0WqtsbFJ/Bprb3cg/Kwy4zVjHpPFI/PYq7rA9f345mPQiv80nmKTgB1z2eORxh90J4ES67XPpf+NGvlANh+KAw==}
+  '@medusajs/ui-preset@2.22.6':
+    resolution: {integrity: sha512-Q1L4iefImN5KNrFtAKjjYgkZtHVPMI6XgTHLoMxd/Gq+Qgt9cHLKlhK1HsWfI+8yjo5jBlTvdZFPCPxz0Az1oA==}
     peerDependencies:
       tailwindcss: ^3.4.3 || ^4.0.0
 
@@ -1109,16 +1109,16 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  '@medusajs/js-sdk@2.22.3':
+  '@medusajs/js-sdk@2.22.6':
     dependencies:
       fetch-event-stream: 0.1.6
       qs: 6.16.1
 
-  '@medusajs/types@2.22.3':
+  '@medusajs/types@2.22.6':
     dependencies:
       bignumber.js: 11.1.5
 
-  '@medusajs/ui-preset@2.22.3(tailwindcss@3.4.19)':
+  '@medusajs/ui-preset@2.22.6(tailwindcss@3.4.19)':
     dependencies:
       tailwindcss: 3.4.19
       tailwindcss-animate: 1.0.7(tailwindcss@3.4.19)

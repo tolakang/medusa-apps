@@ -13,3 +13,10 @@ overrides:
 # not allow it either.
 allowBuilds:
   unrs-resolver: false
+
+minimumReleaseAgeExclude:
+  - "@medusajs/icons@2.22.6"
+  - "@medusajs/instantsearch-adapter@2.22.6"
+  - "@medusajs/js-sdk@2.22.6"
+  - "@medusajs/types@2.22.6"
+  - "@medusajs/ui-preset@2.22.6"

@@ -175,17 +175,17 @@ importers:
         specifier: ^2.2.0
         version: 2.2.10(react-dom@19.0.5(react@19.0.5))(react@19.0.5)
       '@medusajs/icons':
-        specifier: 2.22.3
-        version: 2.22.3(react@19.0.5)
+        specifier: 2.22.6
+        version: 2.22.6(react@19.0.5)
       '@medusajs/instantsearch-adapter':
-        specifier: 2.22.3
-        version: 2.22.3
+        specifier: 2.22.6
+        version: 2.22.6
       '@medusajs/js-sdk':
-        specifier: 2.22.3
-        version: 2.22.3
+        specifier: 2.22.6
+        version: 2.22.6
       '@medusajs/ui-preset':
-        specifier: 2.22.3
-        version: 2.22.3(tailwindcss@3.4.19)
+        specifier: 2.22.6
+        version: 2.22.6(tailwindcss@3.4.19)
       '@radix-ui/react-accordion':
         specifier: ^1.2.3
         version: 1.2.20(@types/react-dom@19.0.5(@types/react@19.0.5))(@types/react@19.0.5)(react-dom@19.0.5(react@19.0.5))(react@19.0.5)
@@ -239,8 +239,8 @@ importers:
         specifier: ^7.17.5
         version: 7.29.7(supports-color@8.1.1)
       '@medusajs/types':
-        specifier: 2.22.3
-        version: 2.22.3
+        specifier: 2.22.6
+        version: 2.22.6
       '@types/lodash':
         specifier: ^4.14.195
         version: 4.17.25
@@ -713,21 +713,21 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@medusajs/icons@2.22.3':
-    resolution: {integrity: sha512-V/kTzn1GLgBGD3MrqalD1dZl8DK1u+0Vekt2Zte9oQucsEDlJLQOVp+Piu+MvNsX5gWU0j/wPsKoaTLvFJ1KVg==}
+  '@medusajs/icons@2.22.6':
+    resolution: {integrity: sha512-PMWEJm+NC/6eSKP8cMtjuJ9gaZLqVxBTmwzqz0IKJ3IUalGP3zSKl+SKD7xvG4B4VWt9uQMKp33gw9IlrCtEXA==}
     peerDependencies:
       react: ^18.3.1 || ^19.0.0
 
-  '@medusajs/instantsearch-adapter@2.22.3':
-    resolution: {integrity: sha512-Ry8n1XgefHAEBq/Yt0QqKRIsU4QwM3RvbxDWD3Qpzb6rv263iNPQmVF2FZCXiiXJqBC1o/xSjjU2uhbyG9CcVQ==}
+  '@medusajs/instantsearch-adapter@2.22.6':
+    resolution: {integrity: sha512-yQQ/XmrBHlE1P8zfZxTlLb6J7g3hUGloWfoE2FKYwakVZbu1GklCWqXcMQdqn9KIs1zfJbFfmqrwz+e8Osm3fQ==}
     engines: {node: '>=22.22.0'}
 
-  '@medusajs/js-sdk@2.22.3':
-    resolution: {integrity: sha512-U6yAfcSUYKdUP62anCsOYPBz6iKCt9cBnZ/CC18UdsDEigmWlxFg8WHuR//sAZ8BkEzi+gbdu4toybQqbAaDzg==}
+  '@medusajs/js-sdk@2.22.6':
+    resolution: {integrity: sha512-YGYUytnY9GaRyaNVKTrwq68y98GYMqrdEqmobp4N0+Iym9fV/LLUZNCQ3TQViTi/MVLBSpgf50oN6Plhc3ahdg==}
     engines: {node: '>=22.22.0'}
 
-  '@medusajs/types@2.22.3':
-    resolution: {integrity: sha512-oE/wAwrqBSThEOx0rdaSmPSD4CfuOL9h6VdsoiIfx3SgQ8yLjSkjMh96twmPcH/h5ol+ZkXEkpHNW4YDUaAiRA==}
+  '@medusajs/types@2.22.6':
+    resolution: {integrity: sha512-SNPY7Scxsq7N4PK63bSCfCjbPm4glkYmqGNLHXu+F5P9vjPtd3hAL790nvk/JyWgAf6dOHrVp22261391q0bVw==}
     engines: {node: '>=22.22.0'}
     peerDependencies:
       express: ^4.21.0
@@ -741,8 +741,8 @@ packages:
       vite:
         optional: true
 
-  '@medusajs/ui-preset@2.22.3':
-    resolution: {integrity: sha512-0WqtsbFJ/Bprb3cg/Kwy4zVjHpPFI/PYq7rA9f345mPQiv80nmKTgB1z2eORxh90J4ES67XPpf+NGvlANh+KAw==}
+  '@medusajs/ui-preset@2.22.6':
+    resolution: {integrity: sha512-Q1L4iefImN5KNrFtAKjjYgkZtHVPMI6XgTHLoMxd/Gq+Qgt9cHLKlhK1HsWfI+8yjo5jBlTvdZFPCPxz0Az1oA==}
     peerDependencies:
       tailwindcss: ^3.4.3 || ^4.0.0
 
@@ -3524,22 +3524,22 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  '@medusajs/icons@2.22.3(react@19.0.5)':
+  '@medusajs/icons@2.22.6(react@19.0.5)':
     dependencies:
       react: 19.0.5
 
-  '@medusajs/instantsearch-adapter@2.22.3': {}
+  '@medusajs/instantsearch-adapter@2.22.6': {}
 
-  '@medusajs/js-sdk@2.22.3':
+  '@medusajs/js-sdk@2.22.6':
     dependencies:
       fetch-event-stream: 0.1.6
       qs: 6.17.1
 
-  '@medusajs/types@2.22.3':
+  '@medusajs/types@2.22.6':
     dependencies:
       bignumber.js: 11.1.5
 
-  '@medusajs/ui-preset@2.22.3(tailwindcss@3.4.19)':
+  '@medusajs/ui-preset@2.22.6(tailwindcss@3.4.19)':
     dependencies:
       tailwindcss: 3.4.19
       tailwindcss-animate: 1.0.7(tailwindcss@3.4.19)
