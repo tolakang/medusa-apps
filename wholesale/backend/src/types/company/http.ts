@@ -1,7 +1,11 @@
 import { FindParams, PaginatedResponse } from "@medusajs/framework/types";
 import { QueryCompany, QueryEmployee } from "./query";
 import { ModuleCompanyFilters, ModuleEmployeeFilters } from "./service";
-import { ModuleCompanySpendingLimitResetFrequency } from "./module";
+import {
+  ModuleCompanyPaymentTerms,
+  ModuleCompanySpendingLimitResetFrequency,
+  ModuleCompanyStatus,
+} from "./module";
 
 /* Filters */
 
@@ -33,6 +37,10 @@ export type AdminCreateCompany = {
   country: string | null;
   logo_url: string | null;
   currency_code: string | null;
+  payment_terms?: `${ModuleCompanyPaymentTerms}`;
+  credit_limit?: number | null;
+  tax_id?: string | null;
+  status?: `${ModuleCompanyStatus}`;
 };
 
 export type AdminUpdateCompany = Partial<AdminCreateCompany>;
@@ -83,6 +91,7 @@ export type StoreCreateCompany = {
   country?: string | null;
   logo_url?: string | null;
   currency_code: string;
+  tax_id?: string | null;
 };
 
 export type StoreUpdateCompany = {
@@ -98,6 +107,7 @@ export type StoreUpdateCompany = {
   logo_url: string | null;
   currency_code: string;
   spending_limit_reset_frequency?: ModuleCompanySpendingLimitResetFrequency;
+  tax_id?: string | null;
 };
 
 /* Employee */

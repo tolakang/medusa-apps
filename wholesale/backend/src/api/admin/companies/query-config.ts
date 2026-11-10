@@ -11,6 +11,10 @@ export const adminCompanyFields = [
   "zip",
   "country",
   "currency_code",
+  "payment_terms",
+  "credit_limit",
+  "tax_id",
+  "status",
   "*employees",
 ];
 

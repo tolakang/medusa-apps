@@ -18,6 +18,11 @@ export const AdminCreateCompany = z
     zip: z.string().optional(),
     country: z.string().optional(),
     logo_url: z.string().optional(),
+    // P4-02: terms, credit and status are admin-only.
+    payment_terms: z.enum(["prepaid", "net_15", "net_30", "net_60"]).optional(),
+    credit_limit: z.number().nonnegative().optional().nullable(),
+    tax_id: z.string().optional().nullable(),
+    status: z.enum(["pending", "approved", "suspended"]).optional(),
   })
   .strict();
 
@@ -34,6 +39,10 @@ export const AdminUpdateCompany = z
     zip: z.string().optional(),
     country: z.string().optional(),
     logo_url: z.string().optional().nullable(),
+    payment_terms: z.enum(["prepaid", "net_15", "net_30", "net_60"]).optional(),
+    credit_limit: z.number().nonnegative().optional().nullable(),
+    tax_id: z.string().optional().nullable(),
+    status: z.enum(["pending", "approved", "suspended"]).optional(),
   })
   .strict();
 

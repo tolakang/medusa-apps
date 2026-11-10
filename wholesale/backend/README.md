@@ -11,9 +11,10 @@ Medusa **2.22.6** backend for the wholesale (B2B) business project. One image, d
 - Starter type errors fixed (the starter has no `typecheck`): unneeded cast in the admin quote items list; `inApp` removed from the test runner options (not an option in `@medusajs/test-utils` 2.22.3); test JWT falls back to Medusa's default secret.
 - Starter tests brought up to 2.22.3: the test product is `published` (carts reject draft products' variants) and the quote summary no longer expects `difference_sum` (not in `OrderSummaryDTO`). Added `health.spec.ts` and `seed-initial-data.spec.ts` from ecommerce.
 - Not copied: `.env.template`, `.npmrc`, `.vscode/`, `static/` (demo images; the seed uses Medusa's public image URLs), the generic `README.md` guides under `src/` and `integration-tests/http/` (F-053).
+- P4-02: `company` gains `payment_terms`, `credit_limit`, `tax_id`, `status` (admin API and admin form; buyers may set only `tax_id`); `POST /store/companies/:id` now validates its body (F-058).
 - Scripts added: `typecheck`, `predeploy` (safe migrate flags), `seed:initial`, `--passWithNoTests` on module and unit tests.
 
-Known starter behaviour left for later tasks: the cart-completion hook reads only `employee.spending_limit`, so the spend window and past orders are not counted yet (P4-04); hooks throw plain `Error` (lint warnings; P4-04); module tables have no prefix (`company`, `quote`, `message`, …; F-055).
+Known starter behaviour left for later tasks: **the store company routes don't check that the company is the buyer's own (F-058, P4-07, must be fixed before any deploy)**; the cart-completion hook reads only `employee.spending_limit`, so the spend window and past orders are not counted yet (P4-04); hooks throw plain `Error` (lint warnings; P4-04); module tables have no prefix (`company`, `quote`, `message`, …; F-055).
 
 ## Run locally
 ```bash

@@ -12,6 +12,19 @@ export enum ModuleCompanySpendingLimitResetFrequency {
   YEARLY = "yearly",
 }
 
+export enum ModuleCompanyPaymentTerms {
+  PREPAID = "prepaid",
+  NET_15 = "net_15",
+  NET_30 = "net_30",
+  NET_60 = "net_60",
+}
+
+export enum ModuleCompanyStatus {
+  PENDING = "pending",
+  APPROVED = "approved",
+  SUSPENDED = "suspended",
+}
+
 export type ModuleCompany = {
   id: string;
   name: string;
@@ -25,6 +38,10 @@ export type ModuleCompany = {
   logo_url: string | null;
   currency_code: string | null;
   spending_limit_reset_frequency: ModuleCompanySpendingLimitResetFrequency;
+  payment_terms: ModuleCompanyPaymentTerms;
+  credit_limit: number | null;
+  tax_id: string | null;
+  status: ModuleCompanyStatus;
   created_at: Date;
   updated_at: Date;
   customer_group: CustomerGroupDTO;
@@ -43,6 +60,10 @@ export type ModuleCreateCompany = {
   logo_url: string | null;
   currency_code: string;
   spending_limit_reset_frequency: ModuleCompanySpendingLimitResetFrequency | null;
+  payment_terms?: ModuleCompanyPaymentTerms;
+  credit_limit?: number | null;
+  tax_id?: string | null;
+  status?: ModuleCompanyStatus;
 };
 
 export interface ModuleUpdateCompany extends Partial<ModuleCompany> {
