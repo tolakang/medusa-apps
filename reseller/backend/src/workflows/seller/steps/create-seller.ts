@@ -1,6 +1,9 @@
+import { MedusaError } from "@medusajs/framework/utils"
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
 import { SELLER_MODULE } from "../../../modules/seller"
 import SellerModuleService from "../../../modules/seller/service"
+
+export const normalizeEmail = (email: string) => email.trim().toLowerCase()
 
 export type CreateSellerInput = {
   handle: string
@@ -15,9 +18,18 @@ export type CreateSellerInput = {
 export const createSellerStep = createStep(
   "create-seller",
   async (input: CreateSellerInput, { container }) => {
-    const seller = await container
-      .resolve<SellerModuleService>(SELLER_MODULE)
-      .createSellers(input)
+    const sellers = container.resolve<SellerModuleService>(SELLER_MODULE)
+    // P5-03: the seller signs in with this email (the invitation is matched
+    // by it), so it is stored lowercase and used by one seller only.
+    const email = normalizeEmail(input.email)
+    const [existing] = await sellers.listSellers({ email })
+    if (existing) {
+      throw new MedusaError(
+        MedusaError.Types.DUPLICATE_ERROR,
+        `A seller with the email ${email} already exists.`
+      )
+    }
+    const seller = await sellers.createSellers({ ...input, email })
     return new StepResponse(seller, seller.id)
   },
   async (sellerId: string | undefined, { container }) => {

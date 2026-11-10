@@ -19,6 +19,8 @@ import {
   requireCaptcha,
   requireStrongPassword,
 } from './auth-guards'
+import { requireSeller, sellerCors } from './seller-auth'
+import { PostAdminSeller } from './admin/sellers/validators'
 
 // The product index declares filterable `status` and `sales_channel_ids`, so
 // the route narrows it to published products in the key's sales channels.
@@ -81,6 +83,35 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/store/customers/me/wishlists/items',
       middlewares: [validateAndTransformBody(PostWishlistItem)],
+    },
+    {
+      // Seller portal routes (TASKS P5-03): SELLER_CORS, then a signed-in
+      // seller who isn't suspended on every /sellers route (seller-auth.ts).
+      matcher: '/sellers*',
+      middlewares: [sellerCors, requireSeller],
+    },
+    {
+      // Seller sign-up and sign-in: the same per-IP limits and password rule
+      // as customers; sign-up only becomes a seller with the shop's
+      // invitation (/sellers/accept).
+      method: ['POST'],
+      matcher: '/auth/seller/emailpass/register',
+      middlewares: [limitPerIp('seller_signup', AUTH_LIMITS.signup, 60), requireStrongPassword],
+    },
+    {
+      method: ['POST'],
+      matcher: '/auth/seller/emailpass',
+      middlewares: [limitPerIp('seller_login', AUTH_LIMITS.login, 60)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/auth/seller/emailpass/reset-password',
+      middlewares: [limitPerIp('seller_password_reset', AUTH_LIMITS.password_reset, 60)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/sellers',
+      middlewares: [validateAndTransformBody(PostAdminSeller)],
     },
     {
       // Customer passwords: at least 8 characters at sign-up and reset.
