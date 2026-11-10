@@ -43,6 +43,7 @@ export async function loadBuyer(
       "id",
       "employee.id",
       "employee.spending_limit",
+      "employee.is_admin",
       "employee.company.id",
       "employee.company.name",
       "employee.company.status",
@@ -61,6 +62,7 @@ export async function loadBuyer(
       ? {
           id: customer.employee.id,
           spending_limit: customer.employee.spending_limit ?? null,
+          is_admin: !!customer.employee.is_admin,
           company: customer.employee.company ?? null,
         }
       : null,
@@ -132,4 +134,36 @@ export async function loadCompanyOrders(
     filters: { customer_id: customerIds },
   });
   return data as B2bOrder[];
+}
+
+/** P4-05: the approval settings of a company. */
+export async function loadApprovalSettings(
+  container: MedusaContainer,
+  companyId: string
+) {
+  const {
+    data: [settings],
+  } = await queryOf(container).graph({
+    entity: "approval_settings",
+    fields: [
+      "requires_admin_approval",
+      "requires_sales_manager_approval",
+      "approval_threshold",
+    ],
+    filters: { company_id: companyId },
+  });
+  return settings ?? null;
+}
+
+/** P4-05: the approvals of a cart. */
+export async function loadCartApprovals(
+  container: MedusaContainer,
+  cartId: string
+) {
+  const { data } = await queryOf(container).graph({
+    entity: "approval",
+    fields: ["id", "type", "status"],
+    filters: { cart_id: cartId },
+  });
+  return data;
 }

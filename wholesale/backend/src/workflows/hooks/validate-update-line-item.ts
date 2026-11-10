@@ -2,12 +2,19 @@ import { StepResponse } from "@medusajs/framework/workflows-sdk";
 import { updateLineItemInCartWorkflow } from "@medusajs/medusa/core-flows";
 import {
   assertApprovedCompanyBuyer,
+  assertCartItemsUnlocked,
   assertMinOrderQuantities,
 } from "../../utils/b2b-cart-rules";
-import { loadBuyer, loadCart, loadMinimums } from "../../utils/load-b2b-buyer";
+import {
+  loadBuyer,
+  loadCart,
+  loadCartApprovals,
+  loadMinimums,
+} from "../../utils/load-b2b-buyer";
 
 // P4-04: changing a line's quantity follows the same rules as adding it.
 updateLineItemInCartWorkflow.hooks.validate(async ({ input }, { container }) => {
+  assertCartItemsUnlocked(await loadCartApprovals(container, input.cart_id));
   const cart = await loadCart(container, input.cart_id);
   assertApprovedCompanyBuyer(await loadBuyer(container, cart?.customer_id));
 

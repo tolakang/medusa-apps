@@ -2,19 +2,18 @@ import { completeCartWorkflow } from "@medusajs/medusa/core-flows";
 import { StepResponse } from "@medusajs/framework/workflows-sdk";
 import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils";
 import { getCartApprovalStatus } from "../../utils/get-cart-approval-status";
-import { checkSpendingLimit } from "../../utils/check-spending-limit";
+import { assertBuyerCanSpend } from "../../utils/b2b-spend-checks";
 import {
+  assertApprovalsGranted,
   assertApprovedCompanyBuyer,
-  assertCreditLimit,
   assertMinOrderQuantities,
-  getOutstandingCredit,
-  spendOrders,
+  requiredApprovalTypes,
 } from "../../utils/b2b-cart-rules";
 import {
+  loadApprovalSettings,
   loadBuyer,
   loadCart,
-  loadCompanyOrders,
-  loadCustomerOrders,
+  loadCartApprovals,
   loadMinimums,
 } from "../../utils/load-b2b-buyer";
 
@@ -61,40 +60,18 @@ completeCartWorkflow.hooks.validate(async ({ cart }, { container }) => {
 
   const cartTotal = Number(current?.total ?? 0);
 
-  // Employee spending limit, over the company's reset window. The starter
-  // read only the limit, so past orders never counted (F-056).
-  if (buyer!.employee?.spending_limit) {
-    const orders = spendOrders(
-      await loadCustomerOrders(container, buyer!.customer_id)
-    );
-    const exceeded = checkSpendingLimit(
-      { total: cartTotal },
-      {
-        employee: {
-          spending_limit: buyer!.employee.spending_limit,
-          company,
-        },
-        orders: orders.map((order) => ({
-          created_at: String(order!.created_at),
-          total: Number(order!.total ?? 0),
-        })),
-      }
-    );
-    if (exceeded) {
-      throw new MedusaError(
-        MedusaError.Types.NOT_ALLOWED,
-        "Cart total exceeds spending limit"
-      );
-    }
-  }
+  // P4-05: orders above the company's approval threshold need every
+  // approval type the company switched on (a company admin's own carts skip
+  // the company-admin approval). The starter only blocked pending carts, so
+  // a buyer could check out without asking.
+  const settings = await loadApprovalSettings(container, company.id);
+  assertApprovalsGranted(
+    requiredApprovalTypes(settings, cartTotal, !!buyer!.employee?.is_admin),
+    await loadCartApprovals(container, cart.id)
+  );
 
-  // Company credit limit, for net-terms companies.
-  if (company.payment_terms && company.payment_terms !== "prepaid") {
-    const outstanding = getOutstandingCredit(
-      await loadCompanyOrders(container, company.id)
-    );
-    assertCreditLimit(company, outstanding, cartTotal);
-  }
+  // Employee spending limit and, on net terms, company credit limit.
+  await assertBuyerCanSpend(container, buyer!, company, cartTotal);
 
   return new StepResponse(undefined, null);
 });

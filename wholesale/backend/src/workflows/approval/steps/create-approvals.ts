@@ -3,6 +3,14 @@ import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk";
 import { APPROVAL_MODULE } from "../../../modules/approval";
 import {
+  assertApprovedCompanyBuyer,
+  requiredApprovalTypes,
+} from "../../../utils/b2b-cart-rules";
+import {
+  loadApprovalSettings,
+  loadBuyer,
+} from "../../../utils/load-b2b-buyer";
+import {
   ApprovalStatusType,
   ApprovalType,
   IApprovalModuleService,
@@ -26,13 +34,7 @@ export const createApprovalStep = createStep(
     } = await query.graph(
       {
         entity: "cart",
-        fields: [
-          "id",
-          "approvals.*",
-          "approval_status.*",
-          "company.id",
-          "company.approval_settings.*",
-        ],
+        fields: ["id", "customer_id", "total", "approvals.*", "approval_status.*"],
         filters: {
           id: approvalData[0].cart_id,
         },
@@ -56,28 +58,38 @@ export const createApprovalStep = createStep(
       throw new MedusaError(MedusaError.Types.NOT_ALLOWED, "Cart is already approved");
     }
 
-    const { requires_admin_approval, requires_sales_manager_approval } =
-      cart?.company?.approval_settings || {};
-
-    const approvalsToCreate = [] as ModuleCreateApproval[];
-
-    if (requires_admin_approval) {
-      approvalsToCreate.push(
-        ...approvalData.map((data) => ({
-          ...data,
-          type: ApprovalType.ADMIN,
-        }))
+    // P4-05: only the cart's own buyer asks, the company comes from their
+    // employee record (the starter read the cart's company link, which came
+    // from client-set metadata), and only the approval types the company's
+    // threshold requires are created.
+    const requester = approvalData[0].created_by;
+    if (!cart.customer_id || cart.customer_id !== requester) {
+      throw new MedusaError(
+        MedusaError.Types.NOT_ALLOWED,
+        "You can only ask for approval of your own cart."
+      );
+    }
+    const buyer = await loadBuyer(container, requester);
+    const company = assertApprovedCompanyBuyer(buyer);
+    const settings = await loadApprovalSettings(container, company.id);
+    const types = requiredApprovalTypes(
+      settings,
+      Number(cart.total ?? 0),
+      !!buyer?.employee?.is_admin
+    );
+    if (!types.length) {
+      throw new MedusaError(
+        MedusaError.Types.NOT_ALLOWED,
+        "This cart doesn't need approval."
       );
     }
 
-    if (requires_sales_manager_approval) {
-      approvalsToCreate.push(
-        ...approvalData.map((data) => ({
-          ...data,
-          type: ApprovalType.SALES_MANAGER,
-        }))
-      );
-    }
+    const approvalsToCreate = types.flatMap((type) =>
+      approvalData.map((data) => ({
+        ...data,
+        type: type === "admin" ? ApprovalType.ADMIN : ApprovalType.SALES_MANAGER,
+      }))
+    ) as ModuleCreateApproval[];
 
     if (approvalsToCreate.length === 0) {
       throw new MedusaError(MedusaError.Types.NOT_ALLOWED, "No enabled approval types found");
