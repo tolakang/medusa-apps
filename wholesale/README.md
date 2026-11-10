@@ -1,18 +1,19 @@
 # Wholesale — `wholesale/`
 
-> **Sellers buy your products in bulk (B2B).** Planned — Phase 4. Scope: [BUILD_PLAN.md §6.4](../BUILD_PLAN.md).
+> **Sellers buy your products in bulk (B2B).** Phase 4, in progress (started 2026-11-10). Scope: [BUILD_PLAN.md §6.4](../BUILD_PLAN.md).
 >
-> The `Dockerfile` and `.env.example` files here are **ready templates**. Application code is added in the build phase; until then a Dokploy build of these folders will fail at `COPY package.json`.
+> `backend/` has app code: the official `b2b-starter` backend (companies, employees, quotes, approvals) on Medusa 2.22.6, see [backend/README.md](backend/README.md) (TASKS P4-01). `storefront/` still holds only the **template** `Dockerfile` and `.env.example`; its code comes with P4-08, and until then a Dokploy build of that folder fails at `COPY package.json`.
 
 This folder is **one complete business project**. Copy the whole folder's setup into one Dokploy project and every piece deploys on its own.
 
 ```
 wholesale/
 ├── README.md                <- this guide
-├── backend/                 Medusa server + worker
+├── backend/                 Medusa server + worker (from b2b-starter; README.md lists the changes)
 │   ├── Dockerfile
 │   ├── docker-entrypoint.sh
-│   └── .env.example
+│   ├── .env.example
+│   └── src/                 modules company, quote, approval
 └── storefront/              customer storefront
     ├── Dockerfile
     └── .env.example
