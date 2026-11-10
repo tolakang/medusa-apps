@@ -15,9 +15,10 @@ Medusa **2.22.6** backend for the wholesale (B2B) business project. One image, d
 - P4-03: `src/scripts/seed-b2b.ts` (`seed:b2b`): the B2B sales channel and its publishable key; with `demo-pricing`, Gold / Silver customer groups, price lists on `customer.groups.id` and quantity tiers. A company gets a tier by joining a customer group (admin: company → customer group).
 - P4-04: B2B cart rules (`src/utils/b2b-cart-rules.ts`, hooks in `src/workflows/hooks/`): only employees of an approved company add to cart or check out; minimum order quantity from `metadata.min_order_quantity` (variant, else product); spending limit over the company's reset window with past orders; credit limit for net-terms companies (unpaid orders count until captured).
 - P4-05: approvals above a limit: `approval_settings.approval_threshold` (admin only); checkout needs every required approval; items lock while pending or approved; only the cart's buyer asks and only an admin of the same company decides (the sales manager in the admin); carts and orders link to the buyer's company from the employee record; one company has many orders; accepting a quote runs the checkout rules (F-059).
+- P4-07: store company API scoped to the buyer (F-058): `/store/companies/me`, `/me/employees`, `/me/approval-settings` replace the starter's `/store/companies/:id…`; sign-up (`POST /store/companies`) creates the company and its first admin together, `pending` when `WHOLESALE_REQUIRE_APPROVAL=true`; quote and approval routes only for the own customer or company.
 - Scripts added: `typecheck`, `predeploy` (safe migrate flags), `seed:initial`, `--passWithNoTests` on module and unit tests.
 
-Known starter behaviour left for later tasks: **the store company routes don't check that the company is the buyer's own (F-058, P4-07, must be fixed before any deploy)**; module tables have no prefix (`company`, `quote`, `message`, …; F-055).
+Known starter behaviour left for later tasks: module tables have no prefix (`company`, `quote`, `message`, …; F-055).
 
 ## Run locally
 ```bash

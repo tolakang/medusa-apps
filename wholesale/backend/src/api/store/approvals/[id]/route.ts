@@ -12,9 +12,7 @@ export const POST = async (
   req: AuthenticatedMedusaRequest<StoreUpdateApprovalType>,
   res: MedusaResponse
 ) => {
-  const { customer_id } = req.auth_context.app_metadata as {
-    customer_id: string;
-  };
+  const customer_id = req.auth_context.actor_id;
 
   const { id: approvalId } = req.params;
   const { status } = req.validatedBody;

@@ -4,6 +4,7 @@ import {
 } from "@medusajs/framework";
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
 import { ApprovalType } from "../../../types/approval";
+import { requireCompanyMember } from "../../../utils/b2b-access";
 import { StoreGetApprovalsType } from "./validators";
 
 export const GET = async (
@@ -11,23 +12,13 @@ export const GET = async (
   res: MedusaResponse
 ) => {
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
-  const { customer_id } = req.auth_context.app_metadata as {
-    customer_id: string;
-  };
-
-  const {
-    data: [customer],
-  } = await query.graph({
-    entity: "customer",
-    fields: ["employee.company.id"],
-    filters: { id: customer_id },
-  });
-
-  const companyId = customer?.employee?.company?.id as string;
-
-  if (!companyId) {
-    return res.json({ approvals: [], count: 0 });
-  }
+  // P4-07: company admins see their own company's approval requests.
+  const member = await requireCompanyMember(
+    req.scope,
+    req.auth_context.actor_id,
+    { admin: true }
+  );
+  const companyId = member.employee.company.id;
 
   const {
     data: [company],
