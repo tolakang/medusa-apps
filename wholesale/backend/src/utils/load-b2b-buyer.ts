@@ -46,6 +46,7 @@ export async function loadBuyer(
       "employee.is_admin",
       "employee.company.id",
       "employee.company.name",
+      "employee.company.tax_id",
       "employee.company.status",
       "employee.company.payment_terms",
       "employee.company.credit_limit",

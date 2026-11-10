@@ -12,6 +12,7 @@ import {
 export type B2bCompany = {
   id: string;
   name?: string | null;
+  tax_id?: string | null;
   status?: `${ModuleCompanyStatus}` | null;
   payment_terms?: `${ModuleCompanyPaymentTerms}` | null;
   credit_limit?: number | null;
