@@ -12,6 +12,7 @@ Medusa **2.22.6** backend for the wholesale (B2B) business project. One image, d
 - Starter tests brought up to 2.22.3: the test product is `published` (carts reject draft products' variants) and the quote summary no longer expects `difference_sum` (not in `OrderSummaryDTO`). Added `health.spec.ts` and `seed-initial-data.spec.ts` from ecommerce.
 - Not copied: `.env.template`, `.npmrc`, `.vscode/`, `static/` (demo images; the seed uses Medusa's public image URLs), the generic `README.md` guides under `src/` and `integration-tests/http/` (F-053).
 - P4-02: `company` gains `payment_terms`, `credit_limit`, `tax_id`, `status` (admin API and admin form; buyers may set only `tax_id`); `POST /store/companies/:id` now validates its body (F-058).
+- P4-03: `src/scripts/seed-b2b.ts` (`seed:b2b`): the B2B sales channel and its publishable key; with `demo-pricing`, Gold / Silver customer groups, price lists on `customer.groups.id` and quantity tiers. A company gets a tier by joining a customer group (admin: company → customer group).
 - Scripts added: `typecheck`, `predeploy` (safe migrate flags), `seed:initial`, `--passWithNoTests` on module and unit tests.
 
 Known starter behaviour left for later tasks: **the store company routes don't check that the company is the buyer's own (F-058, P4-07, must be fixed before any deploy)**; the cart-completion hook reads only `employee.spending_limit`, so the spend window and past orders are not counted yet (P4-04); hooks throw plain `Error` (lint warnings; P4-04); module tables have no prefix (`company`, `quote`, `message`, …; F-055).
@@ -23,7 +24,9 @@ pnpm install --frozen-lockfile
 pnpm medusa db:migrate --execute-safe-links --execute-safe-search
 pnpm dev                                    # http://localhost:9000/app (Companies, Quotes, Approvals)
 pnpm medusa user -e admin@example.com -p <password>
-pnpm seed:initial                           # optional demo data (EU region, demo products)
+pnpm seed:initial                           # optional demo data (EU region, demo products); after the first start
+pnpm seed:b2b                               # "Wholesale" channel + its publishable key (prints it; safe in production)
+pnpm seed:b2b demo-pricing                  # + Gold / Silver groups and price lists with volume tiers (demo)
 ```
 
 ## Verify (DEV_FLOW §5)
