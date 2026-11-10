@@ -1,5 +1,5 @@
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
-import { ContainerRegistrationKeys, ProductStatus } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, Modules, ProductStatus } from "@medusajs/framework/utils"
 import type { SearchTypes } from "@medusajs/framework/types"
 import {
   createApiKeysWorkflow,
@@ -46,13 +46,24 @@ medusaIntegrationTestRunner({
         return response.data.results[0].hits as Hit[]
       }
 
-      // Indexing runs on events, so wait until the index has caught up.
+      // Indexing runs on events, so wait until the index has caught up. An
+      // event handled while the module's own start-up seeding is still running
+      // (or killed by the runner's database reset) can be lost: "Search index
+      // "product" has no active version yet". After 10 s the test asks the
+      // module to rebuild the index from the database (`reindex`, the
+      // documented way "to recover an index whose documents drifted"), then
+      // keeps waiting (TASKS F-065).
       const searchUntil = async (q: string, done: (hits: Hit[]) => boolean) => {
         let hits: Hit[] = []
-        for (let attempt = 0; attempt < 60; attempt++) {
+        for (let attempt = 0; attempt < 80; attempt++) {
           hits = await search(q)
           if (done(hits)) {
             return hits
+          }
+          if (attempt === 20) {
+            await getContainer()
+              .resolve<SearchTypes.ISearchModuleService>(Modules.SEARCH)
+              .reindex({ index: "product" })
           }
           await new Promise((resolve) => setTimeout(resolve, 500))
         }

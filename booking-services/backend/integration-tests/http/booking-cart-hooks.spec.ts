@@ -267,12 +267,16 @@ medusaIntegrationTestRunner({
           expect(await complete(cart.id)).toEqual({ order: expect.stringMatching(/^order_/) })
         })
 
+        // The release job (every minute, P3-09) also runs in the test app and
+        // releases holds that ran out, so these tests make the hold run out
+        // only after checkout is ready, right before completing: the job's
+        // window shrinks to one request (TASKS F-065).
         it("still places the order when the hold ran out but nobody took the time", async () => {
           const resource = await stylist()
           const cart = await newCart()
           const { booking: hold } = await bookInto(cart.id, resource.id)
-          await booking().updateBookings({ id: hold.id, hold_expires_at: new Date(Date.now() - 60_000) })
           await readyForCheckout(cart.id)
+          await booking().updateBookings({ id: hold.id, hold_expires_at: new Date(Date.now() - 1_000) })
 
           expect(await complete(cart.id)).toEqual({ order: expect.stringMatching(/^order_/) })
         })
@@ -281,13 +285,17 @@ medusaIntegrationTestRunner({
           const resource = await stylist()
           const [slow, fast] = [await newCart(), await newCart()]
           const { booking: hold } = await bookInto(slow.id, resource.id)
-          await booking().updateBookings({ id: hold.id, hold_expires_at: new Date(Date.now() - 60_000) })
-          await bookInto(fast.id, resource.id)
           await readyForCheckout(slow.id)
+          await booking().updateBookings({ id: hold.id, hold_expires_at: new Date(Date.now() - 1_000) })
+          await bookInto(fast.id, resource.id)
 
-          expect(await complete(slow.id)).toEqual({
-            refused: "Your hold on this time ran out and the time was taken. Please choose another time.",
-          })
+          // Refused either way: "taken" when the hold is still marked held,
+          // "released" when the release job got to it first.
+          const result = await complete(slow.id)
+          expect([
+            "Your hold on this time ran out and the time was taken. Please choose another time.",
+            "This booking was released. Please choose the time again.",
+          ]).toContain(result.refused)
           const { data: orders } = await getContainer()
             .resolve(ContainerRegistrationKeys.QUERY)
             .graph({ entity: "order", fields: ["id"] })
