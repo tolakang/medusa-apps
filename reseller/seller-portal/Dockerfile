@@ -1,7 +1,10 @@
 # =====================================================================
 # reseller / seller-portal — Next.js (seller portal)
 #
-# Dokploy: Build Type = Dockerfile, Build Path = /reseller/seller-portal
+# Dokploy: Build Type = Dockerfile, Build Path = /,
+#   Docker File = reseller/seller-portal/Dockerfile,
+#   Docker Context Path = reseller/seller-portal,
+#   Watch Paths = reseller/seller-portal/**
 #   Environment -> Build-time Arguments: the ARG values below
 #   Environment -> Runtime variables   : see .env.example
 #   Domain -> port 3000
@@ -9,8 +12,9 @@
 # NEXT_PUBLIC_* values are baked into the JS bundle at build time, so
 # changing one requires a rebuild (Dokploy: Rebuild).
 #
-# STATUS: ready template. Builds once the app code is added
-# (BUILD_PLAN.md §4.2). Requires `output: "standalone"` in next.config.
+# STATUS: app code added (TASKS P5-08). next.config.js sets
+# `output: "standalone"`; the build needs no backend and no build args (the
+# NEXT_PUBLIC_* values below are only a fallback for MEDUSA_BACKEND_URL).
 # =====================================================================
 ARG NODE_VERSION=22
 

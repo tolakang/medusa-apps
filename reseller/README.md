@@ -2,7 +2,7 @@
 
 > **Sellers sell your products; you ship.** Phase 5, in progress (started 2026-11-10). Scope: [BUILD_PLAN.md §6.5](../BUILD_PLAN.md).
 >
-> `backend/` and `storefront/` are a **full copy of Ecommerce** (PayWay, Resend, Telegram, Cambodia rules; TASKS F-061), on Medusa 2.22.6; see [backend/README.md](backend/README.md) and [storefront/README.md](storefront/README.md). The seller features come with P5-01 to P5-07. `seller-portal/` still holds only the **template** `Dockerfile` and `.env.example`; its code comes with P5-08, and until then a Dokploy build of that folder fails at `COPY package.json`. Local stack: `docker-compose.local.yml`.
+> `backend/` and `storefront/` are a **full copy of Ecommerce** (PayWay, Resend, Telegram, Cambodia rules; TASKS F-061), on Medusa 2.22.6; see [backend/README.md](backend/README.md) and [storefront/README.md](storefront/README.md). Seller features: P5-01 to P5-07 (backend README). `seller-portal/` is the seller portal (P5-08; [seller-portal/README.md](seller-portal/README.md)): sign-in for invited sellers, product choice, sales and commissions. Local stack: `docker-compose.local.yml`.
 
 This folder is **one complete business project**. Copy the whole folder's setup into one Dokploy project and every piece deploys on its own.
 
