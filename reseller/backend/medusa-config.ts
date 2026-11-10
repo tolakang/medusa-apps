@@ -250,6 +250,8 @@ module.exports = defineConfig({
     { resolve: "./src/modules/telegram-links" },
     // Customer wishlists (TASKS P1-19).
     { resolve: "./src/modules/wishlist" },
+    // Sellers and their commissions (BUILD_PLAN §6.5, TASKS P5-01).
+    { resolve: "./src/modules/seller" },
     // Auth Module with the default email + password provider and two-factor
     // sign-in for admins (TASKS P1-22; docs "Auth Module Options" and
     // "Multi-Factor Authentication", v2.15.5+; the admin's Settings → Profile

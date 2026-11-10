@@ -7,7 +7,7 @@ Medusa **2.22.6** backend for the reseller business project (sellers sell your p
 - `.env.example` gains the plan §6.5 settings: `RESELLER_DEFAULT_COMMISSION_RATE`, `RESELLER_PAYOUT_DAY`, `SELLER_CORS` (read from P5-03 / P5-04 / P5-05 on).
 - Local stack: `../docker-compose.local.yml` (same host ports as the other categories; run one at a time).
 
-The seller module, seller auth and commissions come in P5-01 to P5-06. The ecommerce notes below apply unchanged.
+**P5-01:** module `seller` (`src/modules/seller`): `seller` (handle, name, email, domain, status, commission rate) and `seller_commission` (one per order). Seller auth, the sales-channel link and commission recording come in P5-02 to P5-06. The ecommerce notes below apply unchanged.
 
 ---
 
