@@ -2,12 +2,18 @@ import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
 import { createOrderWorkflow } from "@medusajs/medusa/core-flows";
 import { StepResponse } from "@medusajs/framework/workflows-sdk";
 import { COMPANY_MODULE } from "../../modules/company";
+import { loadBuyer } from "../../utils/load-b2b-buyer";
 
 createOrderWorkflow.hooks.orderCreated(
   async ({ order }, { container }) => {
     const remoteLink = container.resolve(ContainerRegistrationKeys.LINK);
 
-    if (!order.metadata?.company_id) {
+    // P4-05: the order's company is the customer's company (employee
+    // record), not `metadata.company_id`, which the client sets.
+    const buyer = await loadBuyer(container, order.customer_id);
+    const companyId = buyer?.employee?.company?.id;
+
+    if (!companyId) {
       return new StepResponse(undefined, null);
     }
 
@@ -16,7 +22,7 @@ createOrderWorkflow.hooks.orderCreated(
         order_id: order.id,
       },
       [COMPANY_MODULE]: {
-        company_id: order.metadata?.company_id,
+        company_id: companyId,
       },
     });
 

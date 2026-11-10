@@ -6,6 +6,7 @@ import { OrderStatus } from "@medusajs/framework/utils";
 import { createWorkflow } from "@medusajs/framework/workflows-sdk";
 import { updateOrderWorkflow } from "../../order/workflows/update-order";
 import { validateQuoteAcceptanceStep } from "../steps/validate-quote-acceptance";
+import { validateQuoteBuyerStep } from "../steps/validate-quote-buyer";
 import { updateQuotesWorkflow } from "./update-quote";
 
 /*
@@ -26,6 +27,12 @@ export const customerAcceptQuoteWorkflow = createWorkflow(
     });
 
     validateQuoteAcceptanceStep({ quote });
+
+    // P4-05: the checkout rules, before anything changes.
+    validateQuoteBuyerStep({
+      quote_id: input.quote_id,
+      customer_id: input.customer_id,
+    });
 
     updateQuotesWorkflow.runAsStep({
       input: [{ id: input.quote_id, status: "accepted" }],

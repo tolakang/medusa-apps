@@ -23,6 +23,7 @@ export type B2bBuyer = {
   employee: {
     id: string;
     spending_limit?: number | null;
+    is_admin?: boolean;
     company: B2bCompany | null;
   } | null;
 };
@@ -150,4 +151,88 @@ export function assertCreditLimit(
 /** Orders that count towards an employee's spending limit. */
 export function spendOrders(orders: B2bOrder[]): B2bOrder[] {
   return orders.filter(countsAsSpend);
+}
+
+// P4-05 (plan §6.4: "approval flow for orders above a limit").
+
+export type B2bApprovalSettings = {
+  requires_admin_approval?: boolean | null;
+  requires_sales_manager_approval?: boolean | null;
+  approval_threshold?: number | null;
+} | null;
+
+export type B2bApproval = {
+  type?: string | null;
+  status?: string | null;
+} | null;
+
+/**
+ * The approval types a cart needs: the types the company switched on, when
+ * the cart total is above the threshold (no threshold = every cart). A
+ * company admin is the company's approver, so their own carts skip the
+ * company-admin approval (owner, 2026-11-10); the sales manager still
+ * approves them.
+ */
+export function requiredApprovalTypes(
+  settings: B2bApprovalSettings,
+  cartTotal: number,
+  isCompanyAdmin: boolean
+): ("admin" | "sales_manager")[] {
+  if (!settings) {
+    return [];
+  }
+  const threshold = settings.approval_threshold;
+  if (threshold !== null && threshold !== undefined && cartTotal <= threshold) {
+    return [];
+  }
+  const types: ("admin" | "sales_manager")[] = [];
+  if (settings.requires_admin_approval && !isCompanyAdmin) {
+    types.push("admin");
+  }
+  if (settings.requires_sales_manager_approval) {
+    types.push("sales_manager");
+  }
+  return types;
+}
+
+/** Every required approval type must have an approved approval. */
+export function assertApprovalsGranted(
+  required: string[],
+  approvals: B2bApproval[]
+) {
+  if (!required.length) {
+    return;
+  }
+  const live = approvals.filter(Boolean);
+  if (live.some((approval) => approval!.status === "rejected")) {
+    throw notAllowed("This order was rejected. Start a new cart.");
+  }
+  for (const type of required) {
+    const approved = live.some(
+      (approval) => approval!.type === type && approval!.status === "approved"
+    );
+    if (!approved) {
+      throw notAllowed(
+        type === "admin"
+          ? "This order needs your company admin's approval."
+          : "This order needs the sales manager's approval."
+      );
+    }
+  }
+}
+
+/**
+ * Items can't change once a cart is waiting for approval or approved, or an
+ * approved total could grow before checkout.
+ */
+export function assertCartItemsUnlocked(approvals: B2bApproval[]) {
+  const statuses = approvals.filter(Boolean).map((approval) => approval!.status);
+  if (statuses.includes("pending")) {
+    throw notAllowed("Cart is pending approval");
+  }
+  if (statuses.includes("approved")) {
+    throw notAllowed(
+      "This cart is approved, so its items can't change. Start a new cart."
+    );
+  }
 }

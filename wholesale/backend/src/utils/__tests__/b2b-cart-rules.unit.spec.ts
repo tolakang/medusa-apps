@@ -1,11 +1,14 @@
 import {
+  assertApprovalsGranted,
   assertApprovedCompanyBuyer,
+  assertCartItemsUnlocked,
   assertCreditLimit,
   assertMinOrderQuantities,
   B2bBuyer,
   B2bCompany,
   getMinOrderQuantity,
   getOutstandingCredit,
+  requiredApprovalTypes,
   spendOrders,
 } from "../b2b-cart-rules";
 
@@ -157,5 +160,102 @@ describe("spendOrders", () => {
         null,
       ]).map((order) => order!.id)
     ).toEqual(["a", "d"]);
+  });
+});
+
+// P4-05: approvals above a limit.
+
+describe("requiredApprovalTypes", () => {
+  const both = {
+    requires_admin_approval: true,
+    requires_sales_manager_approval: true,
+    approval_threshold: 1000,
+  };
+
+  it("needs nothing at or below the threshold", () => {
+    expect(requiredApprovalTypes(both, 1000, false)).toEqual([]);
+  });
+
+  it("needs every switched-on type above it", () => {
+    expect(requiredApprovalTypes(both, 1000.01, false)).toEqual([
+      "admin",
+      "sales_manager",
+    ]);
+  });
+
+  it("with no threshold, every cart needs them", () => {
+    expect(
+      requiredApprovalTypes({ ...both, approval_threshold: null }, 1, false)
+    ).toEqual(["admin", "sales_manager"]);
+  });
+
+  it("a company admin skips the company-admin approval, not the sales manager", () => {
+    expect(requiredApprovalTypes(both, 5000, true)).toEqual(["sales_manager"]);
+    expect(
+      requiredApprovalTypes(
+        { ...both, requires_sales_manager_approval: false },
+        5000,
+        true
+      )
+    ).toEqual([]);
+  });
+
+  it("needs nothing with approvals off or no settings", () => {
+    expect(
+      requiredApprovalTypes(
+        { requires_admin_approval: false, requires_sales_manager_approval: false },
+        5000,
+        false
+      )
+    ).toEqual([]);
+    expect(requiredApprovalTypes(null, 5000, false)).toEqual([]);
+  });
+});
+
+describe("assertApprovalsGranted", () => {
+  it("passes when nothing is required", () => {
+    expect(() => assertApprovalsGranted([], [])).not.toThrow();
+  });
+
+  it("needs an approved approval of each required type", () => {
+    expect(() => assertApprovalsGranted(["admin"], [])).toThrow(
+      "company admin's approval"
+    );
+    expect(() =>
+      assertApprovalsGranted(
+        ["admin", "sales_manager"],
+        [{ type: "admin", status: "approved" }, { type: "sales_manager", status: "pending" }]
+      )
+    ).toThrow("sales manager's approval");
+    expect(() =>
+      assertApprovalsGranted(
+        ["admin", "sales_manager"],
+        [{ type: "admin", status: "approved" }, { type: "sales_manager", status: "approved" }, null]
+      )
+    ).not.toThrow();
+  });
+
+  it("a rejection ends the cart", () => {
+    expect(() =>
+      assertApprovalsGranted(["admin"], [{ type: "admin", status: "rejected" }])
+    ).toThrow("rejected");
+  });
+});
+
+describe("assertCartItemsUnlocked", () => {
+  it("allows changes with no approvals or after a rejection", () => {
+    expect(() => assertCartItemsUnlocked([])).not.toThrow();
+    expect(() =>
+      assertCartItemsUnlocked([{ type: "admin", status: "rejected" }])
+    ).not.toThrow();
+  });
+
+  it("locks items while pending and once approved", () => {
+    expect(() =>
+      assertCartItemsUnlocked([{ type: "admin", status: "pending" }])
+    ).toThrow("pending approval");
+    expect(() =>
+      assertCartItemsUnlocked([{ type: "admin", status: "approved" }, null])
+    ).toThrow("approved");
   });
 });

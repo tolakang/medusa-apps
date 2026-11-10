@@ -9,9 +9,9 @@ export const POST = async (
   req: AuthenticatedMedusaRequest<AdminUpdateApproval>,
   res: MedusaResponse
 ) => {
-  const { user_id } = req.auth_context.app_metadata as {
-    user_id: string;
-  };
+  // The signed-in admin user (MEDUSA_SKILL §7: `req.auth_context.actor_id`).
+  // The starter read `app_metadata.user_id`, which not every admin token has.
+  const user_id = req.auth_context.actor_id;
 
   const { id: approvalId } = req.params;
   const { status } = req.validatedBody;

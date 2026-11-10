@@ -114,6 +114,8 @@ export const AdminCreateApprovalSettings = z
     company_id: z.string(),
     requires_admin_approval: z.boolean(),
     requires_sales_manager_approval: z.boolean(),
+    // P4-05: carts above this total need the approvals; null = every cart.
+    approval_threshold: z.number().nonnegative().optional().nullable(),
   })
   .strict();
 
@@ -125,6 +127,8 @@ export const AdminUpdateApprovalSettings = z
     id: z.string(),
     requires_admin_approval: z.boolean(),
     requires_sales_manager_approval: z.boolean(),
+    // P4-05: carts above this total need the approvals; null = every cart.
+    approval_threshold: z.number().nonnegative().optional().nullable(),
   })
   .strict();
 

@@ -1,31 +1,21 @@
-import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils";
 import { StepResponse } from "@medusajs/framework/workflows-sdk";
 import { addToCartWorkflow } from "@medusajs/medusa/core-flows";
-import { getCartApprovalStatus } from "../../utils/get-cart-approval-status";
 import {
   assertApprovedCompanyBuyer,
+  assertCartItemsUnlocked,
   assertMinOrderQuantities,
 } from "../../utils/b2b-cart-rules";
-import { loadBuyer, loadCart, loadMinimums } from "../../utils/load-b2b-buyer";
+import {
+  loadBuyer,
+  loadCart,
+  loadCartApprovals,
+  loadMinimums,
+} from "../../utils/load-b2b-buyer";
 
 addToCartWorkflow.hooks.validate(async ({ input, cart }, { container }) => {
-  const query = container.resolve(ContainerRegistrationKeys.QUERY);
-
-  const {
-    data: [queryCart],
-  } = await query.graph({
-    entity: "cart",
-    fields: ["approvals.*"],
-    filters: {
-      id: cart.id,
-    },
-  });
-
-  const { isPendingApproval } = getCartApprovalStatus(queryCart);
-
-  if (isPendingApproval) {
-    throw new MedusaError(MedusaError.Types.NOT_ALLOWED, "Cart is pending approval");
-  }
+  // Items can't change while the cart waits for approval or once it is
+  // approved (P4-05; the starter blocked only pending carts).
+  assertCartItemsUnlocked(await loadCartApprovals(container, cart.id));
 
   // P4-04: only employees of an approved company buy, and each line reaches
   // its minimum order quantity. A new item adds to the line of the same

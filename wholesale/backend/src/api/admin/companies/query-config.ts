@@ -57,6 +57,7 @@ export const adminApprovalSettingsFields = [
   "company_id",
   "requires_admin_approval",
   "requires_sales_manager_approval",
+  "approval_threshold",
   "*company",
 ];
 

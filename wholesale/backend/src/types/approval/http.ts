@@ -11,8 +11,10 @@ import { HttpTypes } from "@medusajs/framework/types";
 export type AdminApprovalSettings = QueryApprovalSettings;
 
 export type AdminUpdateApprovalSettings = {
+  id?: string;
   requires_admin_approval: boolean;
   requires_sales_manager_approval: boolean;
+  approval_threshold?: number | null;
 };
 
 export type AdminApproval = QueryApproval;

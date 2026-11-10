@@ -2,6 +2,9 @@ import {
   AuthenticatedMedusaRequest,
   MedusaResponse,
 } from "@medusajs/framework";
+import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils";
+import { ApprovalType } from "../../../../types/approval";
+import { loadBuyer } from "../../../../utils/load-b2b-buyer";
 import { updateApprovalsWorkflow } from "../../../../workflows/approval/workflows";
 import { StoreUpdateApprovalType } from "../validators";
 
@@ -15,6 +18,44 @@ export const POST = async (
 
   const { id: approvalId } = req.params;
   const { status } = req.validatedBody;
+
+  // P4-05: the starter let any company admin decide any approval. Only an
+  // admin of the cart's own company may, and only the company-admin
+  // approval (the sales manager decides in the admin).
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
+  const {
+    data: [existing],
+  } = await query.graph({
+    entity: "approval",
+    fields: ["id", "type", "cart_id"],
+    filters: { id: approvalId },
+  });
+  const {
+    data: [cart],
+  } = existing
+    ? await query.graph({
+        entity: "cart",
+        fields: ["customer_id"],
+        filters: { id: existing.cart_id },
+      })
+    : { data: [] };
+  const [approver, cartBuyer] = await Promise.all([
+    loadBuyer(req.scope, customer_id),
+    loadBuyer(req.scope, cart?.customer_id),
+  ]);
+  const approverCompany = approver?.employee?.company?.id;
+  if (
+    !existing ||
+    (existing.type as string) !== ApprovalType.ADMIN ||
+    !approver?.employee?.is_admin ||
+    !approverCompany ||
+    approverCompany !== cartBuyer?.employee?.company?.id
+  ) {
+    throw new MedusaError(
+      MedusaError.Types.NOT_ALLOWED,
+      "You can't decide this approval."
+    );
+  }
 
   const { result: approval, errors } = await updateApprovalsWorkflow.run({
     input: {
