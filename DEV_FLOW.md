@@ -91,7 +91,7 @@ docker build -t <category>-<app>:check <category>/<app>
 Backend: run the image once with `MEDUSA_WORKER_MODE=server` (health 200) and once with `worker` + `DISABLE_MEDUSA_ADMIN=true` + `RUN_MIGRATIONS=false` (process starts, no HTTP admin). Clients: the image starts and serves its port.
 
 ### Gate 5: Guardrails (repo root; each line must print nothing unless noted)
-Phase 0 turns these into `scripts/guard.sh`. Until then, run them by hand. `D` = the deployable folder.
+`scripts/guard.sh <category|all>` runs these checks and more (CI job `guard`); the lines below show what they mean, for a manual check. `D` = the deployable folder.
 ```bash
 git diff --name-only origin/main...HEAD -- BUILD_PLAN.md                       # plan is frozen
 grep -rnE "from ['\"]@medusajs/[^'\"]+/dist" $D/src                            # no dist imports
@@ -175,7 +175,7 @@ After every finished task or phase, **before the PR is merged and pushed to `mai
 ## 10. Stage 8: Push, CI, merge
 
 1. `git push -u origin <branch>` and open a PR using the template below.
-2. CI must run the same gates (Phase 0 wires `scripts/verify.sh` + `scripts/guard.sh` per deployable).
+2. CI runs the same gates: `scripts/guard.sh all`, then `scripts/verify.sh <deployable> --image` for every deployable in the matrix of `.github/workflows/ci.yml` (add a matrix entry when a new deployable gets code).
 3. If CI fails, go back to the fix cycle (§6), treating the CI log as the captured error.
 4. Merge to `main` only when CI is green. Fast-forward or squash; never force-push `main`. The `protect main` ruleset requires the check **`ci-ok`** (the last job in `.github/workflows/ci.yml`, which passes only when `guard` and every `verify` job passed), and the repo allows auto-merge (owner, 2026-11-04). So once the pre-merge checks (no PR based on this branch, base `main`) pass, turn on **squash auto-merge** for the PR: GitHub merges it by itself when `ci-ok` is green and holds it when anything fails. Squash merges delete the branch (repo setting).
 5. Dokploy redeploys only the changed deployables (watch paths). Smoke-test staging before production (BUILD_PLAN §8).

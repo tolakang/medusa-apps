@@ -1,6 +1,6 @@
 # Side-by-Side Comparison — Commerce Scenarios on Medusa
 
-> Planning document. Medusa baseline: **v2.21.1** (checked 2026-09-24).
+> Planning document, written against Medusa **v2.21.1** (checked 2026-09-24); the scenarios and trade-offs still hold on **2.22.6**, which every app now runs. Build status per category: the root `README.md`.
 > Each scenario maps to one category folder = one business project, holding its backend, storefront and (where needed) portal or app, each with its own Dockerfile and env.
 
 | # | Scenario | Folder | Deployables |

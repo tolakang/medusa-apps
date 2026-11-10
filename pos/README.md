@@ -1,6 +1,6 @@
 # POS — `pos/`
 
-> **Physical shop checkout + online store on shared stock.** Phase 2 in progress; all three apps are built:
+> **Physical shop checkout + online store on shared stock.** Phase 2 code done (P2-01 to P2-13); the staging run and exit checklist (P2-14) wait for the owner (`DOKPLOY_STAGING.md`, start at Step 0). All three apps are built:
 > - `backend/`: a copy of `ecommerce/backend`. The POS module, cashier sign-in, shifts, checkout and the `/pos` and `/admin/pos` routes are in; see *Shop setup and selling*.
 > - `pos-app/`: the counter PWA (TASKS P2-10, `pos-app/README.md`).
 > - `storefront/`: the online shop, a copy of `ecommerce/storefront` (TASKS P2-09, `storefront/README.md`).

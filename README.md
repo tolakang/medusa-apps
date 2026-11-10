@@ -2,22 +2,22 @@
 
 Standalone [Medusa](https://medusajs.com) backends, one per commerce scenario, each deployable on its own with Dokploy.
 
-> **Status (2026-11-05): Phase 1 (ecommerce) built and running on staging; production deploy is next. Phase 2 (POS) and Phase 3 (booking-services) code is done and passed local Podman smoke + e2e; their staging and exit checklists wait on the owner.** Wholesale, reseller and marketplace have deployment templates only (Dockerfile + env per deployable). Progress is tracked in [`TASKS.md`](./TASKS.md); requirements are in [`BUILD_PLAN.md`](./BUILD_PLAN.md).
+> **Status (2026-11-11):** Phase 1 (Ecommerce) built and on staging; production (P1-08) is next. Phases 2 (POS), 3 (Booking services) and 5 (Reseller) code done; their staging runs and exit checklists wait for the owner. Phase 4 (Wholesale) in progress: backend done (P4-01 to P4-07), storefront next (P4-08). Phase 6 (Marketplace) not started. Details: `TASKS.md` → *Session handoff*.
 
 Each folder is **one business project** (one Dokploy project). Inside it, every deployable has its own `Dockerfile` and `.env.example` and deploys independently.
 
 | Folder | Scenario | Deployables (Dokploy Build Path) | Status |
 |---|---|---|---|
 | [`ecommerce/`](./ecommerce) | Direct-to-consumer online store | `/ecommerce/backend`, `/ecommerce/storefront` | Built, on staging — Phase 1 (production pending) |
-| [`pos/`](./pos) | Physical shop checkout | `/pos/backend`, `/pos/storefront`, `/pos/pos-app` | Built — Phase 2 (staging deferred by the owner) |
-| [`booking-services/`](./booking-services) | Appointments, classes, tickets, rentals | `/booking-services/backend`, `/booking-services/storefront` | Built — Phase 3 (copy of Ecommerce on Medusa 2.22.2; exit P3-18 pending) |
-| [`wholesale/`](./wholesale) | Sellers buy your products in bulk | `/wholesale/backend`, `/wholesale/storefront` | Planned — Phase 4 |
-| [`reseller/`](./reseller) | Sellers sell your products, you ship | `/reseller/backend`, `/reseller/storefront`, `/reseller/seller-portal` | Planned — Phase 5 |
+| [`pos/`](./pos) | Physical shop checkout | `/pos/backend`, `/pos/storefront`, `/pos/pos-app` | Built — Phase 2 (staging and exit P2-14 wait for the owner) |
+| [`booking-services/`](./booking-services) | Appointments, classes, tickets, rentals | `/booking-services/backend`, `/booking-services/storefront` | Built — Phase 3 (copy of Ecommerce; exit P3-18 pending) |
+| [`wholesale/`](./wholesale) | Sellers buy your products in bulk | `/wholesale/backend`, `/wholesale/storefront` | In progress — Phase 4 (backend done; storefront P4-08 next) |
+| [`reseller/`](./reseller) | Sellers sell your products, you ship | `/reseller/backend`, `/reseller/storefront`, `/reseller/seller-portal` | Built — Phase 5 (exit P5-11 waits for the owner) |
 | [`marketplace/`](./marketplace) | Vendors sell their own products | `/marketplace/backend`, `/marketplace/storefront`, `/marketplace/vendor-portal` | Planned — Phase 6 |
 
 Each category's `README.md` is its Dokploy guide: services, build paths, ports, env and first-deploy order.
 
-Outside `ecommerce/`, the `Dockerfile`s and `.env.example`s are committed **ready templates**; app code is added in each category's build phase, so those folders can't be deployed yet.
+Deployables without code yet (`wholesale/storefront` and all of `marketplace/`) hold **ready templates** (`Dockerfile`, `.env.example`); a Dokploy build of them fails at `COPY package.json` until their phase adds the code.
 
 ## Documents
 
@@ -28,6 +28,9 @@ Outside `ecommerce/`, the `Dockerfile`s and `.env.example`s are committed **read
 - [`DEV_FLOW.md`](./DEV_FLOW.md) — build → verify → test → evidence-based fix cycle → commit → push.
 - [`CLAUDE.md`](./CLAUDE.md) — builder entry point: reading order and non-negotiable rules.
 - [`docs/PLAN_LOCK.md`](./docs/PLAN_LOCK.md) — owner's note: the commands to unlock and lock `BUILD_PLAN.md` for Claude.
+- [`docs/PLAN_REVISION_9_PROPOSAL.md`](./docs/PLAN_REVISION_9_PROPOSAL.md) — where the frozen plan no longer matches the built apps, with the text to change, for the owner's next revision.
+- [`PRE_DEPLOY_AUDIT.md`](./PRE_DEPLOY_AUDIT.md) — the security and readiness audit to run per category before it goes live.
+- [`BACKEND_PATTERNS_SKILL.md`](./BACKEND_PATTERNS_SKILL.md) — backend design patterns mapped to Medusa's own mechanisms (skill `backend-patterns`).
 
 ## Principles
 
