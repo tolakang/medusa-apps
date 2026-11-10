@@ -19,6 +19,11 @@ WORKDIR /app
 # Leave empty when the admin is served by this same app (recommended).
 ARG MEDUSA_BACKEND_URL=""
 ENV MEDUSA_BACKEND_URL=${MEDUSA_BACKEND_URL}
+# Optional: upload ceiling in MB baked into the admin's own file-size check
+# (admin.maxUploadFileSize is build-time). Empty = 5. Keep it equal to the
+# runtime UPLOAD_MAX_FILE_SIZE_CEILING_MB (TASKS P1-12, F-027).
+ARG UPLOAD_MAX_FILE_SIZE_CEILING_MB=""
+ENV UPLOAD_MAX_FILE_SIZE_CEILING_MB=${UPLOAD_MAX_FILE_SIZE_CEILING_MB}
 
 # Exact pnpm version from package.json "packageManager"
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./

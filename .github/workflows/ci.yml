@@ -40,6 +40,8 @@ jobs:
           - booking-services/backend
           - booking-services/storefront
           - wholesale/backend
+          - reseller/backend
+          - reseller/storefront
     services:
       postgres:
         image: docker.io/library/postgres:15-alpine
