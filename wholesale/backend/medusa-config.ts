@@ -143,5 +143,6 @@ module.exports = defineConfig({
     { resolve: "./src/modules/company" },
     { resolve: "./src/modules/quote" },
     { resolve: "./src/modules/approval" },
+    { resolve: "./src/modules/invoice" },
   ],
 })
