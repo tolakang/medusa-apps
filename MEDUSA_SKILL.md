@@ -497,7 +497,7 @@ moduleIntegrationTestRunner<BlogModuleService>({ moduleName: BLOG_MODULE, module
 - `medusa build` doesn't copy the lockfile into `.medusa/server`. Copy it there before `pnpm install --prod --frozen-lockfile`.
 - `tsc --noEmit` needs `.medusa/types`, so **build before typecheck**.
 - `medusa start` must run **inside `.medusa/server`** after its own prod install. From the project root it fails with "Could not find index.html in the admin build directory" (verified 2.21.1; docs `learn/deployment/general`).
-- The `medusaIntegrationTestRunner` teardown can log `[Search] Failed to seed "product" … terminating connection due to administrator command`. The Search Module seeds its index on app start and the runner drops the test database under it. The tests still pass; this is noise, not a failure (observed 2.21.1).
+- The `medusaIntegrationTestRunner` teardown can log `[Search] Failed to seed "product" … terminating connection due to administrator command`. The Search Module seeds its index on app start and the runner drops the test database under it. The tests still pass; this is noise, not a failure (observed 2.21.1). **But** a product event handled before the seeding has an active index version is dropped ("Search index … has no active version yet"), so a test waiting for indexed documents can wait forever: after a short wait, call `container.resolve<SearchTypes.ISearchModuleService>(Modules.SEARCH).reindex({ index: "product" })` (starts a job, not awaited) and keep polling (TASKS F-065, 2.22.6).
 - Plugin or shared packages that import `@medusajs/framework` must declare it as a `peerDependency`, not a `devDependency` (docs pnpm guide).
 
 ## 13. Scenario → official reference map
