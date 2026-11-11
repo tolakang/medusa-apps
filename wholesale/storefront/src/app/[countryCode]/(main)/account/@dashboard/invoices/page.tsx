@@ -83,9 +83,11 @@ export default async function Invoices() {
                     {money(invoice.total, invoice.currency_code)}
                   </td>
                   <td className="p-4 text-right text-neutral-950">
-                    {invoice.amount_due > 0
-                      ? money(invoice.amount_due, invoice.currency_code)
-                      : "Paid"}
+                    {invoice.cancelled
+                      ? "Cancelled"
+                      : invoice.amount_due > 0
+                        ? money(invoice.amount_due, invoice.currency_code)
+                        : "Paid"}
                   </td>
                   <td className="p-4 text-right">
                     <a

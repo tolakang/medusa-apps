@@ -4,6 +4,7 @@ import {
   validateAndTransformQuery,
 } from "@medusajs/framework";
 import { MiddlewareRoute } from "@medusajs/medusa";
+import { cartCustomer, oneOrderPerCompanyAtATime } from "../company-order-lock";
 import { retrieveCartTransformQueryConfig } from "./query-config";
 import {
   GetCartLineItemsBulkParams,
@@ -21,6 +22,12 @@ export const storeCartsMiddlewares: MiddlewareRoute[] = [
         retrieveCartTransformQueryConfig
       ),
     ],
+  },
+  {
+    // REVIEW_FIXES B6: checkouts of one company run one after the other.
+    method: ["POST"],
+    matcher: "/store/carts/:id/complete",
+    middlewares: [oneOrderPerCompanyAtATime(cartCustomer)],
   },
   {
     method: ["POST"],

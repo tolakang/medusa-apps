@@ -26,10 +26,15 @@ createOrderWorkflow.hooks.orderCreated(
       },
     });
 
-    return new StepResponse(undefined, order.id);
+    return new StepResponse(undefined, { order_id: order.id, company_id: companyId });
   },
-  async (orderId: string | null, { container }) => {
-    if (!orderId) {
+  // Both sides of the link: with only the order side `dismiss` throws
+  // (REVIEW_FIXES B8).
+  async (
+    linked: { order_id: string; company_id: string } | null,
+    { container }
+  ) => {
+    if (!linked) {
       return;
     }
 
@@ -37,7 +42,10 @@ createOrderWorkflow.hooks.orderCreated(
 
     await remoteLink.dismiss({
       [Modules.ORDER]: {
-        order_id: orderId,
+        order_id: linked.order_id,
+      },
+      [COMPANY_MODULE]: {
+        company_id: linked.company_id,
       },
     });
   }
