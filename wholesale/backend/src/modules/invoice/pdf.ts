@@ -2,10 +2,15 @@ import PdfPrinter from "pdfmake";
 import type { Content, TDocumentDefinitions } from "pdfmake/interfaces";
 import { invoiceNumber } from "./terms";
 
-// P4-06: the invoice PDF, after the official invoice tutorial (pdfmake,
-// PDFKit's built-in Helvetica, A4). Pure: data in, PDF bytes out. The
-// built-in fonts have no Khmer glyphs; embed a font file here if invoices
-// need Khmer text.
+// P4-06: the invoice PDF, after the official invoice tutorial (pdfmake, A4).
+// Pure: data in, PDF bytes out.
+//
+// P4-13 (owner D10): every label is in English and Khmer. The font is
+// Kantumruy Pro (SIL Open Font License, npm @fontsource/kantumruy-pro), which
+// has Khmer and Latin glyphs, so item names in either script print too.
+// Checked by rendering: stacked consonants, the subscript ro and pre-base
+// vowels come out right. Noto Sans Khmer and Noto Serif Khmer crash pdfmake's
+// font engine (fontkit: a null GPOS anchor), so they aren't used.
 
 export type InvoicePdfInput = {
   invoice: {
@@ -70,11 +75,46 @@ export const sellerFromEnv = (env = process.env): InvoiceSeller => ({
   payment_note: env.INVOICE_PAYMENT_NOTE?.replace(/\\n/g, "\n"),
 });
 
-const TERMS: Record<string, string> = {
-  prepaid: "Prepaid",
-  net_15: "Net 15",
-  net_30: "Net 30",
-  net_60: "Net 60",
+// Labels in English and Khmer (D10). Have a Khmer-speaking colleague read
+// them once before going live.
+const L = {
+  invoice: ["INVOICE", "វិក្កយបត្រ"],
+  order: ["Order", "ការបញ្ជាទិញ"],
+  issued: ["Issued", "ថ្ងៃចេញ"],
+  due: ["Due", "ថ្ងៃផុតកំណត់"],
+  terms: ["Terms", "លក្ខខណ្ឌទូទាត់"],
+  paid_stamp: ["PAID", "បានបង់"],
+  unpaid_stamp: ["UNPAID", "មិនទាន់បង់"],
+  bill_to: ["Bill to", "អតិថិជន"],
+  ship_to: ["Ship to", "ដឹកជញ្ជូនទៅ"],
+  tax_id: ["Tax ID", "លេខអត្តសញ្ញាណកម្មសារពើពន្ធ"],
+  item: ["Item", "ទំនិញ"],
+  sku: ["SKU", "កូដ"],
+  qty: ["Qty", "ចំនួន"],
+  unit_price: ["Unit price", "តម្លៃឯកតា"],
+  amount: ["Amount", "ទឹកប្រាក់"],
+  subtotal: ["Subtotal", "សរុបរង"],
+  discount: ["Discount", "បញ្ចុះតម្លៃ"],
+  shipping: ["Shipping", "ថ្លៃដឹកជញ្ជូន"],
+  tax: ["Tax", "ពន្ធ"],
+  total: ["Total", "សរុប"],
+  paid: ["Paid", "បានបង់"],
+  amount_due: ["Amount due", "ទឹកប្រាក់ត្រូវបង់"],
+} as const;
+
+/** "English / ខ្មែរ" */
+export const label = (key: keyof typeof L) => `${L[key][0]} / ${L[key][1]}`;
+
+const TERMS: Record<string, [string, string]> = {
+  prepaid: ["Prepaid", "បង់ប្រាក់មុន"],
+  net_15: ["Net 15", "ទូទាត់ក្នុងរយៈពេល ១៥ ថ្ងៃ"],
+  net_30: ["Net 30", "ទូទាត់ក្នុងរយៈពេល ៣០ ថ្ងៃ"],
+  net_60: ["Net 60", "ទូទាត់ក្នុងរយៈពេល ៦០ ថ្ងៃ"],
+};
+
+const termsText = (terms?: string | null) => {
+  const pair = TERMS[terms ?? "prepaid"];
+  return pair ? `${pair[0]} / ${pair[1]}` : String(terms);
 };
 
 const day = (value: Date | string) =>
@@ -96,22 +136,28 @@ const addressLines = (address: Address) =>
 
 export function buildInvoiceDocument(input: InvoicePdfInput): TDocumentDefinitions {
   const { invoice, order, seller } = input;
+  // The font has the dollar and riel signs but not €, £, ¥ …, so other
+  // currencies print their code ("EUR 110.00") instead of a blank.
+  const currency = order.currency_code.toUpperCase();
   const money = (amount?: number | null) =>
     new Intl.NumberFormat("en", {
       style: "currency",
-      currency: order.currency_code.toUpperCase(),
+      currency,
+      currencyDisplay: ["USD", "KHR"].includes(currency) ? "narrowSymbol" : "code",
     }).format(Number(amount ?? 0));
   const paid = Number(order.paid_total ?? 0);
   const due = Math.max(0, Number(order.total) - paid);
 
   const totals: [string, string][] = [
-    ["Subtotal", money(order.subtotal)],
-    ...(order.discount_total ? [["Discount", `-${money(order.discount_total)}`] as [string, string]] : []),
-    ["Shipping", money(order.shipping_total)],
-    ["Tax", money(order.tax_total)],
-    ["Total", money(order.total)],
-    ["Paid", money(paid)],
-    ["Amount due", money(due)],
+    [label("subtotal"), money(order.subtotal)],
+    ...(order.discount_total
+      ? [[label("discount"), `-${money(order.discount_total)}`] as [string, string]]
+      : []),
+    [label("shipping"), money(order.shipping_total)],
+    [label("tax"), money(order.tax_total)],
+    [label("total"), money(order.total)],
+    [label("paid"), money(paid)],
+    [label("amount_due"), money(due)],
   ];
 
   const content: Content[] = [
@@ -122,17 +168,21 @@ export function buildInvoiceDocument(input: InvoicePdfInput): TDocumentDefinitio
           ...[seller.address, seller.email, seller.phone]
             .filter(Boolean)
             .map((text) => ({ text: text as string })),
-          ...(seller.tax_id ? [{ text: `Tax ID: ${seller.tax_id}` }] : []),
+          ...(seller.tax_id ? [{ text: `${label("tax_id")}: ${seller.tax_id}` }] : []),
         ],
         {
           stack: [
-            { text: "INVOICE", style: "title" },
+            { text: label("invoice"), style: "title" },
             { text: invoiceNumber(invoice.display_id), bold: true },
-            { text: `Order #${order.display_id ?? ""}` },
-            { text: `Issued: ${day(invoice.issued_at)}` },
-            { text: `Due: ${day(invoice.due_at)}` },
-            { text: `Terms: ${TERMS[invoice.payment_terms ?? "prepaid"] ?? invoice.payment_terms}` },
-            { text: due === 0 ? "PAID" : "UNPAID", bold: true, margin: [0, 4, 0, 0] },
+            { text: `${label("order")} #${order.display_id ?? ""}` },
+            { text: `${label("issued")}: ${day(invoice.issued_at)}` },
+            { text: `${label("due")}: ${day(invoice.due_at)}` },
+            { text: `${label("terms")}: ${termsText(invoice.payment_terms)}` },
+            {
+              text: label(due === 0 ? "paid_stamp" : "unpaid_stamp"),
+              bold: true,
+              margin: [0, 4, 0, 0],
+            },
           ],
           alignment: "right",
         },
@@ -142,16 +192,16 @@ export function buildInvoiceDocument(input: InvoicePdfInput): TDocumentDefinitio
       margin: [0, 24, 0, 12],
       columns: [
         [
-          { text: "Bill to", style: "label" },
+          { text: label("bill_to"), style: "label" },
           ...(invoice.company_name ? [{ text: invoice.company_name, bold: true }] : []),
-          ...(invoice.tax_id ? [{ text: `Tax ID: ${invoice.tax_id}` }] : []),
+          ...(invoice.tax_id ? [{ text: `${label("tax_id")}: ${invoice.tax_id}` }] : []),
           ...addressLines(order.billing_address ?? order.shipping_address ?? null).map(
             (text) => ({ text })
           ),
           ...(order.email ? [{ text: order.email }] : []),
         ],
         [
-          { text: "Ship to", style: "label" },
+          { text: label("ship_to"), style: "label" },
           ...addressLines(order.shipping_address ?? null).map((text) => ({ text })),
         ],
       ],
@@ -161,9 +211,11 @@ export function buildInvoiceDocument(input: InvoicePdfInput): TDocumentDefinitio
         headerRows: 1,
         widths: ["*", "auto", "auto", "auto", "auto"],
         body: [
-          ["Item", "SKU", "Qty", "Unit price", "Amount"].map((text) => ({
-            text,
-            style: "th",
+          (["item", "sku", "qty", "unit_price", "amount"] as const).map((key) => ({
+            stack: [
+              { text: L[key][0], style: "th" },
+              { text: L[key][1], style: "thKm" },
+            ],
           })),
           ...order.items.map((item) => [
             item.title ?? "",
@@ -199,22 +251,30 @@ export function buildInvoiceDocument(input: InvoicePdfInput): TDocumentDefinitio
     pageSize: "A4",
     pageMargins: [40, 40, 40, 40],
     content,
-    defaultStyle: { font: "Helvetica", fontSize: 10 },
+    defaultStyle: { font: "KantumruyPro", fontSize: 10 },
     styles: {
       title: { fontSize: 18, bold: true },
       seller: { fontSize: 14, bold: true },
       label: { bold: true, color: "#666666", margin: [0, 0, 0, 2] },
       th: { bold: true },
+      thKm: { fontSize: 8, color: "#666666" },
     },
   };
 }
 
+// The font files ship in the npm package (a dependency, so they are in the
+// production image too).
+const font = (weight: 400 | 700) =>
+  require.resolve(
+    `@fontsource/kantumruy-pro/files/kantumruy-pro-khmer-${weight}-normal.woff`
+  );
+
 const printer = new PdfPrinter({
-  Helvetica: {
-    normal: "Helvetica",
-    bold: "Helvetica-Bold",
-    italics: "Helvetica-Oblique",
-    bolditalics: "Helvetica-BoldOblique",
+  KantumruyPro: {
+    normal: font(400),
+    bold: font(700),
+    italics: font(400),
+    bolditalics: font(700),
   },
 });
 

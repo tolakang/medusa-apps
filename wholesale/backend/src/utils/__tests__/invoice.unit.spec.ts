@@ -51,32 +51,53 @@ describe("invoice PDF", () => {
     const text = JSON.stringify(buildInvoiceDocument(input).content);
     for (const expected of [
       "INV-000007",
-      "Order #42",
-      "Terms: Net 30",
-      "Due: 2026-12-10",
+      "Order / ការបញ្ជាទិញ #42",
+      "Terms / លក្ខខណ្ឌទូទាត់: Net 30 / ទូទាត់ក្នុងរយៈពេល ៣០ ថ្ងៃ",
+      "Due / ថ្ងៃផុតកំណត់: 2026-12-10",
       "Acme Wholesale",
-      "Tax ID: KH-123",
+      "Tax ID / លេខអត្តសញ្ញាណកម្មសារពើពន្ធ: KH-123",
       "Paper",
-      "UNPAID",
+      "UNPAID / មិនទាន់បង់",
+      "INVOICE / វិក្កយបត្រ",
+      "Amount due / ទឹកប្រាក់ត្រូវបង់",
       "Bank: 123",
-      "€110.00",
+      "EUR\u00a0110.00",
     ]) {
       expect(text).toContain(expected);
     }
+  });
+
+  it("prints signs the font has (USD, KHR), else the currency code", () => {
+    const usd = JSON.stringify(
+      buildInvoiceDocument({ ...input, order: { ...input.order, currency_code: "usd" } }).content
+    );
+    expect(usd).toContain("$110.00");
+    const khr = JSON.stringify(
+      buildInvoiceDocument({ ...input, order: { ...input.order, currency_code: "khr" } }).content
+    );
+    expect(khr).toContain("៛");
   });
 
   it("is PAID once the total is captured", () => {
     const text = JSON.stringify(
       buildInvoiceDocument({ ...input, order: { ...input.order, paid_total: 110 } }).content
     );
-    expect(text).toContain("PAID");
+    expect(text).toContain("PAID / បានបង់");
     expect(text).not.toContain("UNPAID");
   });
 
-  it("renders a PDF", async () => {
-    const pdf = await renderInvoicePdf(input);
+  it("renders a PDF with the Khmer font embedded (TASKS P4-13)", async () => {
+    const pdf = await renderInvoicePdf({
+      ...input,
+      order: {
+        ...input.order,
+        // An item name in Khmer prints too.
+        items: [...input.order.items, { title: "ក្រដាស A4", quantity: 1, unit_price: 5 }],
+      },
+    });
     expect(pdf.subarray(0, 5).toString()).toEqual("%PDF-");
     expect(pdf.length).toBeGreaterThan(1000);
+    expect(pdf.toString("latin1")).toMatch(/\/FontName \/[A-Z]{6}\+KantumruyPro/);
   });
 
   it("reads the seller from env", () => {

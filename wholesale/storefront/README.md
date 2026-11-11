@@ -2,7 +2,7 @@
 
 Next.js B2B buyer shop for the wholesale business project. Standard: `BUILD_PLAN.md` §4.2; scope: §6.4 (TASKS P4-08).
 
-**Starter:** `medusajs/b2b-starter` `apps/storefront` at commit **`f352e3c`** (2026-11-09, Medusa 2.22.6, Next.js 16.3.8). Here: Next.js **16.4.5**, `@medusajs/ui` **4.2.13** (the repo's pin rule), pnpm 12.17.0.
+**Starter:** `medusajs/b2b-starter` `apps/storefront` at commit **`f352e3c`** (2026-11-09, Medusa 2.22.6, Next.js 16.3.8). Here: Next.js **16.4.5**, `@medusajs/ui` **4.2.13** (the repo's pin rule), pnpm 12.18.0.
 
 ## What buyers get
 
