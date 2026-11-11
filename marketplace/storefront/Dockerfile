@@ -1,7 +1,9 @@
 # =====================================================================
 # marketplace / storefront — Next.js (customer storefront)
 #
-# Dokploy: Build Type = Dockerfile, Build Path = /marketplace/storefront
+# Dokploy: Build Type = Dockerfile, Build Path = /,
+#   Docker File = marketplace/storefront/Dockerfile, Docker Context Path = marketplace/storefront,
+#   Watch Paths = marketplace/storefront/**   (BUILD_PLAN.md §5; F-011)
 #   Environment -> Build-time Arguments: the ARG values below
 #   Environment -> Runtime variables   : see .env.example
 #   Domain -> port 8000

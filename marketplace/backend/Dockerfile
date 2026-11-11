@@ -1,7 +1,9 @@
 # =====================================================================
 # marketplace / backend — Medusa server + worker (same image, two Dokploy apps)
 #
-# Dokploy: Build Type = Dockerfile, Build Path = /marketplace/backend
+# Dokploy: Build Type = Dockerfile, Build Path = /,
+#   Docker File = marketplace/backend/Dockerfile, Docker Context Path = marketplace/backend,
+#   Watch Paths = marketplace/backend/**   (BUILD_PLAN.md §5; F-011)
 #   server app : MEDUSA_WORKER_MODE=server   (domain -> port 9000)
 #   worker app : MEDUSA_WORKER_MODE=worker, DISABLE_MEDUSA_ADMIN=true,
 #                RUN_MIGRATIONS=false        (no domain)

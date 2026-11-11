@@ -5,6 +5,8 @@
 #
 # Env:
 #   GUARD_BASE_REF   git ref that "new lines" are compared to (default: origin/main)
+#   PLAN_REVISION_APPROVED  "true" lets a branch change BUILD_PLAN.md and its
+#                    lock (CI sets it from the owner's `plan-revision` PR label)
 #
 # Exit 0 = all checks pass, 1 = at least one violation.
 set -u
@@ -37,8 +39,27 @@ else
   fail "BUILD_PLAN.md changed (frozen; log deviations in TASKS.md instead)"
 fi
 
+# 1b. The plan and its lock don't change on a branch without the owner's
+#     approval (REVIEW_FIXES T1). A matching checksum alone isn't enough: a
+#     branch could change both. CI sets PLAN_REVISION_APPROVED from the
+#     `plan-revision` label, which only the owner adds (docs/PLAN_LOCK.md).
+PLAN_FILES="BUILD_PLAN.md .build-plan.sha256 .claude/hooks/protect-build-plan.sh .claude/settings.json scripts/test-plan-lock.sh"
+if git rev-parse --verify --quiet "$BASE_REF^{commit}" >/dev/null; then
+  CHANGED=$(git diff --name-only "$BASE_REF...HEAD" -- $PLAN_FILES 2>/dev/null || true)
+  if [ -z "$CHANGED" ]; then
+    pass "plan and lock files unchanged vs $BASE_REF"
+  elif [ "${PLAN_REVISION_APPROVED:-}" = true ]; then
+    pass "plan or lock files changed with the owner's approval: $(echo $CHANGED)"
+  else
+    fail "plan or lock files changed without the owner's 'plan-revision' label: $(echo $CHANGED)"
+  fi
+elif [ -n "${CI:-}" ]; then
+  fail "plan check needs $BASE_REF (fetch-depth: 0)"
+fi
+
 # 2. No env files committed (only .env.example).
-ENVFILES=$(git ls-files | grep -E '(^|/)\.env(\.[A-Za-z0-9_-]+)?$' | grep -v '\.env\.example$' || true)
+# Any number of dots: .env.production.local too (REVIEW_FIXES T6).
+ENVFILES=$(git ls-files | grep -E '(^|/)\.env(\.[A-Za-z0-9_-]+)*$' | grep -v '\.env\.example$' || true)
 [ -z "$ENVFILES" ] && pass "no .env files tracked" || fail "tracked env files: $ENVFILES"
 
 # 3. No leftover merge conflict markers in tracked files (owner, 2026-09-29,
@@ -65,9 +86,15 @@ for D in $DEPLOYABLES; do
   echo "== $D"
   SRC="$D/src"
 
-  # 4. Exact @medusajs pins (no ^ ~ latest *).
-  BAD=$(grep -nE '"@medusajs/[^"]+": *"([\^~]|latest|\*)' "$D/package.json" || true)
+  # 4. Exact @medusajs pins, all on one version except @medusajs/ui
+  #    (CLAUDE.md; REVIEW_FIXES T4: ">=2.22.6" or "2.x" used to pass).
+  BAD=$(grep -nE '"@medusajs/[^"]+": *"' "$D/package.json" \
+        | grep -vE '"@medusajs/[^"]+": *"[0-9]+\.[0-9]+\.[0-9]+"' || true)
   [ -z "$BAD" ] && pass "exact @medusajs pins" || fail "non-exact @medusajs versions: $BAD"
+  VERSIONS=$(grep -oE '"@medusajs/[^"]+": *"[0-9]+\.[0-9]+\.[0-9]+"' "$D/package.json" \
+             | grep -v '"@medusajs/ui"' | sed -E 's/.*"([0-9.]+)"$/\1/' | sort -u)
+  [ "$(printf '%s\n' "$VERSIONS" | grep -c .)" -le 1 ] && pass "one @medusajs version${VERSIONS:+ ($VERSIONS)}" \
+    || fail "@medusajs packages on different versions: $(echo $VERSIONS)"
 
   # 5. packageManager pinned.
   grep -qE '"packageManager": *"pnpm@[0-9]+\.[0-9]+\.[0-9]+"' "$D/package.json" \
@@ -84,7 +111,8 @@ for D in $DEPLOYABLES; do
   case "$D" in
     */backend)
       # 8. zod only via @medusajs/framework/zod (MEDUSA_SKILL §7).
-      BAD=$(grep -rnE "from ['\"]zod['\"]" "$SRC" 2>/dev/null || true)
+      #    Also `zod/v4` and require("zod") (REVIEW_FIXES T7).
+      BAD=$(grep -rnE "from ['\"]zod(/[^'\"]*)?['\"]|require\(['\"]zod(/[^'\"]*)?['\"]\)" "$SRC" 2>/dev/null || true)
       [ -z "$BAD" ] && pass "zod via @medusajs/framework/zod" || fail "bare zod imports: $BAD"
 
       # 9. Workflow constructor functions are not async (MEDUSA_SKILL §6).
@@ -92,7 +120,9 @@ for D in $DEPLOYABLES; do
       [ -z "$BAD" ] && pass "no async workflow constructors" || fail "async createWorkflow: $BAD"
 
       # 10. Entrypoint migrates in safe, non-interactive mode (MEDUSA_SKILL §11).
-      grep -q -- "--execute-safe-links --execute-safe-search" "$D/docker-entrypoint.sh" \
+      #     The db:migrate command itself, not a comment (REVIEW_FIXES T7).
+      grep -vE '^[[:space:]]*#' "$D/docker-entrypoint.sh" \
+        | grep -E 'db:migrate' | grep -q -- "--execute-safe-links --execute-safe-search" \
         && pass "entrypoint uses safe migrate flags" || fail "entrypoint missing safe migrate flags"
 
       # 11. Nothing in migration-scripts is a demo seed (auto-runs in production).
@@ -115,9 +145,14 @@ for D in $DEPLOYABLES; do
   [ -f "$D/.guard-baseline" ] && read -r REF FROM < "$D/.guard-baseline"
   # No "\b": macOS git's ERE has no word boundary (TASKS F-057), so the
   # boundary is spelled out and grep and git grep match the same lines.
-  SUPPRESS="@ts-ignore|@ts-nocheck|as any([^A-Za-z0-9_]|\$)"
+  SUPPRESS="@ts-ignore|@ts-nocheck|@ts-expect-error|as any([^A-Za-z0-9_]|\$)"
   if ! git rev-parse --verify --quiet "$REF^{commit}" >/dev/null; then
-    echo "  skip: new-suppression check (ref '$REF' not found; set GUARD_BASE_REF)"
+    # In CI a missing ref is a setup error, not a reason to pass (T5).
+    if [ -n "${CI:-}" ]; then
+      fail "new-suppression check: ref '$REF' not found (fetch-depth: 0?)"
+    else
+      echo "  skip: new-suppression check (ref '$REF' not found; set GUARD_BASE_REF)"
+    fi
   elif [ -n "$FROM" ]; then
     trim() { sed -E 's/^[^:]*:[0-9]+://; s/^[[:space:]]+//; s/[[:space:]]+$//' | sort; }
     BAD=$(comm -23 <(grep -rnE "$SUPPRESS" "$SRC" 2>/dev/null | trim) \
@@ -129,6 +164,17 @@ for D in $DEPLOYABLES; do
     [ -z "$BAD" ] && pass "no new type suppressions vs $REF" || fail "new type suppressions: $BAD"
   fi
 done
+
+# 13. Every deployable with app code is built and tested in CI: the matrix
+#     in ci.yml is written by hand (REVIEW_FIXES T8).
+if [ "$TARGET" = all ]; then
+  echo "== ci"
+  MISSING=""
+  for D in $DEPLOYABLES; do
+    grep -qE "^[[:space:]]*- $D[[:space:]]*$" .github/workflows/ci.yml || MISSING="$MISSING $D"
+  done
+  [ -z "$MISSING" ] && pass "every deployable is in the CI matrix" || fail "not in the CI matrix (.github/workflows/ci.yml):$MISSING"
+fi
 
 echo
 [ "$FAILED" = 0 ] && echo "guard: PASS" || echo "guard: FAIL"

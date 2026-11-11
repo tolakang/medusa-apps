@@ -12,6 +12,12 @@ touch .claude/plan-unlocked
 
 Claude can now edit `BUILD_PLAN.md` and its checksum `.build-plan.sha256`.
 
+## Merging a plan revision
+
+The plan lock only stops Claude in your checkout. On GitHub, CI also refuses any pull request that changes `BUILD_PLAN.md`, its checksum or the lock's own files, unless the PR carries the label **`plan-revision`** (`scripts/guard.sh` check 1b). Add that label yourself, on GitHub, to the revision PR you approved; CI then runs again and passes.
+
+For a stronger lock, turn on **Require review from Code Owners** in the `main` ruleset (GitHub → Settings → Rules). `.github/CODEOWNERS` lists you for the plan, the lock and CI files, so such a PR then also waits for you, auto-merge included.
+
 ## Lock again (the default)
 
 ```bash

@@ -8,8 +8,7 @@
 #   worker app : MEDUSA_WORKER_MODE=worker, DISABLE_MEDUSA_ADMIN=true,
 #                RUN_MIGRATIONS=false        (no domain)
 #
-# STATUS: ready template. Builds once the Medusa app code is added
-# (BUILD_PLAN.md §4.1). Base images are fully qualified for Podman/Buildah.
+# Base images are fully qualified for Podman/Buildah (BUILD_PLAN.md §4.1).
 # =====================================================================
 ARG NODE_VERSION=22
 

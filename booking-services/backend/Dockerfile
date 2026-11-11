@@ -1,13 +1,14 @@
 # =====================================================================
 # booking-services / backend — Medusa server + worker (same image, two Dokploy apps)
 #
-# Dokploy: Build Type = Dockerfile, Build Path = /booking-services/backend
+# Dokploy: Build Type = Dockerfile, Build Path = /,
+#   Docker File = booking-services/backend/Dockerfile, Docker Context Path = booking-services/backend,
+#   Watch Paths = booking-services/backend/**   (BUILD_PLAN.md §5; F-011)
 #   server app : MEDUSA_WORKER_MODE=server   (domain -> port 9000)
 #   worker app : MEDUSA_WORKER_MODE=worker, DISABLE_MEDUSA_ADMIN=true,
 #                RUN_MIGRATIONS=false        (no domain)
 #
-# STATUS: ready template. Builds once the Medusa app code is added
-# (BUILD_PLAN.md §4.1). Base images are fully qualified for Podman/Buildah.
+# Base images are fully qualified for Podman/Buildah (BUILD_PLAN.md §4.1).
 # =====================================================================
 ARG NODE_VERSION=22
 

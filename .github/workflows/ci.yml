@@ -5,6 +5,8 @@ name: ci
 
 on:
   pull_request:
+    # labeled / unlabeled: the owner's `plan-revision` label re-runs guard.
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
     branches: [main]
 
@@ -19,10 +21,14 @@ jobs:
   guard:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # guard diffs against .guard-baseline / origin/main
       - name: Guardrails (DEV_FLOW Gate 5)
+        env:
+          # Only the owner adds this label to a PR that revises the plan
+          # (docs/PLAN_LOCK.md; REVIEW_FIXES T1).
+          PLAN_REVISION_APPROVED: ${{ contains(github.event.pull_request.labels.*.name, 'plan-revision') }}
         run: scripts/guard.sh all
 
   verify:
@@ -64,11 +70,11 @@ jobs:
       VERIFY_DOCKER_NETWORK: host
       VERIFY_DATABASE_URL: postgres://medusa:medusa@localhost:5432/verify
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
           package_json_file: ${{ matrix.deployable }}/package.json # pnpm version from packageManager
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: pnpm
