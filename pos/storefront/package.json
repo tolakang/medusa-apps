@@ -4,7 +4,7 @@
   "private": true,
   "author": "Kasper Fabricius Kristensen <kasper@medusajs.com> & Victor Gerbrands <victor@medusajs.com> (https://www.medusajs.com)",
   "description": "Next.js Starter to be used with Medusa V2",
-  "packageManager": "pnpm@12.17.0",
+  "packageManager": "pnpm@12.18.0",
   "engines": {
     "node": ">=22.23.4"
   },

@@ -2,7 +2,7 @@
   "name": "wholesale-storefront",
   "version": "1.0.3",
   "private": true,
-  "packageManager": "pnpm@12.17.0",
+  "packageManager": "pnpm@12.18.0",
   "description": "Medusa B2B Starter Storefront",
   "author": "Medusa (https://medusajs.com)",
   "keywords": [
