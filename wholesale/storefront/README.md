@@ -7,7 +7,9 @@ Next.js B2B buyer shop for the wholesale business project. Standard: `BUILD_PLAN
 ## What buyers get
 
 - **Sign-in first.** With `NEXT_PUBLIC_REQUIRE_LOGIN` on (the default), a visitor without a session sees only the sign-in / sign-up page and the legal pages (`terms`, `privacy`, `contact`); every other page sends them to sign-in (`src/middleware.ts`).
-- **Company sign-up.** One form creates the customer, the company and the customer as its first admin (backend `POST /store/companies`, TASKS P4-07).
+- **Company sign-up.** One form creates the customer, the company and the customer as its first admin (backend `POST /store/companies`, TASKS P4-07). A colleague ticks "I have a join code" instead and joins the company that invited them.
+- **Inviting colleagues** (company admins, Company page): enter an email, get a **join code**, give it to the colleague. Nobody is added without using the code (REVIEW_FIXES B14). A signed-in customer without a company can also enter a code on their account page.
+- **Approved companies only:** the backend shows products and prices only to employees of an approved company; anyone else lands on their account page, which says why (REVIEW_FIXES X4).
 - **Company page:** details, approval settings, employees with spending limits (`/store/companies/me…`).
 - **Their own prices:** product and home pages render per request, so a buyer in a price tier (customer group) sees that tier's prices.
 - **Quick order** (`/account/quick-order`): paste `SKU, quantity` lines or upload a CSV; found SKUs go into the cart in one request, unknown ones are listed.

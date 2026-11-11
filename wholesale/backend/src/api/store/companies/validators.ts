@@ -57,11 +57,17 @@ export type StoreGetEmployeeParamsType = z.infer<typeof StoreGetEmployeeParams>;
 export const StoreGetEmployeeParams = createSelectParams();
 
 export type StoreCreateEmployeeType = z.infer<typeof StoreCreateEmployee>;
+// REVIEW_FIXES B14: an invitation by email; the colleague joins with the code.
 export const StoreCreateEmployee = z
   .object({
-    spending_limit: z.number().optional().nullable(),
-    is_admin: z.boolean().optional().nullable().default(false),
-    customer_id: z.string(),
+    email: z.string().trim().email(),
+  })
+  .strict();
+
+export type StoreJoinCompanyType = z.infer<typeof StoreJoinCompany>;
+export const StoreJoinCompany = z
+  .object({
+    join_code: z.string().trim().min(1).max(80),
   })
   .strict();
 

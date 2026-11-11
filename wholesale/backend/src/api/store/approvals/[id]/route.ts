@@ -3,7 +3,7 @@ import {
   MedusaResponse,
 } from "@medusajs/framework";
 import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils";
-import { ApprovalType } from "../../../../types/approval";
+import { ApprovalStatusType, ApprovalType } from "../../../../types/approval";
 import { loadBuyer } from "../../../../utils/load-b2b-buyer";
 import { updateApprovalsWorkflow } from "../../../../workflows/approval/workflows";
 import { StoreUpdateApprovalType } from "../validators";
@@ -25,7 +25,7 @@ export const POST = async (
     data: [existing],
   } = await query.graph({
     entity: "approval",
-    fields: ["id", "type", "cart_id"],
+    fields: ["id", "type", "cart_id", "status"],
     filters: { id: approvalId },
   });
   const {
@@ -42,6 +42,8 @@ export const POST = async (
     loadBuyer(req.scope, cart?.customer_id),
   ]);
   const approverCompany = approver?.employee?.company?.id;
+  // One answer for "not found" and "not yours", so other companies'
+  // approval ids can't be told apart (REVIEW_FIXES B16).
   if (
     !existing ||
     (existing.type as string) !== ApprovalType.ADMIN ||
@@ -49,9 +51,12 @@ export const POST = async (
     !approverCompany ||
     approverCompany !== cartBuyer?.employee?.company?.id
   ) {
+    throw new MedusaError(MedusaError.Types.NOT_FOUND, "Approval not found");
+  }
+  if ((existing.status as string) !== ApprovalStatusType.PENDING) {
     throw new MedusaError(
       MedusaError.Types.NOT_ALLOWED,
-      "You can't decide this approval."
+      "This approval has already been decided."
     );
   }
 

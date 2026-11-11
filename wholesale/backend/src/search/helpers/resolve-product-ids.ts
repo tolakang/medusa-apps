@@ -97,22 +97,27 @@ export async function resolveProductIds(
         (row) => [row.product_id],
         deleted
       )
+    // Options can be shared between products, so an option has `products`
+    // rather than a `product_id` (ProductOptionDTO, @medusajs/types). The
+    // starter's copy read `product_id` and failed on every option event; the
+    // same fix as ecommerce/ (TASKS F-023, REVIEW_FIXES X1).
     case 'product-option':
       return relatedProductIds(
         query,
         'product_option',
-        ['product_id'],
+        ['products.id'],
         ids,
-        (row) => [row.product_id],
+        (row) => (row?.products ?? []).map((product: any) => product?.id),
         deleted
       )
     case 'product-option-value':
       return relatedProductIds(
         query,
         'product_option_value',
-        ['option.product_id'],
+        ['option.products.id'],
         ids,
-        (row) => [row.option?.product_id],
+        (row) =>
+          (row?.option?.products ?? []).map((product: any) => product?.id),
         deleted
       )
     case 'product-tag':

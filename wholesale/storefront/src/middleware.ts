@@ -117,41 +117,42 @@ const isAgentPath = (request: NextRequest) => {
   )
 }
 
-// Is this session token still good? Asked from the backend (it verifies the
-// token), and remembered for a minute per token so pages don't each pay for
-// the call. A token that is missing, expired, or signed for another backend
-// sends the buyer to sign-in instead of to pages whose product calls the
-// backend would refuse (TASKS F-068). If the backend can't be reached the
+// What this session may see (TASKS F-068, REVIEW_FIXES X4), asked from the
+// backend's own product route and remembered for a minute per token:
+// "shop" = an employee of an approved company; "account" = signed in, but no
+// company or one that isn't approved (only the account pages, where they
+// see why); "signin" = no valid session. If the backend can't be reached the
 // buyer is let through; the page then shows its own error.
-const SESSION_CHECK_TTL_MS = 60 * 1000
-const checkedSessions = new Map<string, { valid: boolean; at: number }>()
+type Access = "shop" | "account" | "signin"
+const ACCESS_TTL_MS = 60 * 1000
+const knownAccess = new Map<string, { access: Access; at: number }>()
 
-async function sessionValid(token: string | undefined) {
+async function sessionAccess(token: string | undefined): Promise<Access> {
   if (!token) {
-    return false
+    return "signin"
   }
-  const known = checkedSessions.get(token)
-  if (known && known.at > Date.now() - SESSION_CHECK_TTL_MS) {
-    return known.valid
+  const known = knownAccess.get(token)
+  if (known && known.at > Date.now() - ACCESS_TTL_MS) {
+    return known.access
   }
-  let valid = true
+  let access: Access = "shop"
   try {
-    const res = await fetch(`${BACKEND_URL}/store/customers/me?fields=id`, {
+    const res = await fetch(`${BACKEND_URL}/store/products?limit=1&fields=id`, {
       headers: {
         "x-publishable-api-key": PUBLISHABLE_API_KEY!,
         authorization: `Bearer ${token}`,
       },
       cache: "no-store",
     })
-    valid = res.status !== 401 && res.status !== 403 && res.status !== 404
+    access = res.status === 401 ? "signin" : res.status === 403 ? "account" : "shop"
   } catch {
-    return true
+    return "shop"
   }
-  if (checkedSessions.size > 5000) {
-    checkedSessions.clear()
+  if (knownAccess.size > 5000) {
+    knownAccess.clear()
   }
-  checkedSessions.set(token, { valid, at: Date.now() })
-  return valid
+  knownAccess.set(token, { access, at: Date.now() })
+  return access
 }
 
 /**
@@ -192,16 +193,20 @@ export async function middleware(request: NextRequest) {
     !request.nextUrl.pathname.includes(".")
   ) {
     const page = request.nextUrl.pathname.split("/")[2] ?? ""
-    if (
-      !PUBLIC_PAGES.includes(page) &&
-      !(await sessionValid(request.cookies.get("_medusa_jwt")?.value))
-    ) {
-      const signIn = NextResponse.redirect(
-        `${request.nextUrl.origin}/${countryCode}/account`,
-        307
+    if (!PUBLIC_PAGES.includes(page)) {
+      const access = await sessionAccess(
+        request.cookies.get("_medusa_jwt")?.value
       )
-      signIn.cookies.delete("_medusa_jwt")
-      return signIn
+      if (access !== "shop") {
+        const toAccount = NextResponse.redirect(
+          `${request.nextUrl.origin}/${countryCode}/account`,
+          307
+        )
+        if (access === "signin") {
+          toAccount.cookies.delete("_medusa_jwt")
+        }
+        return toAccount
+      }
     }
   }
 

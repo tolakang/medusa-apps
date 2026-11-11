@@ -48,7 +48,14 @@ export async function retrieveCart(id?: string) {
     .then(({ cart }) => {
       return cart as B2BCart
     })
-    .catch(() => {
+    .catch(async (e) => {
+      // A cart that no longer exists (completed elsewhere, database reset):
+      // forget it, so the next add starts a new one instead of the checkout
+      // answering "not found" (REVIEW_FIXES X3). Only possible where cookies
+      // can be written (server actions, route handlers).
+      if ((e as { status?: number })?.status === 404 && !id) {
+        await removeCartId().catch(() => {})
+      }
       return null
     })
 }

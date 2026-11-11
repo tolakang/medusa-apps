@@ -40,12 +40,14 @@ Done 2026-11-12 (PR #153). Choices: spending windows are in UTC (B1). B5 is an `
 
 ### Batch 3: Wholesale data exposure
 
+Done 2026-11-12 (PR #154). B14 got a consent flow: a company admin asks for a **join code** for a colleague's email (`POST /store/companies/me/employees` `{ email }`), and the colleague, signed in with that email, joins with it (`POST /store/companies/join`, or the "I have a join code" option at sign-up). Nothing about any customer is returned to the admin. X4: the catalog needs an employee of an **approved** company (owner: "Fix those"); others see why on their account page.
+
 | ✓ | ID | Sev | Problem | Where | Best fix |
 |---|---|---|---|---|---|
-| [ ] | B12 | medium | Bulk add-to-cart accepts any `?fields=` (no `allowed` list; defaults `*customer`, `*company`), so a cart id can expose coworkers' emails and phones. | W `api/store/carts/middlewares.ts:16-23`, `[id]/line-items/bulk/route.ts`, `query-config.ts` | `allowed` / `disallowed` in the query config, explicit customer fields, `authenticate("customer")` and a `cart.customer_id === actor_id` check. |
-| [ ] | B14 | medium | A company admin can add any customer by id without consent; the response shows their email and phone. | W `api/store/companies/me/employees/route.ts:40-77` | Invite by email, accepted by the customer on an authenticated route. At least: require an email match and drop the PII from the response. |
-| [ ] | B13 | low-med | Quote routes return `*messages.admin` (admin user records) and accept any `fields`. | W `api/store/quotes/query-config.ts:7-8` | Name the admin fields (`messages.admin.first_name`), add `allowed` / `disallowed`. |
-| [ ] | B16 | low-med | Approval decision: `status: z.string()` (not strict, not an enum), no pending check, 404 vs 403 reveals other companies' ids. | W `api/store/approvals/validators.ts:27-29`, `[id]/route.ts`, `middlewares.ts:15-45` | `z.object({ status: z.enum(["approved","rejected"]) }).strict()`, refuse unless pending, one 404 for "not found or not yours". |
+| [x] #154 | B12 | medium | Bulk add-to-cart accepts any `?fields=` (no `allowed` list; defaults `*customer`, `*company`), so a cart id can expose coworkers' emails and phones. | W `api/store/carts/middlewares.ts:16-23`, `[id]/line-items/bulk/route.ts`, `query-config.ts` | `allowed` / `disallowed` in the query config, explicit customer fields, `authenticate("customer")` and a `cart.customer_id === actor_id` check. |
+| [x] #154 | B14 | medium | A company admin can add any customer by id without consent; the response shows their email and phone. | W `api/store/companies/me/employees/route.ts:40-77` | Invite by email, accepted by the customer on an authenticated route. At least: require an email match and drop the PII from the response. |
+| [x] #154 | B13 | low-med | Quote routes return `*messages.admin` (admin user records) and accept any `fields`. | W `api/store/quotes/query-config.ts:7-8` | Name the admin fields (`messages.admin.first_name`), add `allowed` / `disallowed`. |
+| [x] #154 | B16 | low-med | Approval decision: `status: z.string()` (not strict, not an enum), no pending check, 404 vs 403 reveals other companies' ids. | W `api/store/approvals/validators.ts:27-29`, `[id]/route.ts`, `middlewares.ts:15-45` | `z.object({ status: z.enum(["approved","rejected"]) }).strict()`, refuse unless pending, one 404 for "not found or not yours". |
 
 ### Batch 4: Storefronts and portals
 
@@ -87,10 +89,10 @@ Done 2026-11-12 (PR #156). T1 in code: guard check 1b fails a branch that change
 
 | ✓ | ID | Sev | Problem | Where | Best fix |
 |---|---|---|---|---|---|
-| [ ] | X1 | low | The worker logs `Cannot read properties of undefined (reading 'product_id')` on `product-option.created` (seen while seeding, 2026-11-12, F-069). Ecommerce fixed this helper for shared product options (F-023); the wholesale backend has the starter's copy. | `wholesale/backend/src/search/helpers/resolve-product-ids.ts` | Port the F-023 fix from `ecommerce/backend/src/search/helpers/resolve-product-ids.ts`. |
-| [ ] | X2 | low | The sign-in page logs one `Error: Unauthorized` per view: the account dashboard slot is rendered for guests too and asks for approvals. | `wholesale/storefront/src/modules/account/templates/account-layout` (via `@dashboard/layout.tsx`) | Skip the approvals call when there is no customer. |
-| [ ] | X3 | low | `wholesale/storefront` keeps a cart cookie whose cart no longer exists: checkout answers 404 until something is added to the cart. | `wholesale/storefront/src/lib/data/cart.ts` (`retrieveCart`) | Clear the cookie when the backend says the cart is not found. |
-| [ ] | X4 | medium | Any signed-in customer can read the wholesale catalog and prices, also one whose company is still `pending` (F-068 stopped at "signed in"). | `wholesale/backend/src/api/store/catalog/middlewares.ts` | Owner decision: also require an employee of an `approved` company when `WHOLESALE_REQUIRE_APPROVAL=true`. |
+| [x] #154 | X1 | low | The worker logs `Cannot read properties of undefined (reading 'product_id')` on `product-option.created` (seen while seeding, 2026-11-12, F-069). Ecommerce fixed this helper for shared product options (F-023); the wholesale backend has the starter's copy. | `wholesale/backend/src/search/helpers/resolve-product-ids.ts` | Port the F-023 fix from `ecommerce/backend/src/search/helpers/resolve-product-ids.ts`. |
+| [x] #154 | X2 | low | The sign-in page logs one `Error: Unauthorized` per view: the account dashboard slot is rendered for guests too and asks for approvals. | `wholesale/storefront/src/modules/account/templates/account-layout` (via `@dashboard/layout.tsx`) | Skip the approvals call when there is no customer. |
+| [x] #154 | X3 | low | `wholesale/storefront` keeps a cart cookie whose cart no longer exists: checkout answers 404 until something is added to the cart. | `wholesale/storefront/src/lib/data/cart.ts` (`retrieveCart`) | Clear the cookie when the backend says the cart is not found. |
+| [x] #154 | X4 | medium | Any signed-in customer can read the wholesale catalog and prices, also one whose company is still `pending` (F-068 stopped at "signed in"). | `wholesale/backend/src/api/store/catalog/middlewares.ts` | Owner decision: also require an employee of an `approved` company when `WHOLESALE_REQUIRE_APPROVAL=true`. |
 
 ### Rejected or by design
 

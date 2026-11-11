@@ -129,15 +129,45 @@ medusaIntegrationTestRunner({
           (await get("/store/companies/me", admin.token)).data.company.approval_settings.requires_admin_approval
         ).toEqual(true);
 
-        // A new colleague: a customer who isn't in a company yet.
+        // A new colleague (REVIEW_FIXES B14): the admin gets a join code for
+        // their email; nobody is added until the colleague uses it.
         const recruit = await b2b.register();
-        const added = await post(
+        const invited = await post(
           "/store/companies/me/employees",
-          { customer_id: recruit.customer.id, spending_limit: 50 },
+          { email: recruit.customer.email.toUpperCase() },
           admin.token
         );
-        expect(added.status).toEqual(200);
+        expect(invited.status).toEqual(200);
+        expect(invited.data).toEqual({
+          invitation: {
+            email: recruit.customer.email,
+            join_code: expect.stringMatching(/^comp_[A-Za-z0-9]+\.[A-Z2-9]{10}$/),
+          },
+        });
+        expect((await get("/store/companies/me", recruit.token)).status).toEqual(403);
+        // The old way, by customer id, is refused.
+        expect(
+          (await post("/store/companies/me/employees", { customer_id: recruit.customer.id }, admin.token)).status
+        ).toEqual(400);
+        // The code works for that email only.
+        const outsider = await b2b.register();
+        expect(
+          (await post("/store/companies/join", { join_code: invited.data.invitation.join_code }, outsider.token)).status
+        ).toEqual(400);
+        const joined = await post(
+          "/store/companies/join",
+          {
+            // The code part may be typed in lower case.
+            join_code: invited.data.invitation.join_code.replace(/\.(.*)$/, (_: string, c: string) => "." + c.toLowerCase()),
+          },
+          recruit.token
+        );
+        expect(joined.status).toEqual(200);
         expect((await get("/store/companies/me", recruit.token)).data.company.id).toEqual(company.id);
+        // A member can't join again.
+        expect(
+          (await post("/store/companies/join", { join_code: invited.data.invitation.join_code }, recruit.token)).status
+        ).toEqual(400);
 
         expect((await del(path, admin.token)).data.deleted).toEqual(true);
         expect((await get("/store/companies/me", buyer.token)).status).toEqual(403);
@@ -178,14 +208,20 @@ medusaIntegrationTestRunner({
         expect((await post(path, { is_admin: true }, bAdmin.token)).status).toEqual(404);
         expect((await del(path, bAdmin.token)).status).toEqual(404);
 
-        // B can't take A's employee into B.
+        // B can't take A's employee into B, even with a code for their email.
         const poach = await post(
           "/store/companies/me/employees",
-          { customer_id: aBuyer.customer.id },
+          { email: aBuyer.customer.email },
           bAdmin.token
         );
-        expect(poach.status).toEqual(400);
-        expect(poach.data.message).toContain("already belongs to a company");
+        expect(poach.status).toEqual(200);
+        const taken = await post(
+          "/store/companies/join",
+          { join_code: poach.data.invitation.join_code },
+          aBuyer.token
+        );
+        expect(taken.status).toEqual(400);
+        expect(taken.data.message).toContain("already belongs to a company");
 
         // B's list shows only B.
         const bList = (await get("/store/companies/me/employees", bAdmin.token)).data.employees;
