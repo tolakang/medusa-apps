@@ -131,6 +131,12 @@ export default defineMiddlewares({
       middlewares: [requireStrongPassword],
     },
     {
+      // REVIEW_FIXES B17: the same password rule when an admin sets a new one.
+      method: ['POST'],
+      matcher: '/auth/user/emailpass/update',
+      middlewares: [requireStrongPassword],
+    },
+    {
       // Admin sign-in and forgot password (pre-deploy audit E-A1): the same
       // per-IP limits as the customer routes. The admin dashboard calls the
       // backend from the browser, so req.ip is the admin's address.

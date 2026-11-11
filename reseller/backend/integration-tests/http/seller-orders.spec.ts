@@ -26,7 +26,11 @@ medusaIntegrationTestRunner({
         const email = `${handle}@seller.test`
         const invited = await api.post("/admin/sellers", { handle, name: handle, email, status: "active" }, admin)
         const reg = await api.post("/auth/seller/emailpass/register", { email, password: "seller-pass-1" })
-        await api.post("/sellers/accept", {}, bearer(reg.data.token))
+        await api.post(
+          "/sellers/accept",
+          { invite_code: invited.data.invite_code },
+          bearer(reg.data.token)
+        )
         const { data } = await api.post("/auth/seller/emailpass", { email, password: "seller-pass-1" })
         return { id: invited.data.seller.id as string, key: invited.data.publishable_key as string, auth: bearer(data.token) }
       }

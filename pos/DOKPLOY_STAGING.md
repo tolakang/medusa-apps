@@ -40,7 +40,7 @@ Save each result in your password manager under these names:
 | B | `COOKIE_SECRET` | backend, worker |
 | C | `AUTH_MFA_ENCRYPTION_KEY` (never change it later) | backend, worker |
 | D | `REVALIDATE_SECRET` | backend, worker, storefront |
-| E | `SHOPPER_IP_SECRET` | backend, worker, storefront |
+| E | `SHOPPER_IP_SECRET` | backend, worker, storefront, till app |
 | F | `COOKIE_SECRET` of the till app (not the same as B) | till app |
 
 ### C. Optional extras (recommended: later)
@@ -349,7 +349,9 @@ CLIENT_IP_HEADER=
    PORT=3000
    MEDUSA_BACKEND_URL=https://<api host>
    COOKIE_SECRET=<F>
+   SHOPPER_IP_SECRET=<E>
    ```
+   - `E` lets the backend count sign-in attempts per cashier's own IP. Without it every till shares one limit, and one person's wrong passwords can lock all tills out.
    - `F` seals the cashier's sign-in cookie. Changing it later signs every till out.
    - The app talks to the backend only from its own server, so the browser never sees the token.
 3. **Save**.
@@ -418,13 +420,13 @@ There is no admin page for these yet, so use `curl` in a terminal on your own co
    curl -s -X POST $API/admin/pos/cashiers -H "$AUTH" -H 'content-type: application/json' \
      -d '{"name":"Test Cashier","email":"<cashier email>"}'
    ```
-   **Check:** the answer starts with `{"cashier":`.
+   **Check:** the answer starts with `{"cashier":` and ends with `"invite_code":"XXXXX-XXXXX"`. Write the code down: the cashier needs it once, at first sign-in. `GET $API/admin/pos/cashiers` shows it again.
 
 A `401` at any point means the token expired: run step 1 again.
 
 ### C. A sale at the till
 1. Open `https://<till host>/login` → **First time? Set your password**.
-2. Enter the cashier email from B.4, and a password of at least 8 characters, twice → **Set password and sign in**.
+2. Enter the cashier email from B.4, a password of at least 8 characters, twice, and the **invite code** from B.4 → **Set password and sign in**.
 3. **Choose a register:** *Front till*.
 4. **Opening cash:** `20` → **Open shift**.
 5. Type or scan `SHIRT-L-BLACK` and press Enter. Make the quantity **2**.
@@ -507,3 +509,4 @@ Known causes:
 | Till: "This register has no stock location" | register created without `stock_location_id` | step 7.B.3 |
 | `curl` answers `401` | admin token missing or expired | step 7.B.1 again |
 | Till sign-in: "Enter the invited email…" | the email isn't invited, or the password is shorter than 8 characters | step 7.B.4, or a longer password |
+| Till sign-in: "This invite code isn't right…" | the code doesn't belong to this cashier's invitation | read it again with `GET $API/admin/pos/cashiers` |

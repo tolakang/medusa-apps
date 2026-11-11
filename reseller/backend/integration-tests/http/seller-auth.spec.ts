@@ -1,6 +1,9 @@
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { Modules } from "@medusajs/framework/utils"
-import { NO_SELLER_INVITATION_MESSAGE } from "../../src/workflows/seller/accept-seller-invite"
+import {
+  NO_SELLER_INVITATION_MESSAGE,
+  WRONG_SELLER_INVITE_CODE_MESSAGE,
+} from "../../src/workflows/seller/accept-seller-invite"
 import { SELLER_SUSPENDED_MESSAGE } from "../../src/api/seller-auth"
 import { SELLER_MODULE } from "../../src/modules/seller"
 import SellerModuleService from "../../src/modules/seller/service"
@@ -64,7 +67,11 @@ medusaIntegrationTestRunner({
         const invited = await invite({ email })
         const registered = await register(email)
         const accepted = await call(
-          api.post("/sellers/accept", {}, bearer(registered.data.token))
+          api.post(
+            "/sellers/accept",
+            { invite_code: invited.data.invite_code },
+            bearer(registered.data.token)
+          )
         )
         return { invited, registered, accepted, token: await login(email) }
       }
@@ -81,6 +88,8 @@ medusaIntegrationTestRunner({
           })
         )
         expect(res.data.publishable_key).toMatch(/^pk_/)
+        // The shop hands this code to the seller (REVIEW_FIXES B11).
+        expect(res.data.invite_code).toMatch(/^[A-Z2-9]{5}-[A-Z2-9]{5}$/)
 
         // The same email in other case: one seller per email.
         expect((await invite({ handle: "other", email: "SOK@seller.test" })).status).toEqual(422)
@@ -118,17 +127,54 @@ medusaIntegrationTestRunner({
 
         // Accepting twice is refused.
         expect(
-          (await call(api.post("/sellers/accept", {}, bearer(token)))).status
+          (
+            await call(
+              api.post("/sellers/accept", { invite_code: "AAAAA-AAAAA" }, bearer(token))
+            )
+          ).status
         ).toEqual(400)
       })
 
       it("nobody becomes a seller without an invitation", async () => {
         const registered = await register("stranger@seller.test")
         const accepted = await call(
-          api.post("/sellers/accept", {}, bearer(registered.data.token))
+          api.post(
+            "/sellers/accept",
+            { invite_code: "AAAAA-AAAAA" },
+            bearer(registered.data.token)
+          )
         )
         expect(accepted.status).toEqual(400)
         expect(accepted.data.message).toEqual(NO_SELLER_INVITATION_MESSAGE)
+      })
+
+      // REVIEW_FIXES B11: knowing the invited email isn't enough any more.
+      it("the invited email without the shop's invite code can't take the seller account", async () => {
+        const invited = await invite({ email: "target@seller.test", handle: "target" })
+        const other = await invite({ email: "other@seller.test", handle: "other" })
+        const registered = await register("target@seller.test")
+        const accept = (body: Record<string, unknown>) =>
+          call(api.post("/sellers/accept", body, bearer(registered.data.token)))
+
+        expect((await accept({})).status).toEqual(400)
+        for (const code of ["AAAAA-AAAAA", other.data.invite_code]) {
+          const res = await accept({ invite_code: code })
+          expect(res.status).toEqual(400)
+          expect(res.data.message).toEqual(WRONG_SELLER_INVITE_CODE_MESSAGE)
+        }
+        expect(
+          (await call(api.get("/sellers/me", bearer(await login("target@seller.test"))))).status
+        ).toEqual(401)
+
+        // The real code still works afterwards, typed in lower case.
+        const ok = await accept({ invite_code: invited.data.invite_code.toLowerCase() })
+        expect(ok.status).toEqual(200)
+        expect(ok.data.seller.email).toEqual("target@seller.test")
+        expect(
+          (await api.get("/admin/sellers", admin)).data.sellers.find(
+            (s: { handle: string }) => s.handle === "target"
+          ).invite_code
+        ).toEqual(invited.data.invite_code)
       })
 
       it("short passwords, guests, admins and customers are refused", async () => {
@@ -159,10 +205,14 @@ medusaIntegrationTestRunner({
         expect(res.status).toEqual(401)
         expect(res.data.message).toEqual(SELLER_SUSPENDED_MESSAGE)
 
-        await invite({ email: "late@seller.test", handle: "late", status: "suspended" })
+        const late = await invite({ email: "late@seller.test", handle: "late", status: "suspended" })
         const registered = await register("late@seller.test")
         const accepted = await call(
-          api.post("/sellers/accept", {}, bearer(registered.data.token))
+          api.post(
+            "/sellers/accept",
+            { invite_code: late.data.invite_code },
+            bearer(registered.data.token)
+          )
         )
         expect(accepted.status).toEqual(400)
       })

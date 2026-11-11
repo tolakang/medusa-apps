@@ -49,19 +49,33 @@ export async function setupAccount(_: AuthState, form: FormData): Promise<AuthSt
   if (password !== String(form.get("confirm") ?? "")) {
     return { error: "The two passwords don't match." }
   }
+  // The shop admin gives this code with the invitation; the email alone isn't
+  // enough to take the account (REVIEW_FIXES B11).
+  const inviteCode = field(form, "invite_code")
+  if (!inviteCode) {
+    return { error: "Enter the invite code the shop admin gave you." }
+  }
 
-  let registration: string
+  let registration: string | null
   try {
     registration = await sdk.auth.register("cashier", "emailpass", { email, password })
   } catch (e) {
     const message = e instanceof Error ? e.message : ""
-    return {
-      error: /exist/i.test(message)
-        ? "This email already has a password. Sign in instead."
-        : message || "Couldn't create the account.",
+    if (!/exist/i.test(message)) {
+      return { error: message || "Couldn't create the account." }
+    }
+    // The password was set on an earlier try that stopped at the invite
+    // code: carry on with that password.
+    registration = await signIn(email, password)
+    if (!registration) {
+      return { error: "This email already has a password. Sign in instead." }
     }
   }
-  const accepted = await backendFetch("/pos/cashiers/accept", { token: registration, method: "POST", body: {} })
+  const accepted = await backendFetch("/pos/cashiers/accept", {
+    token: registration,
+    method: "POST",
+    body: { invite_code: inviteCode },
+  })
   if (!accepted.ok) {
     return { error: accepted.message }
   }
