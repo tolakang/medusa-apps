@@ -1,12 +1,14 @@
 # Build Plan — Medusa Apps
 
-> **Revision 10 (2026-11-12, owner: "Update old places in build plan too").** Builder documents moved into `docs/`; §2 and every path in this plan follow (TASKS F-071). Nothing else changed: the rest of the Revision 10 proposal (Wholesale as built, review fixes) is still in `docs/PLAN_REVISION_11_PROPOSAL.md`.
+> **Revision 11 (2026-11-12, owner: "Fix those", applied on "Yes").** Brings §6.2, §6.4, §6.5 and §7 in line with Wholesale P4-08 to P4-13 and the review fixes (TASKS F-066 to F-070, the first review's fix list, now done). Requirements, scope and build order are unchanged.
+>
+> **Revision 10 (2026-11-12, owner: "Update old places in build plan too").** Builder documents moved into `docs/`; §2 and every path in this plan follow (TASKS F-071). Nothing else changed.
 >
 > **Revision 9 (2026-11-11, owner).** A clean rewrite: the plan now describes the repo as it is, with each rule given once, and the revision notes moved to *Revision history* at the end. It takes in TASKS F-055 to F-065, V-06 and decisions D9 to D11. Requirements, scope and build order are unchanged.
 >
-> **Status (2026-11-11).** Phase 0 is done. Phase 1 (Ecommerce) is on staging, and production (P1-08) waits on the owner. Phases 2 (POS), 3 (Booking services) and 5 (Reseller) have their code done, with staging and the exit checklists (P2-14, P3-18, P5-11) waiting on the owner. Phase 4 (Wholesale) has its backend done (P4-01 to P4-07), and the storefront (P4-08) is next. Phase 6 (Marketplace) has not started. Progress, decisions and evidence are in `docs/TASKS.md`.
+> **Status (2026-11-12).** Phase 0 is done. Phase 1 (Ecommerce) is on staging, and production (P1-08) waits on the owner. Phases 2 (POS), 3 (Booking services), 4 (Wholesale) and 5 (Reseller) have their code done, with staging and the exit checklists (P2-14, P3-18, P4-11, P5-11) waiting on the owner. Phase 6 (Marketplace) has not started. Progress, decisions and evidence are in `docs/TASKS.md`.
 
-**Versions in this repo (checked 2026-11-11)**
+**Versions in this repo (checked 2026-11-12)**
 
 | Package | Version | Since |
 |---|---|---|
@@ -14,7 +16,7 @@
 | `@medusajs/ui` | **4.2.13** (the version `@medusajs/dashboard@2.22.6` depends on) | 2026-11-10 |
 | Node | `>=22.23.4` | 2026-11-06 |
 | Next.js (every web client) | **16.4.5** | 2026-11-06 (V-04) |
-| pnpm | **12.17.0**; 12.18.0 from 2026-11-12, once it is a week old (V-07) | 2026-11-06 (V-03) |
+| pnpm | **12.18.0** (V-07) | 2026-11-12 |
 | Starters | `dtc-starter` (`6440e85`) and `b2b-starter` (`f352e3c`) on 2.22.6 | 2026-11-09 |
 
 Updates are separate tasks (§8). This table records what the code uses.
@@ -439,7 +441,7 @@ Each scenario lists:
   - **`close-shift`:** computes the expected cash from cash payments and stores the variance.
   - **`pos-checkout`** (official POS recipe): creates the sale as a **draft order** in the POS sales channel, applies promotions, records the payment, converts it to an order and links the order to the shift.
 - **Cashiers:** a custom actor type **`cashier`** (`/auth/cashier/emailpass`, `authenticate("cashier", ["session", "bearer"])`), because Medusa's admin roles aren't usable (§3.2, R-g).
-  - **Invite-only:** an admin creates the cashier first, and the registered email must match an active invitation (F-036).
+  - **Invite-only:** an admin creates the cashier first (the answer carries an **invite code**); the cashier registers the invited email and accepts with that code (F-036, review fix B11).
   - **Shifts:** any active cashier can sell on and close any open shift. The shift records who opened and closed it, and each sale records its cashier (`pos_cashier_id`).
 - **Payments:**
   - **One provider:** everything goes through `pp_system_default`. Each POS payment session carries `metadata.pos_payment_method` = `cash`, `card` or `qr`, and close-shift counts only `cash` (F-037, F-038).
@@ -505,6 +507,7 @@ Each scenario lists:
   - **`invoice`** (new; see Invoices).
 - **Links:** employee ↔ customer (one ↔ one); company ↔ customer group (the price tier).
 - **Catalog scope:** a B2B **sales channel** with its own publishable key, so the B2B storefront sees only B2B products (`pnpm seed:b2b`).
+- **Who sees the catalog** (F-068, X4): with `WHOLESALE_REQUIRE_LOGIN` on (default), the Store API's product, variant and search routes answer only an employee of an **approved** company; the publishable key alone gets 401, anyone else signed in 403. The storefront's `NEXT_PUBLIC_REQUIRE_LOGIN` shows its pages to the same people and sends others to their account page, which says why.
 - **Pricing:** core **price lists** of type `sale` with a customer-group rule (`customer.groups.id`) per tier. A company gets a tier by joining a customer group. Quantity tiers use each price's `min_quantity` / `max_quantity`.
 - **Who may buy:** only a signed-in employee of an approved company; a guest may open an empty cart. The company of a cart or order always comes from the customer's employee record, never from cart metadata (F-059).
 - **Cart rules (workflow hooks):**
@@ -517,21 +520,25 @@ Each scenario lists:
 - **Quotes:** `request-quote` / `accept-quote` through draft orders. Accepting a quote runs the checkout rules (own quote, approved company, spending and credit limits on the quoted total).
 - **Payments:**
   - **Net-terms companies:** the built-in **system payment provider** (`pp_system_default`). The payment is captured in the admin when the invoice is paid, and the credit limit counts the order until then.
-  - **Prepaid companies:** **ABA PayWay** (KHQR and cards), the Ecommerce provider (D9, task P4-12).
+  - **Prepaid companies:** **ABA PayWay** (KHQR and cards), the Ecommerce provider (D9, task P4-12). With PayWay set up, prepaid companies must pay with it and net-terms companies by invoice: checked when a payment session starts and at cart completion. Without PayWay keys, everyone pays by invoice.
+  - **One order at a time per company:** cart completion and quote acceptance run inside a lock on the company, so two checkouts can't both use the last of the credit (B6). Every placed order is linked to its company, so it keeps counting against the credit after its buyer leaves (B4, B5).
 - **Invoices:**
   - **Module `invoice`:** numbers `INV-000001`, one per order, with a snapshot of the company, tax ID and terms, and a due date from the terms.
   - **PDF:** `pdfmake`, following the official invoice tutorial pattern. It is at `GET /admin/orders/:id/invoice` and `GET /store/orders/:id/invoice` (the buyer or their company admin only); `GET /store/invoices` lists what's due.
-  - **Language:** Khmer as well as English, with an embedded Khmer font (D10, task P4-13).
+  - **Language:** every label in English and Khmer, font Kantumruy Pro (SIL OFL; D10, P4-13, F-070). USD and KHR print their sign, other currencies their code.
+  - **Dates:** issued when the order is placed, or when a quote is accepted; a cancelled order is listed with nothing due (B2, B3).
   - **Seller details:** from `INVOICE_SELLER_*`.
 - **API routes:**
   - **Company:** `/store/companies/me` and `/store/companies/me/employees`. They take the company and role from the customer's employee record; the starter's `/store/companies/:id…` routes are removed (F-058).
   - **Quotes:** `/store/quotes`.
   - **Sign-up:** creates the company and its first admin together.
-- **Client app:** `wholesale/storefront` (from the `b2b-starter` storefront), a B2B buyer shop behind login (`NEXT_PUBLIC_REQUIRE_LOGIN`): bulk add by SKU or CSV, reorder, invoices, quotes, company users.
+  - **Colleagues join with consent** (B14): a company admin asks for a **join code** for an email (`POST /store/companies/me/employees` `{ email }`); the colleague, signed in with that email, joins with it (`POST /store/companies/join`). Nobody is added by id.
+- **Client app:** `wholesale/storefront` (from the `b2b-starter` storefront `f352e3c`, P4-08), a B2B buyer shop behind login (`NEXT_PUBLIC_REQUIRE_LOGIN`): quick order by SKU or CSV, reorder, invoices, quotes, company users and join codes. The starter's catalog for AI agents (UCP, `/buy`, `llms.txt`, sitemap) is off while login is required (F-068).
 - **Env:**
   - **Approval:** `WHOLESALE_REQUIRE_APPROVAL` (`true` = a company that signs up in the storefront starts `pending`; companies the admin creates start `approved`).
   - **Invoices:** `INVOICE_SELLER_NAME`, `INVOICE_SELLER_ADDRESS`, `INVOICE_SELLER_TAX_ID`, `INVOICE_SELLER_EMAIL`, `INVOICE_SELLER_PHONE`, `INVOICE_PAYMENT_NOTE`.
-  - **Payments:** the PayWay keys once P4-12 is done.
+  - **Catalog:** `WHOLESALE_REQUIRE_LOGIN` (default on; F-068).
+  - **Payments:** `PAYWAY_MERCHANT_ID`, `PAYWAY_API_KEY`, `PAYWAY_API_URL`, `PAYWAY_RETURN_URL` (P4-12), and `pp_payway_payway` enabled on the region.
 - **Optional:** ERP integration exactly as in the official ERP recipe.
 - **Acceptance:** a Gold company sees Gold prices; an employee over their limit can't complete checkout, and neither can a company over its credit limit.
 
@@ -549,15 +556,15 @@ Each scenario lists:
 - **Links:** seller ↔ sales channel (one ↔ one; the seller's storefront publishable key). Creating a seller (`createSellerWorkflow`) also creates their channel and key.
 - **Commissions:**
   - **Recording:** `record-seller-commission`, triggered by subscriber `order.placed`. It goes order → sales channel → seller → commission and ignores channels without an active seller. It writes one commission per order, guarded by a lock and the unique `order_id`, so a repeated event creates no second one.
-  - **Base:** the order's items after discounts, without tax and shipping (D11, task P5-12; the first build used the order total, F-063).
-  - **Cancels and refunds:** an order cancel cancels the commission. A refund recalculates it on what the shop kept (cancelled at 0). A paid commission isn't changed by either.
+  - **Base:** the order's items after discounts, without tax and shipping (`item_total − item_tax_total`; D11, P5-12; the first build used the order total, F-063). `order_total` stores this base.
+  - **Cancels and refunds:** an order cancel cancels the commission. A refund keeps the share of the order the shop kept, measured against the captured amount (an order's `total` goes down after a refund); cancelled at 0. A paid commission isn't changed by either, and payouts take the same per-order locks as refunds (B10).
 - **Payouts (manual, D11, F-064):**
   - **Payout day:** on `RESELLER_PAYOUT_DAY` (1–28, UTC), a job approves last month's pending commissions.
   - **What's due:** `GET /admin/seller-payouts` reports it.
   - **Paying:** the shop pays outside Medusa and records it with `POST /admin/sellers/:id/payouts` (approved → paid).
   - **Later:** a `seller_payout` record, once statements are needed.
 - **Seller auth:** a custom actor type **`seller`** (`/auth/seller/emailpass`; `/sellers/*` routes behind `authenticate("seller", ["session", "bearer"])`).
-  - **Invite-only, like POS cashiers:** the shop creates the seller (`POST /admin/sellers`), and the seller registers, accepts (`POST /sellers/accept`) and signs in.
+  - **Invite-only, like POS cashiers:** the shop creates the seller (`POST /admin/sellers`, which returns an **invite code**), and the seller registers, accepts with that code (`POST /sellers/accept` `{ invite_code }`) and signs in. The invited email alone can't take the account (B11).
   - **Suspended sellers** are locked out at once.
   - **CORS:** `/sellers/*` isn't covered by the built-in CORS settings, so a middleware reading `SELLER_CORS` covers it.
 - **API routes:**
@@ -630,12 +637,12 @@ Rules for the order:
 - **Don't start two "L" phases at the same time.**
 - **Staging may wait (owner; F-034, F-044):** a phase's code can be finished and merged while its staging run and exit checklist wait for the owner. Those items stay open in `docs/TASKS.md` and are done before that category goes live.
 
-**Status 2026-11-11:**
+**Status 2026-11-12:**
 - Phase 0: done.
 - Phase 1: on staging; production waiting (P1-08, P1-09).
-- Phases 2, 3 and 5: code done; staging and exit waiting (P2-14, P3-18, P5-11).
-- Phase 4: backend done (P4-01 to P4-07); storefront next (P4-08); payment and invoice follow-ups P4-12 and P4-13.
+- Phases 2, 3, 4 and 5: code done; staging and exit waiting (P2-14, P3-18, P4-11, P5-11).
 - Phase 6: not started.
+- The first full review's 29 findings and four later ones are fixed (2026-11-12).
 
 ## 8. Update and release process
 
@@ -756,6 +763,7 @@ Also decided for Ecommerce:
 
 | Rev | Date | What changed |
 |---|---|---|
+| 11 | 2026-11-12 | Wholesale as built after P4-08 to P4-13 and the review fixes: catalog for employees of approved companies (`WHOLESALE_REQUIRE_LOGIN`), join codes, PayWay for prepaid companies, one order at a time per company, bilingual invoices. Reseller: commission base and refund share, payout locks. POS and Reseller: invite codes. Status line, pnpm 12.18.0. TASKS F-066 to F-070, D9 to D11. |
 | 10 | 2026-11-12 | Builder documents moved into `docs/` (owner request, F-071): §2 tree, R5 and every path. `BUILD_PLAN.md` and `CLAUDE.md` stay at the root. |
 | 9 | 2026-11-11 | Clean rewrite: one current description per topic, history moved here. Versions 2.22.6 / `@medusajs/ui` 4.2.13. Wholesale (§6.4) and Reseller (§6.5) as built. Decisions D9–D11. pnpm release-age rule (§3.2) and flaky-test rule (§3.3, R-k). TASKS F-055 to F-065, V-06. |
 | 8 | 2026-11-06 | Versions 2.22.3; apps may sit on different Medusa versions (F-044); plan lock hook (F-054); local Podman stacks (F-043, F-050 to F-052); POS and Booking details (F-036 to F-049); pre-deploy audit, alerts, `pnpm audit` triage. |

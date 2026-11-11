@@ -32,7 +32,6 @@ At the root: this README, [`BUILD_PLAN.md`](./BUILD_PLAN.md) and [`CLAUDE.md`](.
 - [`docs/BACKEND_PATTERNS_SKILL.md`](./docs/BACKEND_PATTERNS_SKILL.md) — backend design patterns mapped to Medusa's own mechanisms (skill `backend-patterns`).
 - [`docs/PRE_DEPLOY_AUDIT.md`](./docs/PRE_DEPLOY_AUDIT.md) — the security and readiness audit to run per category before it goes live.
 - [`docs/PLAN_LOCK.md`](./docs/PLAN_LOCK.md) — owner's note: the commands to unlock and lock `BUILD_PLAN.md` for Claude.
-- [`docs/PLAN_REVISION_11_PROPOSAL.md`](./docs/PLAN_REVISION_11_PROPOSAL.md) — plan text to apply in the next owner revision.
 - [`docs/HANDOVER-2026-11-10.md`](./docs/HANDOVER-2026-11-10.md) — handover note of 2026-11-10.
 
 ## Principles
