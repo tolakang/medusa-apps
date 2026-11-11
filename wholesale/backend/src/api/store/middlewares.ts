@@ -6,6 +6,7 @@ import { storeCompaniesMiddlewares } from "./companies/middlewares";
 import { storeFreeShippingMiddlewares } from "./free-shipping/middlewares";
 import { storeInvoicesMiddlewares } from "./invoices/middlewares";
 import { storeQuotesMiddlewares } from "./quotes/middlewares";
+import { requireProviderForTerms } from "./payment-terms-middleware";
 import { storeSearchMiddlewares } from "./search/middlewares";
 
 export const storeMiddlewares: MiddlewareRoute[] = [
@@ -18,4 +19,10 @@ export const storeMiddlewares: MiddlewareRoute[] = [
   ...storeApprovalsMiddlewares,
   ...storeSearchMiddlewares,
   ...storeInvoicesMiddlewares,
+  {
+    // TASKS P4-12: PayWay for prepaid companies, invoice for net terms.
+    method: ["POST"],
+    matcher: "/store/payment-collections/:id/payment-sessions",
+    middlewares: [requireProviderForTerms],
+  },
 ];

@@ -1,7 +1,7 @@
 "use client"
 
-import { isAdyen, isManual, isPaypal, isStripeLike } from "@/lib/constants"
-import { createCartApproval, placeOrder } from "@/lib/data/cart"
+import { isAdyen, isManual, isPayway, isPaypal, isStripeLike } from "@/lib/constants"
+import { createCartApproval, placeOrder, startPaywayPayment } from "@/lib/data/cart"
 import { getPaymentErrorMessage } from "@/lib/util/payment-error"
 import ErrorMessage from "@/modules/checkout/components/error-message"
 import Button from "@/modules/common/components/button"
@@ -82,6 +82,10 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
           data-testid={dataTestId}
         />
       )
+    case isPayway(paymentSession?.provider_id):
+      return (
+        <PaywayPaymentButton notReady={notReady} data-testid={dataTestId} />
+      )
     case isManual(paymentSession?.provider_id):
       return (
         <ManualTestPaymentButton
@@ -101,6 +105,73 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
     default:
       return <Button disabled>Select a payment method</Button>
   }
+}
+
+// ABA PayWay (TASKS P4-12, as ecommerce P1-03): gets a freshly signed PayWay
+// form from the backend and posts it from the browser (PayWay's "hosted
+// view"). The buyer pays on PayWay's page and comes back to
+// /checkout/payway-return, where the order is placed once PayWay confirms.
+const PaywayPaymentButton = ({
+  notReady,
+  "data-testid": dataTestId,
+}: {
+  notReady: boolean
+  "data-testid"?: string
+}) => {
+  const [submitting, setSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  const handlePayment = async () => {
+    setSubmitting(true)
+    setErrorMessage(null)
+    const started = await startPaywayPayment()
+    if ("error" in started) {
+      // The backend refuses a new payment while the previous PayWay
+      // transaction is paid (a PayWay page left open): then the order is
+      // placed from that payment (placeOrder redirects to the confirmation).
+      const placed = await placeOrder().catch((err) => {
+        if (err instanceof Error && err.message === "NEXT_REDIRECT") {
+          throw err
+        }
+        return null
+      })
+      setErrorMessage(
+        placed?.type === "cart" ? placed.error?.message ?? started.error : started.error
+      )
+      setSubmitting(false)
+      return
+    }
+    const element = document.createElement("form")
+    element.method = "POST"
+    element.action = started.checkout_url
+    for (const [name, value] of Object.entries(started.form)) {
+      const input = document.createElement("input")
+      input.type = "hidden"
+      input.name = name
+      input.value = value
+      element.appendChild(input)
+    }
+    document.body.appendChild(element)
+    element.submit()
+  }
+
+  return (
+    <>
+      <Button
+        disabled={notReady}
+        isLoading={submitting}
+        onClick={handlePayment}
+        size="large"
+        data-testid={dataTestId}
+      >
+        Pay with ABA PayWay
+      </Button>
+      <ErrorMessage
+        error={errorMessage}
+        data-testid="payway-payment-error-message"
+      />
+    </>
+  )
 }
 
 const RequestApprovalButton = ({

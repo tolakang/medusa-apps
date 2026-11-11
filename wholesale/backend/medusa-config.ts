@@ -115,6 +115,37 @@ const fileModules = S3_BUCKET
     ]
   : []
 
+// ABA PayWay (TASKS D1, P1-03; wholesale P4-12 for prepaid companies,
+// copied from ecommerce/): registered as pp_payway_payway when the
+// merchant ID and API key are set; the built-in manual provider
+// (pp_system_default) is always there too (@medusajs/payment providers loader).
+// Webhook: https://<api host>/hooks/payment/payway_payway.
+const PAYWAY_MERCHANT_ID = process.env.PAYWAY_MERCHANT_ID
+const PAYWAY_API_KEY = process.env.PAYWAY_API_KEY
+const paymentModules =
+  PAYWAY_MERCHANT_ID && PAYWAY_API_KEY
+    ? [
+        {
+          resolve: "@medusajs/medusa/payment",
+          options: {
+            providers: [
+              {
+                resolve: "./src/modules/payway",
+                id: "payway",
+                options: {
+                  merchant_id: PAYWAY_MERCHANT_ID,
+                  api_key: PAYWAY_API_KEY,
+                  api_url: process.env.PAYWAY_API_URL || undefined,
+                  return_url: process.env.PAYWAY_RETURN_URL,
+                  storefront_url: process.env.STOREFRONT_URL,
+                },
+              },
+            ],
+          },
+        },
+      ]
+    : []
+
 module.exports = defineConfig({
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
@@ -144,5 +175,6 @@ module.exports = defineConfig({
     { resolve: "./src/modules/quote" },
     { resolve: "./src/modules/approval" },
     { resolve: "./src/modules/invoice" },
+    ...paymentModules,
   ],
 })
