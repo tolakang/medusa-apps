@@ -14,6 +14,15 @@ Claude started this on 2026-11-12 with the plan unlocked, but Claude Code's auto
 | Status | "Phases 2 (POS), 3 (Booking services), 4 (Wholesale) and 5 (Reseller) have their code done, with staging and the exit checklists (P2-14, P3-18, P4-11, P5-11) waiting on the owner." |
 | Versions table, pnpm row | "**12.18.0** (V-07), since 2026-11-12" |
 
+## §1 Requirements, R5
+
+- **R5 result column:** "`docs/COMPARISON.md` (moved from the root on the owner's request, 2026-11-12, F-071)".
+
+## §2 Repo layout
+
+- **Tree:** the root holds `README.md`, `BUILD_PLAN.md`, `.build-plan.sha256`, `CLAUDE.md`, the six category folders, `scripts/`, `.github/` and `.claude/`. Replace the six root lines for `COMPARISON.md`, `MEDUSA_SKILL.md`, `BACKEND_PATTERNS_SKILL.md`, `DEV_FLOW.md`, `TASKS.md` and `PRE_DEPLOY_AUDIT.md` with one: "`docs/` <- builder documents (`TASKS.md`, `MEDUSA_SKILL.md`, `DEV_FLOW.md`, `COMPARISON.md`, `BACKEND_PATTERNS_SKILL.md`, `PRE_DEPLOY_AUDIT.md`), owner notes (`PLAN_LOCK.md`), handovers, plan proposals".
+- **Elsewhere:** every `TASKS.md`, `MEDUSA_SKILL.md`, `DEV_FLOW.md` and `PRE_DEPLOY_AUDIT.md` reference may gain the `docs/` prefix; bare names still mean those files.
+
 ## §6.2 POS
 
 - **Invite-only:** "an admin creates the cashier first (the answer carries an **invite code**); the cashier registers the invited email and accepts with that code (F-036, REVIEW_FIXES B11)."
@@ -48,4 +57,4 @@ Claude started this on 2026-11-12 with the plan unlocked, but Claude Code's auto
 
 ## Revision history
 
-New first row: "| 10 | 2026-11-12 | Wholesale as built after P4-08 to P4-13 and the review fixes: catalog for employees of approved companies (`WHOLESALE_REQUIRE_LOGIN`), join codes, PayWay for prepaid companies, one order at a time per company, bilingual invoices. Reseller: commission base and refund share, payout locks. POS and Reseller: invite codes. Status line. TASKS F-066 to F-070, D9 to D11. |"
+New first row: "| 10 | 2026-11-12 | Wholesale as built after P4-08 to P4-13 and the review fixes: catalog for employees of approved companies (`WHOLESALE_REQUIRE_LOGIN`), join codes, PayWay for prepaid companies, one order at a time per company, bilingual invoices. Reseller: commission base and refund share, payout locks. POS and Reseller: invite codes. Status line. Builder documents in `docs/` (§2, R5). TASKS F-066 to F-071, D9 to D11. |"
