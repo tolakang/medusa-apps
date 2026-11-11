@@ -2,7 +2,7 @@
 
 `BUILD_PLAN.md` is frozen (CLAUDE.md), so Claude doesn't edit it. This file lists where it no longer matches the built apps (checked 2026-11-11 against `main` and `TASKS.md`), with the text to change and the finding behind each change. To apply it, follow `docs/PLAN_LOCK.md`: unlock, edit (or ask Claude to, while unlocked), update the checksum, lock again.
 
-Nothing here changes scope. Sections 1 to 5 record what was built and decided; section 6 lists the decisions still open.
+Nothing here changes scope. Sections 1 to 5 record what was built and decided; section 6 records the owner's answers to the questions this audit raised, with the plan text they need.
 
 ## 1. Header (line 4, "Versions") and §3.2 (versions and pins)
 
@@ -52,12 +52,12 @@ Nothing here changes scope. Sections 1 to 5 record what was built and decided; s
 
 Proposed new line in §8 (CI gate): "Tests that depend on background work (scheduled jobs, search indexing) must control or wait for it, not race it: make a hold expire right before the step that checks it, and rebuild a search index with the Search Module's `reindex` when events may have been lost." (F-065)
 
-## 6. Decisions still open (owner)
+## 6. Owner decisions (2026-11-11)
 
-| # | Decision | Default used | Where |
+| # | Question | Decision | Follow-up |
 |---|---|---|---|
-| 1 | Reseller commission base: the whole order total, or items only (without shipping and tax)? | Whole total | F-063 |
-| 2 | Keep payouts manual, or add a `seller_payout` record (the plan's "later") for a statement per payout? | Manual | F-064 |
-| 3 | Wholesale invoices: also in Khmer? Needs an embedded font in the PDF. | English only (built-in fonts) | P4-06 |
-| 4 | Wholesale prepaid companies pay through the system provider (captured by hand). Add a card or QR provider for them? | System provider | P4-06 |
-| 5 | Move to pnpm 12.18.0 (with `scripts/update-medusa.sh --pnpm-latest`) once it is past pnpm's minimum release age? | Stay on 12.17.0 | V-03 |
+| 1 | Reseller commission base | **Items only**: after discounts, without tax and shipping (Claude's recommendation, accepted) | §6.5: "commission on the order's items after discounts, without tax or shipping". Task P5-12 (D9) |
+| 2 | Payouts manual or a `seller_payout` record | **Stay manual** (recommendation, accepted); add the record when there are enough sellers to need statements | §6.5 keeps `seller_payout` as "later" (D9) |
+| 3 | Wholesale invoices in Khmer | **Yes**, with an embedded Khmer font | §6.4 invoices: "in Khmer and English". Task P4-13 (D8) |
+| 4 | Payment for prepaid wholesale companies | **QR payment**: ABA PayWay (KHQR, cards), the Ecommerce provider; net terms stay on `pp_system_default` | §6.4 payments: "PayWay for prepaid companies". Task P4-12 (D7) |
+| 5 | pnpm 12.18.0 | **Move from 2026-11-12**, when it is a week old (released 2026-11-05; still npm `latest`) | Task V-07; §3.2 pnpm pin |
