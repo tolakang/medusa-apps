@@ -319,6 +319,12 @@
 
 ---
 
+## Review fixes · `docs/REVIEW_FIXES.md`
+
+Findings from full repo reviews, verified against the code and **fixed later in one go** (owner, 2026-11-11). Later reviews append to that file; fix in its batches, one PR each; delete the file (and this section) when every row is ticked. Review 1 (2026-11-11): 29 findings, highest B11, C4, B1, T1.
+
+---
+
 ## Pre-deploy audit fixes · `PRE_DEPLOY_AUDIT.md`
 
 First audit: `ecommerce/AUDIT-2026-11-05.md` (ecommerce @ `e2d8090`, verdict NO-GO until E-A5). Each fix covers every app with the same code (ecommerce, pos, booking-services).
