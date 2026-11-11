@@ -9,7 +9,7 @@ Plain Next.js **16.4.5** + `@medusajs/js-sdk` **2.22.6** (TASKS V-04, V-06; star
 - **Server-side backend access.** The browser only talks to this app. Next.js server code calls Medusa with `@medusajs/js-sdk` (`src/lib/server/medusa.ts`, `jwtTokenStorageMethod: "nostore"`, so the SDK shared by all requests never stores a token).
 - **Session.** Sign-in (`POST /auth/cashier/emailpass`) returns the cashier's JWT. The app keeps it in an httpOnly, SameSite=Strict cookie, sealed with AES-256-GCM under `COOKIE_SECRET` (`src/lib/session-seal.ts`). Page scripts never see the token. A 401 from the backend (expired token, deactivated cashier) signs the till out.
 - **Proxy.** `/api/pos/*` forwards an allow-list of cashier routes to the backend's `/pos/*` with the token (`src/lib/proxy-path.ts`). POSTs must come from the app's own pages (Origin check).
-- **First time.** An admin invites the cashier (Admin → `POST /admin/pos/cashiers`). On the sign-in page, *First time? Set your password* registers the invited email and accepts the invitation (`/auth/cashier/emailpass/register`, then `/pos/cashiers/accept`).
+- **First time.** An admin invites the cashier (Admin → `POST /admin/pos/cashiers`). The admin gets an **invite code** with the invitation and gives it to the cashier. On the sign-in page, *First time? Set your password* asks for the invited email, a password and that code, then registers and accepts the invitation (`/auth/cashier/emailpass/register`, then `/pos/cashiers/accept`).
 - **Scanning.** USB and Bluetooth scanners type the code and press Enter into the focused field. Tablets whose browser has the `BarcodeDetector` API (Chrome on Android) also get a **Camera** button. The code matches a variant's barcode, EAN, UPC or SKU exactly.
 - **Totals.** The cart total is an estimate from the scanned prices. The backend prices the sale again with promotions and tax, and the receipt shows the final total and the cash change from it.
 - **Card and QR** are taken on the shop's own terminal or KHQR stand; the sale records the method (TASKS F-038).
@@ -35,4 +35,4 @@ pnpm build && pnpm typecheck && pnpm test   # unit tests: cart, change, session 
 
 ## Deploy (Dokploy)
 
-Application `pos-pos-app`, Dockerfile build (`pos/pos-app/Dockerfile`), port 3000. Runtime variables: `MEDUSA_BACKEND_URL` (the backend's internal hostname) and `COOKIE_SECRET` (required). No build arguments are needed. See `../README.md`.
+Application `pos-pos-app`, Dockerfile build (`pos/pos-app/Dockerfile`), port 3000. Runtime variables: `MEDUSA_BACKEND_URL` (the backend's internal hostname), `SHOPPER_IP_SECRET` (the backend's value, so sign-in limits count per cashier and not per app server) and `COOKIE_SECRET` (required). No build arguments are needed. See `../README.md`.

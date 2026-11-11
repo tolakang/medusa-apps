@@ -10,6 +10,7 @@ import {
   PostAdminPosRegisterUpdate,
 } from './admin/pos/validators'
 import {
+  PostPosCashierAccept,
   PostPosCheckout,
   PostPosCustomer,
   PostPosShiftClose,
@@ -107,6 +108,18 @@ export default defineMiddlewares({
       middlewares: [requireStrongPassword],
     },
     {
+      // REVIEW_FIXES B17: the same password rule when an admin sets a new one.
+      method: ['POST'],
+      matcher: '/auth/user/emailpass/update',
+      middlewares: [requireStrongPassword],
+    },
+    {
+      // REVIEW_FIXES B17: the same password rule when a cashier sets a new one.
+      method: ['POST'],
+      matcher: '/auth/cashier/emailpass/update',
+      middlewares: [requireStrongPassword],
+    },
+    {
       // Admin sign-in and forgot password (pre-deploy audit E-A1): the same
       // per-IP limits as the customer routes. The admin dashboard calls the
       // backend from the browser, so req.ip is the admin's address.
@@ -177,6 +190,20 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/auth/cashier/emailpass',
       middlewares: [limitPerIp('cashier_login', AUTH_LIMITS.login, 60)],
+    },
+    {
+      // REVIEW_FIXES B17: the same limit as the seller and customer resets.
+      method: ['POST'],
+      matcher: '/auth/cashier/emailpass/reset-password',
+      middlewares: [limitPerIp('cashier_password_reset', AUTH_LIMITS.password_reset, 60)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/pos/cashiers/accept',
+      middlewares: [
+        limitPerIp('cashier_accept', AUTH_LIMITS.login, 60),
+        validateAndTransformBody(PostPosCashierAccept),
+      ],
     },
     {
       method: ['POST'],

@@ -33,7 +33,11 @@ medusaIntegrationTestRunner({
           email,
           password: "seller-pass-1",
         })
-        await api.post("/sellers/accept", {}, bearer(reg.data.token))
+        await api.post(
+          "/sellers/accept",
+          { invite_code: invited.data.invite_code },
+          bearer(reg.data.token)
+        )
         const { data } = await api.post("/auth/seller/emailpass", {
           email,
           password: "seller-pass-1",

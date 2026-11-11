@@ -321,7 +321,7 @@
 
 ## Review fixes · `docs/REVIEW_FIXES.md`
 
-Findings from full repo reviews, verified against the code and **fixed later in one go** (owner, 2026-11-11). Later reviews append to that file; fix in its batches, one PR each; delete the file (and this section) when every row is ticked. Review 1 (2026-11-11): 29 findings, highest B11, C4, B1, T1.
+Findings from full repo reviews, verified against the code and **fixed later in one go** (owner, 2026-11-11). **Fixing started 2026-11-12** (owner: "Fix those"): batch 1 (security: B11 invite codes for sellers and cashiers, C4 per-user IP from the seller portal and POS app, B17 password limits) in PR #152; gates: `verify.sh` PASS for `reseller/backend` (unit 160, HTTP 76), `pos/backend` (unit 129, HTTP 75), `reseller/seller-portal`, `pos/pos-app`. Later reviews append to that file; fix in its batches, one PR each; delete the file (and this section) when every row is ticked. Review 1 (2026-11-11): 29 findings, highest B11, C4, B1, T1.
 
 ---
 

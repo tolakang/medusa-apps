@@ -20,7 +20,7 @@ import {
   requireStrongPassword,
 } from './auth-guards'
 import { requireSeller, sellerCors } from './seller-auth'
-import { PostSellerProducts } from './sellers/validators'
+import { PostSellerAccept, PostSellerProducts } from './sellers/validators'
 import { PostAdminSeller, PostAdminSellerPayout } from './admin/sellers/validators'
 
 // The product index declares filterable `status` and `sales_channel_ids`, so
@@ -116,6 +116,14 @@ export default defineMiddlewares({
     },
     {
       method: ['POST'],
+      matcher: '/sellers/accept',
+      middlewares: [
+        limitPerIp('seller_accept', AUTH_LIMITS.login, 60),
+        validateAndTransformBody(PostSellerAccept),
+      ],
+    },
+    {
+      method: ['POST'],
       matcher: '/sellers/me/products',
       middlewares: [validateAndTransformBody(PostSellerProducts)],
     },
@@ -133,6 +141,18 @@ export default defineMiddlewares({
     {
       method: ['POST'],
       matcher: '/auth/customer/emailpass/update',
+      middlewares: [requireStrongPassword],
+    },
+    {
+      // REVIEW_FIXES B17: the same password rule when an admin sets a new one.
+      method: ['POST'],
+      matcher: '/auth/user/emailpass/update',
+      middlewares: [requireStrongPassword],
+    },
+    {
+      // REVIEW_FIXES B17: the same password rule when a seller sets a new one.
+      method: ['POST'],
+      matcher: '/auth/seller/emailpass/update',
       middlewares: [requireStrongPassword],
     },
     {

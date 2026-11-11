@@ -3,6 +3,7 @@ import type {
   MedusaResponse,
 } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import { inviteCode } from "../../../lib/invite-code"
 import { createSellerWorkflow } from "../../../workflows/seller/create-seller"
 import type { PostAdminSellerType } from "./validators"
 
@@ -24,12 +25,20 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
   const { data: sellers } = await req.scope
     .resolve(ContainerRegistrationKeys.QUERY)
     .graph({ entity: "seller", fields: SELLER_FIELDS })
-  res.json({ sellers, count: sellers.length })
+  // The invite code is the shop's to hand to each seller (REVIEW_FIXES B11).
+  res.json({
+    sellers: sellers.map((seller) => ({
+      ...seller,
+      invite_code: inviteCode("seller", seller.id),
+    })),
+    count: sellers.length,
+  })
 }
 
 // POST /admin/sellers (TASKS P5-03): invites a seller. Creates the seller with
 // their own sales channel and publishable key (createSellerWorkflow, P5-02);
-// the seller then registers with this email and accepts (/sellers/accept).
+// the seller then registers with this email and accepts (/sellers/accept)
+// with the `invite_code` returned here.
 export const POST = async (
   req: AuthenticatedMedusaRequest<PostAdminSellerType>,
   res: MedusaResponse
@@ -44,5 +53,9 @@ export const POST = async (
     fields: SELLER_FIELDS,
     filters: { id: result.seller.id },
   })
-  res.json({ seller, publishable_key: result.publishable_key.token })
+  res.json({
+    seller,
+    publishable_key: result.publishable_key.token,
+    invite_code: inviteCode("seller", result.seller.id),
+  })
 }
