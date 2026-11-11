@@ -17,8 +17,13 @@ export default async function Home() {
     token,
   })
   if (!me.ok) {
-    // Expired token or deactivated cashier: the sign-in page explains.
-    redirect("/login")
+    // Expired token or deactivated cashier: the sign-in page explains. A
+    // backend that is down shows the error page instead of sending the till
+    // to sign-in (REVIEW_FIXES C5).
+    if (me.status === 401 || me.status === 403) {
+      redirect("/login")
+    }
+    throw new Error(me.message)
   }
   return <Till cashier={me.data.cashier} />
 }
