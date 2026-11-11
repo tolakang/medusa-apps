@@ -1,5 +1,5 @@
 # pnpm SETTINGS for this app only. No `packages:` key, so this is a single
-# package, not a workspace (BUILD_PLAN.md §4.1, MEDUSA_SKILL.md §12).
+# package, not a workspace (BUILD_PLAN.md §4.1, docs/MEDUSA_SKILL.md §12).
 
 # Required by the Medusa Admin build. The docs put these in .npmrc
 # (learn/configurations/pnpm); pnpm >= 11 reads them from here instead.

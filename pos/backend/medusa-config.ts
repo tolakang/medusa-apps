@@ -2,7 +2,7 @@ import { loadEnv, defineConfig } from "@medusajs/framework/utils"
 
 loadEnv(process.env.NODE_ENV || "development", process.cwd())
 
-// Env-driven config (BUILD_PLAN.md §4.1). Option shapes: MEDUSA_SKILL.md §2.
+// Env-driven config (BUILD_PLAN.md §4.1). Option shapes: docs/MEDUSA_SKILL.md §2.
 // REDIS_URL unset = in-memory infrastructure (development only).
 // S3_BUCKET unset = local file storage (development only).
 // RESEND_API_KEY / TELEGRAM_BOT_TOKEN / TELEGRAM_CUSTOMER_BOT_TOKEN unset = that

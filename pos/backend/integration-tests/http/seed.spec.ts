@@ -6,7 +6,7 @@ import {
 } from "@medusajs/medusa/core-flows"
 import seed from "../../src/scripts/seed"
 
-// Runner + api client: MEDUSA_SKILL.md §10. Preconditions as in
+// Runner + api client: docs/MEDUSA_SKILL.md §10. Preconditions as in
 // seed-initial-data.spec.ts: the shipping profile db:migrate creates, then the
 // first-boot defaults (createDefaultsWorkflow).
 jest.setTimeout(120 * 1000)

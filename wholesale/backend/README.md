@@ -1,6 +1,6 @@
 # wholesale / backend
 
-Medusa **2.22.6** backend for the wholesale (B2B) business project. One image, deployed twice (server + worker). Standard: `BUILD_PLAN.md` §4.1, scenario: §6.4. Medusa reference: `MEDUSA_SKILL.md`.
+Medusa **2.22.6** backend for the wholesale (B2B) business project. One image, deployed twice (server + worker). Standard: `BUILD_PLAN.md` §4.1, scenario: §6.4. Medusa reference: `docs/MEDUSA_SKILL.md`.
 
 **Starter:** `medusajs/b2b-starter` `apps/backend` at commit **`47eecab`** (2026-11-05, Medusa 2.22.3, the last starter commit on 2.22.3; the starter moved to 2.22.4 and 2.22.6 on 2026-11-09, TASKS F-055). Modules from the starter: `company` (+ `employee`), `quote`, `approval`, with their links, workflows, hooks, API routes and admin pages. Changes from the starter (TASKS P4-01):
 - Medusa 2.22.3 → **2.22.6** after the copy (security release; `scripts/update-medusa.sh wholesale 2.22.6`, TASKS V-06), `@medusajs/ui` 4.2.13. The starter itself is on 2.22.6 since `f352e3c`; its 2.22.4 and 2.22.6 commits only bump versions.

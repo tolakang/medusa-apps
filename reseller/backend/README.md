@@ -1,6 +1,6 @@
 # reseller / backend
 
-Medusa **2.22.6** backend for the reseller business project (sellers sell your products on their own domains, you ship; BUILD_PLAN §6.5). One image, deployed twice (server + worker). Standard: `BUILD_PLAN.md` §4.1. Medusa reference: `MEDUSA_SKILL.md`.
+Medusa **2.22.6** backend for the reseller business project (sellers sell your products on their own domains, you ship; BUILD_PLAN §6.5). One image, deployed twice (server + worker). Standard: `BUILD_PLAN.md` §4.1. Medusa reference: `docs/MEDUSA_SKILL.md`.
 
 **Copied from `ecommerce/backend` at `main` `847465d`** (TASKS Phase 5, owner 2026-11-10: "1" = full copy of Ecommerce; F-061), tracked files only: PayWay, Resend, Telegram, Cambodia contact rules, anti-abuse, account emails, admin 2FA, wishlist and upload limits work the same here. Already on Medusa 2.22.6 (V-06), so no version update was needed.
 - Package `reseller-backend`; the Dockerfile, entrypoint, `.env.example` and comments name `reseller/*` (database `reseller`, `reseller-postgres`, `reseller-redis`).
@@ -13,7 +13,7 @@ Medusa **2.22.6** backend for the reseller business project (sellers sell your p
 
 ## From `ecommerce/backend`
 
-Backend of the ecommerce business project (this app now runs Medusa **2.22.6**, see the header above). One image, deployed twice (server + worker). Standard: `BUILD_PLAN.md` §4.1. Medusa reference: `MEDUSA_SKILL.md`.
+Backend of the ecommerce business project (this app now runs Medusa **2.22.6**, see the header above). One image, deployed twice (server + worker). Standard: `BUILD_PLAN.md` §4.1. Medusa reference: `docs/MEDUSA_SKILL.md`.
 
 **Starter:** `medusajs/dtc-starter` `apps/backend` at commit **`15ef93d`** (2026-10-02, Medusa 2.21.2; synced from `e3a237c9b877`: the starter's changes since were the 2.21.2 package bump, done with `scripts/update-medusa.sh`, and `engines.node` `>=22.22.0`). Changes from the starter:
 - pnpm standalone package: `packageManager`, settings-only `pnpm-workspace.yaml` (hoisting, `allowBuilds`, `tsconfig-paths` override).

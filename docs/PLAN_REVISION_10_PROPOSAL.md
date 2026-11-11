@@ -21,7 +21,7 @@ Claude started this on 2026-11-12 with the plan unlocked, but Claude Code's auto
 ## §2 Repo layout
 
 - **Tree:** the root holds `README.md`, `BUILD_PLAN.md`, `.build-plan.sha256`, `CLAUDE.md`, the six category folders, `scripts/`, `.github/` and `.claude/`. Replace the six root lines for `COMPARISON.md`, `MEDUSA_SKILL.md`, `BACKEND_PATTERNS_SKILL.md`, `DEV_FLOW.md`, `TASKS.md` and `PRE_DEPLOY_AUDIT.md` with one: "`docs/` <- builder documents (`TASKS.md`, `MEDUSA_SKILL.md`, `DEV_FLOW.md`, `COMPARISON.md`, `BACKEND_PATTERNS_SKILL.md`, `PRE_DEPLOY_AUDIT.md`), owner notes (`PLAN_LOCK.md`), handovers, plan proposals".
-- **Elsewhere:** every `TASKS.md`, `MEDUSA_SKILL.md`, `DEV_FLOW.md` and `PRE_DEPLOY_AUDIT.md` reference may gain the `docs/` prefix; bare names still mean those files.
+- **Elsewhere in the plan:** write the moved files with their path (`docs/TASKS.md`, `docs/MEDUSA_SKILL.md`, `docs/DEV_FLOW.md`, `docs/PRE_DEPLOY_AUDIT.md`), as the rest of the repo now does. Short section citations such as "DEV_FLOW §7.1" stay as they are.
 
 ## §6.2 POS
 

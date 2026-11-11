@@ -6,7 +6,7 @@ import {
 } from "@medusajs/medusa/core-flows"
 import seedInitialData from "../../src/scripts/seed-initial-data"
 
-// Runner + api client: MEDUSA_SKILL.md §10. createDefaultsWorkflow is what
+// Runner + api client: docs/MEDUSA_SKILL.md §10. createDefaultsWorkflow is what
 // Medusa runs on first boot (core-flows defaults/workflows/create-defaults).
 // The runner skips core migration scripts, so the test creates the shipping
 // profile that `db:migrate` creates in production (@medusajs/medusa

@@ -484,17 +484,17 @@ The automatic **rollback** (a failing health check rolls back to the old contain
 1. Dokploy → **Settings → Notifications** → add a **Telegram** notification. Use the staff group: bot token and chat ID as in `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID`, or a separate alerts bot. (Slack, Discord, email, Gotify, ntfy and Lark also work.)
 2. Turn on **App Build Error**, **App Deploy**, **Database Backup**, **Dokploy Restart** (and **Volume Backup** if you use volume backups).
 3. **Check:** the next deploy posts a message to the group, and so does the next database backup (02:00 Cambodia).
-4. **App down:** Dokploy has no "app is down" notification. A health check that fails during a deploy rolls back (`FailureAction: rollback`), but a container that dies later only restarts. For an alert, an outside uptime check must call `https://<api host>/health` and the shop every 1–5 minutes. That is a new service: the owner decides and it is recorded in `TASKS.md` (pre-deploy audit E-A3).
+4. **App down:** Dokploy has no "app is down" notification. A health check that fails during a deploy rolls back (`FailureAction: rollback`), but a container that dies later only restarts. For an alert, an outside uptime check must call `https://<api host>/health` and the shop every 1–5 minutes. That is a new service: the owner decides and it is recorded in `docs/TASKS.md` (pre-deploy audit E-A3).
 
 **Reply with** "alerts on" and which events you turned on.
 
-After this I tick the last two items of P2-14 in `TASKS.md` and close Phase 2.
+After this I tick the last two items of P2-14 in `docs/TASKS.md` and close Phase 2.
 
 ---
 
 ## Step 10: If something fails
 1. Send the deployment's **log lines around the error**: the app → **Deployments** → the failed one → **View**.
-2. Don't retry with changed settings first (`DEV_FLOW.md` §6). We find the cause together.
+2. Don't retry with changed settings first (`docs/DEV_FLOW.md` §6). We find the cause together.
 
 Known causes:
 

@@ -1,6 +1,6 @@
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 
-// Runner + api client: MEDUSA_SKILL.md §10 (learn/debugging-and-testing/testing-tools).
+// Runner + api client: docs/MEDUSA_SKILL.md §10 (learn/debugging-and-testing/testing-tools).
 jest.setTimeout(60 * 1000)
 
 medusaIntegrationTestRunner({

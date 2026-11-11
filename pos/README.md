@@ -102,4 +102,4 @@ Stock that only the online shop should sell (a warehouse) goes in a location tha
 
 - This project has its **own** Postgres and Redis. Never point two business projects at the same database.
 - A second business of the same type = a second Dokploy project built from the same folder, with its own env.
-- To add another scenario to this business (e.g. POS for a marketplace), add that module to **this** backend; do not deploy a second backend. See `COMPARISON.md` §4.
+- To add another scenario to this business (e.g. POS for a marketplace), add that module to **this** backend; do not deploy a second backend. See `docs/COMPARISON.md` §4.
