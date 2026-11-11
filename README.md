@@ -28,7 +28,7 @@ Deployables without code yet (all of `marketplace/`) hold **ready templates** (`
 - [`DEV_FLOW.md`](./DEV_FLOW.md) — build → verify → test → evidence-based fix cycle → commit → push.
 - [`CLAUDE.md`](./CLAUDE.md) — builder entry point: reading order and non-negotiable rules.
 - [`docs/PLAN_LOCK.md`](./docs/PLAN_LOCK.md) — owner's note: the commands to unlock and lock `BUILD_PLAN.md` for Claude.
-- [`docs/REVIEW_FIXES.md`](./docs/REVIEW_FIXES.md) — issues found by full repo reviews, kept to fix in one go later; deleted once all are fixed.
+- [`docs/PLAN_REVISION_10_PROPOSAL.md`](./docs/PLAN_REVISION_10_PROPOSAL.md) — plan text to apply in the next owner revision (Wholesale P4-08 to P4-13, review fixes).
 - [`PRE_DEPLOY_AUDIT.md`](./PRE_DEPLOY_AUDIT.md) — the security and readiness audit to run per category before it goes live.
 - [`BACKEND_PATTERNS_SKILL.md`](./BACKEND_PATTERNS_SKILL.md) — backend design patterns mapped to Medusa's own mechanisms (skill `backend-patterns`).
 
