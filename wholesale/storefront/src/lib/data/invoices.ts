@@ -16,6 +16,7 @@ export type StoreInvoice = {
   due_at: string | null
   currency_code: string | null
   total: number
+  cancelled?: boolean
   amount_due: number
 }
 

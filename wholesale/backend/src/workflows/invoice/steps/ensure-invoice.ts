@@ -23,7 +23,7 @@ export const ensureInvoiceStep = createStep(
       data: [order],
     } = await container.resolve(ContainerRegistrationKeys.QUERY).graph({
       entity: "order",
-      fields: ["id", "customer_id", "created_at", "status", "is_draft_order"],
+      fields: ["id", "customer_id", "status", "is_draft_order"],
       filters: { id: input.order_id },
     });
     if (!order) {
@@ -38,7 +38,11 @@ export const ensureInvoiceStep = createStep(
 
     const company = (await loadBuyer(container, order.customer_id))?.employee
       ?.company;
-    const issuedAt = new Date(order.created_at as string | Date);
+    // Issued when the invoice is made: at once for a checkout (order.placed)
+    // and at acceptance for a quote. The order's `created_at` is wrong for a
+    // quote: it is the day the quote was requested, which made net-terms
+    // invoices due too early or already overdue (REVIEW_FIXES B2).
+    const issuedAt = new Date();
     const created = await invoices.createInvoices({
       order_id: order.id,
       company_id: company?.id ?? null,

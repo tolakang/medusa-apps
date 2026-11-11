@@ -41,6 +41,7 @@ export const GET = async (
           "id",
           "display_id",
           "currency_code",
+          "status",
           "total",
           "payment_collections.captured_amount",
         ],
@@ -53,6 +54,7 @@ export const GET = async (
     invoices: rows.map((row) => {
       const order = byId.get(row.order_id);
       const total = Number(order?.total ?? 0);
+      const cancelled = order?.status === "canceled";
       const paid = (order?.payment_collections ?? []).reduce(
         (sum, collection) => sum + Number(collection?.captured_amount ?? 0),
         0
@@ -68,7 +70,9 @@ export const GET = async (
         due_at: row.due_at,
         currency_code: order?.currency_code ?? null,
         total,
-        amount_due: Math.max(0, total - paid),
+        // Nothing is owed on a cancelled order (REVIEW_FIXES B3).
+        cancelled,
+        amount_due: cancelled ? 0 : Math.max(0, total - paid),
       };
     }),
     count: rows.length,

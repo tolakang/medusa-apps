@@ -111,30 +111,56 @@ export async function loadCustomerOrders(
   return data as B2bOrder[];
 }
 
-/** Orders placed by every employee of a company. */
+/**
+ * A company's orders: those linked to it (the link is made when an order is
+ * placed, and stays when the employee who placed it leaves) and those of its
+ * current employees (which covers an order whose link isn't there yet).
+ * Counting only current employees let a company free its used credit by
+ * removing an employee (REVIEW_FIXES B4).
+ */
 export async function loadCompanyOrders(
   container: MedusaContainer,
   companyId: string
 ): Promise<B2bOrder[]> {
+  const query = queryOf(container);
   const {
     data: [company],
-  } = await queryOf(container).graph({
+  } = await query.graph({
     entity: "company",
-    fields: ["id", "employees.customer.id"],
+    fields: ["id", "employees.customer.id", "orders.id"],
     filters: { id: companyId },
   });
   const customerIds = (company?.employees ?? [])
     .map((employee) => employee?.customer?.id)
     .filter((id): id is string => !!id);
-  if (!customerIds.length) {
-    return [];
+  const linkedIds = ((company as { orders?: ({ id?: string } | null)[] })?.orders ?? [])
+    .map((order) => order?.id)
+    .filter((id): id is string => !!id);
+
+  const [byCustomer, byLink] = await Promise.all([
+    customerIds.length
+      ? query.graph({
+          entity: "order",
+          fields: ORDER_FIELDS,
+          filters: { customer_id: customerIds },
+        })
+      : { data: [] },
+    linkedIds.length
+      ? query.graph({
+          entity: "order",
+          fields: ORDER_FIELDS,
+          filters: { id: linkedIds },
+        })
+      : { data: [] },
+  ]);
+
+  const orders = new Map<string, B2bOrder>();
+  for (const order of [...byCustomer.data, ...byLink.data] as B2bOrder[]) {
+    if (order?.id) {
+      orders.set(order.id, order);
+    }
   }
-  const { data } = await queryOf(container).graph({
-    entity: "order",
-    fields: ORDER_FIELDS,
-    filters: { customer_id: customerIds },
-  });
-  return data as B2bOrder[];
+  return [...orders.values()];
 }
 
 /** P4-05: the approval settings of a company. */
