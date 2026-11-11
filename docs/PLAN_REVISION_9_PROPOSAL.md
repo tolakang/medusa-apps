@@ -56,8 +56,8 @@ Proposed new line in §8 (CI gate): "Tests that depend on background work (sched
 
 | # | Question | Decision | Follow-up |
 |---|---|---|---|
-| 1 | Reseller commission base | **Items only**: after discounts, without tax and shipping (Claude's recommendation, accepted) | §6.5: "commission on the order's items after discounts, without tax or shipping". Task P5-12 (D9) |
+| 1 | Reseller commission base | **Items only**: after discounts, without tax and shipping (Claude's recommendation, accepted) | §6.5: "commission on the order's items after discounts, without tax or shipping". Task P5-12 (D11) |
 | 2 | Payouts manual or a `seller_payout` record | **Stay manual** (recommendation, accepted); add the record when there are enough sellers to need statements | §6.5 keeps `seller_payout` as "later" (D9) |
-| 3 | Wholesale invoices in Khmer | **Yes**, with an embedded Khmer font | §6.4 invoices: "in Khmer and English". Task P4-13 (D8) |
-| 4 | Payment for prepaid wholesale companies | **QR payment**: ABA PayWay (KHQR, cards), the Ecommerce provider; net terms stay on `pp_system_default` | §6.4 payments: "PayWay for prepaid companies". Task P4-12 (D7) |
+| 3 | Wholesale invoices in Khmer | **Yes**, with an embedded Khmer font | §6.4 invoices: "in Khmer and English". Task P4-13 (D10) |
+| 4 | Payment for prepaid wholesale companies | **QR payment**: ABA PayWay (KHQR, cards), the Ecommerce provider; net terms stay on `pp_system_default` | §6.4 payments: "PayWay for prepaid companies". Task P4-12 (D9) |
 | 5 | pnpm 12.18.0 | **Move from 2026-11-12**, when it is a week old (released 2026-11-05; still npm `latest`) | Task V-07; §3.2 pnpm pin |
