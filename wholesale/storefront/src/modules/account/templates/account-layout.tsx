@@ -13,10 +13,14 @@ const AccountLayout: React.FC<AccountLayoutProps> = async ({
   customer,
   children,
 }) => {
-  const { carts_with_approvals } = await listApprovals({
-    type: ApprovalType.ADMIN,
-    status: ApprovalStatusType.PENDING,
-  })
+  // Only a company admin has approvals to see; asking for anyone else (a
+  // guest on the sign-in page, a buyer) only logged an error (REVIEW_FIXES X2).
+  const { carts_with_approvals } = customer?.employee?.is_admin
+    ? await listApprovals({
+        type: ApprovalType.ADMIN,
+        status: ApprovalStatusType.PENDING,
+      })
+    : { carts_with_approvals: [] }
 
   const numPendingApprovals = carts_with_approvals?.length || 0
 

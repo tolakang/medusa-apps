@@ -1,25 +1,16 @@
-import {
-  authenticate,
-  validateAndTransformBody,
-  validateAndTransformQuery,
-} from "@medusajs/framework";
+import { authenticate, validateAndTransformBody } from "@medusajs/framework";
 import { MiddlewareRoute } from "@medusajs/medusa";
-import { retrieveCartTransformQueryConfig } from "./query-config";
-import {
-  GetCartLineItemsBulkParams,
-  StoreAddLineItemsBulk,
-} from "./validators";
+import { StoreAddLineItemsBulk } from "./validators";
 
 export const storeCartsMiddlewares: MiddlewareRoute[] = [
   {
     method: ["POST"],
     matcher: "/store/carts/:id/line-items/bulk",
+    // REVIEW_FIXES B12: a signed-in buyer (the route checks it is the cart's
+    // own) and a fixed response (no `?fields`).
     middlewares: [
+      authenticate("customer", ["session", "bearer"]),
       validateAndTransformBody(StoreAddLineItemsBulk),
-      validateAndTransformQuery(
-        GetCartLineItemsBulkParams,
-        retrieveCartTransformQueryConfig
-      ),
     ],
   },
   {

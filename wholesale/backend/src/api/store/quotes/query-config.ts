@@ -1,12 +1,28 @@
 export const quoteFields = [
   "id",
   "status",
-  "*customer",
-  "*customer.employee",
-  "*customer.employee.company",
-  "*messages",
-  "*messages.admin",
-  "*messages.customer",
+  // REVIEW_FIXES B13: named fields only. The starter returned whole customer,
+  // company and admin user records (`*customer`, `*messages.admin`, …).
+  "customer.id",
+  "customer.email",
+  "customer.first_name",
+  "customer.last_name",
+  "customer.phone",
+  "customer.employee.id",
+  "customer.employee.spending_limit",
+  "customer.employee.is_admin",
+  "customer.employee.company.id",
+  "customer.employee.company.name",
+  "messages.id",
+  "messages.text",
+  "messages.item_id",
+  "messages.admin_id",
+  "messages.customer_id",
+  "messages.created_at",
+  "messages.admin.first_name",
+  "messages.admin.last_name",
+  "messages.customer.first_name",
+  "messages.customer.last_name",
   "cart.id",
   "draft_order.id",
   "draft_order.currency_code",
@@ -46,12 +62,29 @@ export const quoteFields = [
   "*order_change.actions",
 ];
 
+// What `?fields=` may never reach (REVIEW_FIXES B13): other people's records
+// through the quote's customer and company, and anything of the admin user
+// who wrote a message except their name.
+const disallowed: (string | RegExp)[] = [
+  "employees",
+  "orders",
+  "addresses",
+  "groups",
+  "account_holders",
+  // Patterns are also tested against each single segment, so they need the
+  // dot: `messages.admin` (the whole record) and any admin field but the name.
+  /\.admin$/,
+  /\.admin\.(?!(first_name|last_name)$)/,
+];
+
 export const retrieveQuoteTransformQueryConfig = {
   defaults: quoteFields,
+  disallowed,
   isList: false,
 };
 
 export const listQuotesTransformQueryConfig = {
   defaults: quoteFields,
+  disallowed,
   isList: true,
 };

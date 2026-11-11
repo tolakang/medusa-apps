@@ -1,10 +1,4 @@
-import { createSelectParams } from "@medusajs/medusa/api/utils/validators";
 import { z } from "@medusajs/framework/zod";
-
-export type GetCartLineItemsBulkParamsType = z.infer<
-  typeof GetCartLineItemsBulkParams
->;
-export const GetCartLineItemsBulkParams = createSelectParams();
 
 export type StoreAddLineItemsBulkType = z.infer<typeof StoreAddLineItemsBulk>;
 export const StoreAddLineItemsBulk = z
@@ -12,8 +6,8 @@ export const StoreAddLineItemsBulk = z
     line_items: z.array(
       z.object({
         variant_id: z.string(),
-        quantity: z.number(),
+        quantity: z.number().int().positive(),
       })
-    ),
+    ).min(1).max(200),
   })
   .strict();

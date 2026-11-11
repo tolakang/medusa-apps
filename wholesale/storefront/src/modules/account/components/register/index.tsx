@@ -27,6 +27,7 @@ interface FormData {
   company_zip: string
   company_country: string
   currency_code: string
+  join_code: string
 }
 
 const initialFormData: FormData = {
@@ -41,6 +42,7 @@ const initialFormData: FormData = {
   company_zip: "",
   company_country: "",
   currency_code: "",
+  join_code: "",
 }
 
 const placeholder = ({
@@ -62,6 +64,9 @@ const Register = ({ setCurrentView, regions }: Props) => {
   const [message, formAction] = useActionState(signup, null)
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [formData, setFormData] = useState<FormData>(initialFormData)
+  // Joining the company of a colleague with the join code they made for this
+  // email (REVIEW_FIXES B14), instead of creating a company.
+  const [joining, setJoining] = useState(false)
 
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -85,13 +90,15 @@ const Register = ({ setCurrentView, regions }: Props) => {
     !!formData.email &&
     !!formData.first_name &&
     !!formData.last_name &&
-    !!formData.company_name &&
     !!formData.password &&
-    !!formData.company_address &&
-    !!formData.company_city &&
-    !!formData.company_zip &&
-    !!formData.company_country &&
-    !!formData.currency_code
+    (joining
+      ? !!formData.join_code
+      : !!formData.company_name &&
+        !!formData.company_address &&
+        !!formData.company_city &&
+        !!formData.company_zip &&
+        !!formData.company_country &&
+        !!formData.currency_code)
 
   const countryNames = regions
     .flatMap((region) =>
@@ -107,7 +114,7 @@ const Register = ({ setCurrentView, regions }: Props) => {
       data-testid="register-page"
     >
       <Text className="text-4xl text-neutral-950 text-left mb-4">
-        Create your
+        {joining ? "Join your" : "Create your"}
         <br />
         company account.
       </Text>
@@ -145,16 +152,6 @@ const Register = ({ setCurrentView, regions }: Props) => {
             onChange={handleChange}
           />
           <Input
-            label="Company name"
-            name="company_name"
-            required
-            autoComplete="organization"
-            data-testid="company-name-input"
-            className="bg-white"
-            value={formData.company_name}
-            onChange={handleChange}
-          />
-          <Input
             label="Password"
             name="password"
             required
@@ -165,6 +162,132 @@ const Register = ({ setCurrentView, regions }: Props) => {
             value={formData.password}
             onChange={handleChange}
           />
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="joining-checkbox"
+              data-testid="joining-checkbox"
+              checked={joining}
+              onCheckedChange={(checked) => setJoining(!!checked)}
+            />
+            <Label
+              className="flex items-center text-ui-fg-base !text-xs hover:cursor-pointer !transform-none"
+              htmlFor="joining-checkbox"
+            >
+              My company already has an account: I have a join code.
+            </Label>
+          </div>
+          {joining ? (
+            <Input
+              label="Join code"
+              name="join_code"
+              required
+              autoComplete="off"
+              data-testid="join-code-input"
+              className="bg-white"
+              value={formData.join_code}
+              onChange={handleChange}
+            />
+          ) : (
+            <>
+          <Input
+            label="Company name"
+            name="company_name"
+            required
+            autoComplete="organization"
+            data-testid="company-name-input"
+            className="bg-white"
+            value={formData.company_name}
+            onChange={handleChange}
+          />
+          <Input
+            label="Company address"
+            name="company_address"
+            required
+            autoComplete="address"
+            data-testid="company-address-input"
+            className="bg-white"
+            value={formData.company_address}
+            onChange={handleChange}
+          />
+          <Input
+            label="Company city"
+            name="company_city"
+            required
+            autoComplete="city"
+            data-testid="company-city-input"
+            className="bg-white"
+            value={formData.company_city}
+            onChange={handleChange}
+          />
+          <Input
+            label="Company state"
+            name="company_state"
+            autoComplete="state"
+            data-testid="company-state-input"
+            className="bg-white"
+            value={formData.company_state}
+            onChange={handleChange}
+          />
+          <Input
+            label="Company zip"
+            name="company_zip"
+            required
+            autoComplete="postal-code"
+            data-testid="company-zip-input"
+            className="bg-white"
+            value={formData.company_zip}
+            onChange={handleChange}
+          />
+          <Select
+            name="company_country"
+            required
+            autoComplete="country"
+            data-testid="company-country-input"
+            value={formData.company_country}
+            onValueChange={handleSelectChange("company_country")}
+          >
+            <Select.Trigger className="rounded-full h-10 px-4">
+              <Select.Value
+                placeholder={placeholder({
+                  placeholder: "Select a country",
+                  required: true,
+                })}
+              />
+            </Select.Trigger>
+            <Select.Content>
+              {countryNames?.map((country) => (
+                <Select.Item key={country} value={country}>
+                  {country}
+                </Select.Item>
+              ))}
+            </Select.Content>
+          </Select>
+          <Select
+            name="currency_code"
+            required
+            autoComplete="currency"
+            data-testid="company-currency-input"
+            value={formData.currency_code}
+            onValueChange={handleSelectChange("currency_code")}
+          >
+            <Select.Trigger className="rounded-full h-10 px-4">
+              <Select.Value
+                placeholder={placeholder({
+                  placeholder: "Select a currency",
+                  required: true,
+                })}
+              />
+            </Select.Trigger>
+            <Select.Content>
+              {[...new Set(currencies)].map((currency) => (
+                <Select.Item key={currency} value={currency}>
+                  {currency.toUpperCase()} ({currencySymbolMap[currency]})
+                </Select.Item>
+              ))}
+            </Select.Content>
+          </Select>
+            </>
+          )}
           <Input
             label="Company address"
             name="company_address"

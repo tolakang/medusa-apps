@@ -3,6 +3,7 @@ import { authenticate } from "@medusajs/medusa";
 import {
   StoreCreateCompany,
   StoreCreateEmployee,
+  StoreJoinCompany,
   StoreUpdateApprovalSettings,
   StoreUpdateCompany,
   StoreUpdateEmployee,
@@ -32,6 +33,11 @@ export const storeCompaniesMiddlewares: MiddlewareRoute[] = [
     method: ["POST"],
     matcher: "/store/companies/me/employees",
     middlewares: [validateAndTransformBody(StoreCreateEmployee)],
+  },
+  {
+    method: ["POST"],
+    matcher: "/store/companies/join",
+    middlewares: [validateAndTransformBody(StoreJoinCompany)],
   },
   {
     method: ["POST"],

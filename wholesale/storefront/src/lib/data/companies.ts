@@ -10,10 +10,10 @@ import {
   StoreCompaniesResponse,
   StoreCompanyResponse,
   StoreCreateCompany,
-  StoreCreateEmployee,
   StoreEmployeeResponse,
   StoreUpdateCompany,
   StoreUpdateEmployee,
+  QueryCompany,
   QueryEmployee,
 } from "@/types"
 import { track } from "@vercel/analytics/server"
@@ -93,30 +93,46 @@ export const updateCompany = async (data: StoreUpdateCompany) => {
   return company
 }
 
-export const createEmployee = async (data: StoreCreateEmployee) => {
-  const { company_id: _companyId, ...employeeData } = data
-
-  const headers = {
-    ...(await getAuthHeaders()),
-  }
-
-  const employee = await sdk.client.fetch<StoreEmployeeResponse>(
-    `/store/companies/me/employees`,
-    {
+// A company admin invites a colleague by email and gets a join code to give
+// them; nobody is added until the colleague joins with it (REVIEW_FIXES B14).
+export const inviteEmployee = async (
+  email: string
+): Promise<{ join_code?: string; error?: string }> => {
+  try {
+    const { invitation } = await sdk.client.fetch<{
+      invitation: { email: string; join_code: string }
+    }>(`/store/companies/me/employees`, {
       method: "POST",
-      body: employeeData,
-      headers,
-    }
-  )
+      body: { email },
+      headers: { ...(await getAuthHeaders()) },
+    })
+    return { join_code: invitation.join_code }
+  } catch (e) {
+    return { error: (e as Error)?.message || "Couldn't make a join code." }
+  }
+}
 
-  track("employee_created", {
-    employee_id: employee.employee.id,
-  })
-
-  const cacheTag = await getCacheTag("companies")
-  revalidateTag(cacheTag, { expire: 0 })
-
-  return employee
+// The signed-in customer joins a company with a colleague's join code.
+export const joinCompany = async (
+  joinCode: string
+): Promise<{ company?: QueryCompany; error?: string }> => {
+  try {
+    const { company } = await sdk.client.fetch<{ company: QueryCompany }>(
+      `/store/companies/join`,
+      {
+        method: "POST",
+        body: { join_code: joinCode },
+        headers: { ...(await getAuthHeaders()) },
+      }
+    )
+    const customerTag = await getCacheTag("customers")
+    revalidateTag(customerTag, { expire: 0 })
+    const companiesTag = await getCacheTag("companies")
+    revalidateTag(companiesTag, { expire: 0 })
+    return { company }
+  } catch (e) {
+    return { error: (e as Error)?.message || "Couldn't join the company." }
+  }
 }
 
 export const updateEmployee = async (data: StoreUpdateEmployee) => {
