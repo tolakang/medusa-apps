@@ -1,0 +1,105 @@
+# wholesale: whole business project for LOCAL testing (BUILD_PLAN.md §4.3).
+# Dokploy ignores this file. Images and ports are local-only.
+#
+#   podman compose -f wholesale/docker-compose.local.yml up -d --build   (or: docker compose …)
+#   admin user:  podman exec wholesale-local-backend docker-entrypoint.sh medusa user -e admin@example.com -p supersecret
+#   admin:       http://localhost:9000/app (plain http works because SESSION_COOKIE_SECURE=false, TASKS F-043)
+#
+# Host ports are offset to avoid clashing with other local databases.
+name: wholesale-local
+
+services:
+  postgres:
+    image: docker.io/library/postgres:15-alpine
+    container_name: wholesale-local-postgres
+    environment:
+      POSTGRES_USER: medusa
+      POSTGRES_PASSWORD: medusa
+      POSTGRES_DB: wholesale
+    ports: ["55432:5432"]
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medusa -d wholesale"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: docker.io/library/redis:7-alpine
+    container_name: wholesale-local-redis
+    ports: ["56379:6379"]
+
+  backend:
+    build: ./backend
+    container_name: wholesale-local-backend
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_started }
+    # 8000 belongs to the storefront, which shares this network namespace.
+    ports: ["9000:9000", "8000:8000"]
+    # No curl in the slim image; Node 22 has fetch.
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:9000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      retries: 60
+    environment: &backend-env
+      NODE_ENV: production
+      PORT: "9000"
+      DATABASE_URL: postgres://medusa:medusa@postgres:5432/wholesale
+      DATABASE_SSL: "false"
+      REDIS_URL: redis://redis:6379
+      MEDUSA_FF_CACHING: "true"
+      JWT_SECRET: local-only-jwt-secret
+      COOKIE_SECRET: local-only-cookie-secret
+      # Plain http here, so the admin session cookie must not be Secure (local only).
+      SESSION_COOKIE_SECURE: "false"
+      # Sign-ups start as approved companies here (BUILD_PLAN 6.4).
+      WHOLESALE_REQUIRE_APPROVAL: "false"
+      # Links in account emails (verification, password reset) point here.
+      STOREFRONT_URL: http://localhost:8000
+      STORE_CORS: http://localhost:8000
+      ADMIN_CORS: http://localhost:9000
+      AUTH_CORS: http://localhost:9000,http://localhost:8000
+      MEDUSA_WORKER_MODE: server
+      DISABLE_MEDUSA_ADMIN: "false"
+      RUN_MIGRATIONS: "true"
+
+  worker:
+    build: ./backend
+    container_name: wholesale-local-worker
+    # Worker starts only after the server has migrated and is healthy
+    # (same order as the Dokploy first deploy, BUILD_PLAN.md §5).
+    depends_on:
+      backend: { condition: service_healthy }
+    environment:
+      <<: *backend-env
+      MEDUSA_WORKER_MODE: worker
+      DISABLE_MEDUSA_ADMIN: "true"
+      RUN_MIGRATIONS: "false"
+
+  # Shares the backend's network namespace, so "localhost:9000" means the
+  # backend both in the browser (host) and inside this container. Local only:
+  # on Dokploy the public URL is used, plus MEDUSA_BACKEND_URL (internal).
+  # Get the key from the seed's log:
+  #   podman exec wholesale-local-backend docker-entrypoint.sh medusa exec ./src/scripts/seed-initial-data.js
+  #   podman exec wholesale-local-backend docker-entrypoint.sh medusa exec ./src/scripts/seed-b2b.js demo-pricing
+  #   STOREFRONT_PUBLISHABLE_KEY=pk_... podman compose -f wholesale/docker-compose.local.yml up -d --build storefront
+  storefront:
+    build:
+      context: ./storefront
+      args:
+        NEXT_PUBLIC_MEDUSA_BACKEND_URL: http://localhost:9000
+        NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: ${STOREFRONT_PUBLISHABLE_KEY:-pk_set_me}
+        NEXT_PUBLIC_BASE_URL: http://localhost:8000
+        # The demo seed (seed-initial-data) creates a Europe region.
+        NEXT_PUBLIC_DEFAULT_REGION: dk
+    container_name: wholesale-local-storefront
+    network_mode: service:backend
+    depends_on:
+      backend: { condition: service_healthy }
+    environment:
+      NODE_ENV: production
+      PORT: "8000"
+      MEDUSA_BACKEND_URL: http://localhost:9000
+
+volumes:
+  postgres_data:

@@ -1,16 +1,17 @@
 # =====================================================================
 # wholesale / storefront — Next.js (customer storefront)
 #
-# Dokploy: Build Type = Dockerfile, Build Path = /wholesale/storefront
+# Dokploy: Build Type = Dockerfile, Build Path = /,
+#   Docker File = wholesale/storefront/Dockerfile,
+#   Docker Context Path = wholesale/storefront,
+#   Watch Paths = wholesale/storefront/**
 #   Environment -> Build-time Arguments: the ARG values below
 #   Environment -> Runtime variables   : see .env.example
 #   Domain -> port 8000
 #
 # NEXT_PUBLIC_* values are baked into the JS bundle at build time, so
 # changing one requires a rebuild (Dokploy: Rebuild).
-#
-# STATUS: ready template. Builds once the app code is added
-# (BUILD_PLAN.md §4.2). Requires `output: "standalone"` in next.config.
+# Requires `output: "standalone"` in next.config.
 # =====================================================================
 ARG NODE_VERSION=22
 
@@ -30,7 +31,7 @@ ENV NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=${NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY}
 ARG NEXT_PUBLIC_BASE_URL=""
 ENV NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}
 # Fallback country code (ISO-2 lowercase)
-ARG NEXT_PUBLIC_DEFAULT_REGION="us"
+ARG NEXT_PUBLIC_DEFAULT_REGION="kh"
 ENV NEXT_PUBLIC_DEFAULT_REGION=${NEXT_PUBLIC_DEFAULT_REGION}
 # Stripe publishable key (empty if not using Stripe)
 ARG NEXT_PUBLIC_STRIPE_KEY=""
@@ -41,7 +42,7 @@ ENV S3_IMAGE_HOSTNAME=${S3_IMAGE_HOSTNAME}
 # Allowed image path pattern
 ARG S3_IMAGE_PATHNAME="/**"
 ENV S3_IMAGE_PATHNAME=${S3_IMAGE_PATHNAME}
-# Hide catalog and prices until a buyer logs in
+# "false" opens the shop's pages to guests (default: buyers sign in first)
 ARG NEXT_PUBLIC_REQUIRE_LOGIN="true"
 ENV NEXT_PUBLIC_REQUIRE_LOGIN=${NEXT_PUBLIC_REQUIRE_LOGIN}
 

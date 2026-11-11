@@ -11,13 +11,13 @@ Each folder is **one business project** (one Dokploy project). Inside it, every 
 | [`ecommerce/`](./ecommerce) | Direct-to-consumer online store | `/ecommerce/backend`, `/ecommerce/storefront` | Built, on staging — Phase 1 (production pending) |
 | [`pos/`](./pos) | Physical shop checkout | `/pos/backend`, `/pos/storefront`, `/pos/pos-app` | Built — Phase 2 (staging and exit P2-14 wait for the owner) |
 | [`booking-services/`](./booking-services) | Appointments, classes, tickets, rentals | `/booking-services/backend`, `/booking-services/storefront` | Built — Phase 3 (copy of Ecommerce; exit P3-18 pending) |
-| [`wholesale/`](./wholesale) | Sellers buy your products in bulk | `/wholesale/backend`, `/wholesale/storefront` | In progress — Phase 4 (backend done; storefront P4-08 next) |
+| [`wholesale/`](./wholesale) | Sellers buy your products in bulk | `/wholesale/backend`, `/wholesale/storefront` | In progress — Phase 4 (backend and storefront built; P4-10 to P4-13 open) |
 | [`reseller/`](./reseller) | Sellers sell your products, you ship | `/reseller/backend`, `/reseller/storefront`, `/reseller/seller-portal` | Built — Phase 5 (exit P5-11 waits for the owner) |
 | [`marketplace/`](./marketplace) | Vendors sell their own products | `/marketplace/backend`, `/marketplace/storefront`, `/marketplace/vendor-portal` | Planned — Phase 6 |
 
 Each category's `README.md` is its Dokploy guide: services, build paths, ports, env and first-deploy order.
 
-Deployables without code yet (`wholesale/storefront` and all of `marketplace/`) hold **ready templates** (`Dockerfile`, `.env.example`); a Dokploy build of them fails at `COPY package.json` until their phase adds the code.
+Deployables without code yet (all of `marketplace/`) hold **ready templates** (`Dockerfile`, `.env.example`); a Dokploy build of them fails at `COPY package.json` until their phase adds the code.
 
 ## Documents
 
