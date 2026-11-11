@@ -1,27 +1,18 @@
-# Proposal for BUILD_PLAN.md Revision 10
+# Proposal for BUILD_PLAN.md Revision 11
 
-`BUILD_PLAN.md` is frozen. This lists where Revision 9 no longer matches the repo after Wholesale P4-08 to P4-13, V-07 and the review fixes (2026-11-12). It is the text to apply, section by section. Nothing here changes requirements, scope or build order.
+`BUILD_PLAN.md` is frozen. This lists where Revision 10 no longer matches the repo after Wholesale P4-08 to P4-13, V-07 and the review fixes (2026-11-12). It is the text to apply, section by section. Nothing here changes requirements, scope or build order.
 
 **To apply:** unlock (`docs/PLAN_LOCK.md`), then edit `BUILD_PLAN.md` yourself or ask Claude to while unlocked, update `.build-plan.sha256`, and give the PR the **`plan-revision`** label (CI refuses plan changes without it, guard check 1b). Lock again afterwards.
 
-Claude started this on 2026-11-12 with the plan unlocked, but Claude Code's auto-mode safety check stopped it from writing the frozen plan and its checksum from the shell, so this proposal stands in. That one edit was undone, and the plan is unchanged.
+Claude first tried to apply this on 2026-11-12, but Claude Code's auto-mode safety check stopped it from writing the plan and its checksum from the shell. Revision 10 (same day) was written with Claude's file tools instead and only moved the document paths (F-071); this proposal is still to apply.
 
 ## Header
 
 | Where | Proposed |
 |---|---|
-| Revision note | "**Revision 10 (2026-11-12, owner: "Fix those").** Brings §6.2, §6.4, §6.5 and §7 in line with Wholesale P4-08 to P4-13 and the review fixes (TASKS F-066 to F-070, the first review's fix list, now done). Requirements, scope and build order are unchanged." |
+| Revision note | "**Revision 11 (owner: "Fix those").** Brings §6.2, §6.4, §6.5 and §7 in line with Wholesale P4-08 to P4-13 and the review fixes (TASKS F-066 to F-070, the first review's fix list, now done). Requirements, scope and build order are unchanged." |
 | Status | "Phases 2 (POS), 3 (Booking services), 4 (Wholesale) and 5 (Reseller) have their code done, with staging and the exit checklists (P2-14, P3-18, P4-11, P5-11) waiting on the owner." |
 | Versions table, pnpm row | "**12.18.0** (V-07), since 2026-11-12" |
-
-## §1 Requirements, R5
-
-- **R5 result column:** "`docs/COMPARISON.md` (moved from the root on the owner's request, 2026-11-12, F-071)".
-
-## §2 Repo layout
-
-- **Tree:** the root holds `README.md`, `BUILD_PLAN.md`, `.build-plan.sha256`, `CLAUDE.md`, the six category folders, `scripts/`, `.github/` and `.claude/`. Replace the six root lines for `COMPARISON.md`, `MEDUSA_SKILL.md`, `BACKEND_PATTERNS_SKILL.md`, `DEV_FLOW.md`, `TASKS.md` and `PRE_DEPLOY_AUDIT.md` with one: "`docs/` <- builder documents (`TASKS.md`, `MEDUSA_SKILL.md`, `DEV_FLOW.md`, `COMPARISON.md`, `BACKEND_PATTERNS_SKILL.md`, `PRE_DEPLOY_AUDIT.md`), owner notes (`PLAN_LOCK.md`), handovers, plan proposals".
-- **Elsewhere in the plan:** write the moved files with their path (`docs/TASKS.md`, `docs/MEDUSA_SKILL.md`, `docs/DEV_FLOW.md`, `docs/PRE_DEPLOY_AUDIT.md`), as the rest of the repo now does. Short section citations such as "DEV_FLOW §7.1" stay as they are.
 
 ## §6.2 POS
 
@@ -57,4 +48,4 @@ Claude started this on 2026-11-12 with the plan unlocked, but Claude Code's auto
 
 ## Revision history
 
-New first row: "| 10 | 2026-11-12 | Wholesale as built after P4-08 to P4-13 and the review fixes: catalog for employees of approved companies (`WHOLESALE_REQUIRE_LOGIN`), join codes, PayWay for prepaid companies, one order at a time per company, bilingual invoices. Reseller: commission base and refund share, payout locks. POS and Reseller: invite codes. Status line. Builder documents in `docs/` (§2, R5). TASKS F-066 to F-071, D9 to D11. |"
+New first row: "| 11 | <date> | Wholesale as built after P4-08 to P4-13 and the review fixes: catalog for employees of approved companies (`WHOLESALE_REQUIRE_LOGIN`), join codes, PayWay for prepaid companies, one order at a time per company, bilingual invoices. Reseller: commission base and refund share, payout locks. POS and Reseller: invite codes. Status line. TASKS F-066 to F-070, D9 to D11. |"

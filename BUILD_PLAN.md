@@ -1,8 +1,10 @@
 # Build Plan — Medusa Apps
 
+> **Revision 10 (2026-11-12, owner: "Update old places in build plan too").** Builder documents moved into `docs/`; §2 and every path in this plan follow (TASKS F-071). Nothing else changed: the rest of the Revision 10 proposal (Wholesale as built, review fixes) is still in `docs/PLAN_REVISION_11_PROPOSAL.md`.
+>
 > **Revision 9 (2026-11-11, owner).** A clean rewrite: the plan now describes the repo as it is, with each rule given once, and the revision notes moved to *Revision history* at the end. It takes in TASKS F-055 to F-065, V-06 and decisions D9 to D11. Requirements, scope and build order are unchanged.
 >
-> **Status (2026-11-11).** Phase 0 is done. Phase 1 (Ecommerce) is on staging, and production (P1-08) waits on the owner. Phases 2 (POS), 3 (Booking services) and 5 (Reseller) have their code done, with staging and the exit checklists (P2-14, P3-18, P5-11) waiting on the owner. Phase 4 (Wholesale) has its backend done (P4-01 to P4-07), and the storefront (P4-08) is next. Phase 6 (Marketplace) has not started. Progress, decisions and evidence are in `TASKS.md`.
+> **Status (2026-11-11).** Phase 0 is done. Phase 1 (Ecommerce) is on staging, and production (P1-08) waits on the owner. Phases 2 (POS), 3 (Booking services) and 5 (Reseller) have their code done, with staging and the exit checklists (P2-14, P3-18, P5-11) waiting on the owner. Phase 4 (Wholesale) has its backend done (P4-01 to P4-07), and the storefront (P4-08) is next. Phase 6 (Marketplace) has not started. Progress, decisions and evidence are in `docs/TASKS.md`.
 
 **Versions in this repo (checked 2026-11-11)**
 
@@ -42,7 +44,7 @@ Revision history
 | R2 | Always compatible with Medusa updates; deploy an update at any time | Exact version pins, a lockfile per deployable, a scripted update per category, a CI gate before any deploy (build, typecheck, tests, migrate, health check), and Dokploy rollback (§3, §8). |
 | R3 | Dokploy-ready, **not a monorepo**: one folder per scenario, each with the backend **and** its clients, each with its own `Dockerfile` and env, each deployed independently | Six category folders. Each has one sub-folder per deployable, with its own `Dockerfile`, `.env.example`, `package.json` and lockfile. No root `package.json`, no workspace, no shared code. Each sub-folder is its own Docker context and Dokploy app (§2, §5). |
 | R4 | Each scenario has its own dependencies | Each deployable has its own `package.json`, `pnpm-lock.yaml` and `node_modules`. Nothing is shared between sub-folders or categories. |
-| R5 | Side-by-side comparison in the project root | `COMPARISON.md` |
+| R5 | Side-by-side comparison in the project root | `docs/COMPARISON.md` (moved from the root into `docs/` on the owner's request, 2026-11-12, F-071; linked from the root `README.md`) |
 | R6 | Pre-build plan with a recommended build order in the project root | This file, §7 |
 
 **Honest limit on R2.** The starters are templates that get copied, not packages, so their upstream changes are merged by hand (§8.1). No repo can promise that every future Medusa release is non-breaking: Medusa sometimes ships breaking changes in minor versions (listed in its release notes), and database migrations only go forward. This plan does guarantee three things:
@@ -57,14 +59,16 @@ Revision history
 ```
 medusa-apps/                        <- plain git repo, NOT a workspace
 ├── README.md                       <- overview and status
-├── COMPARISON.md                   <- side-by-side comparison (R5)
-├── BUILD_PLAN.md                   <- this file (R6), frozen (§3.4)
-├── MEDUSA_SKILL.md                 <- the only allowed Medusa reference, per version
-├── BACKEND_PATTERNS_SKILL.md       <- design patterns mapped to Medusa extension points
-├── DEV_FLOW.md                     <- the builder's cycle and gates
-├── TASKS.md                        <- tasks, decisions, findings, handoff
-├── PRE_DEPLOY_AUDIT.md             <- 10-check audit before staging or production (§8)
-├── docs/                           <- owner notes (PLAN_LOCK.md), handovers, plan proposals
+├── BUILD_PLAN.md                   <- this file (R6), frozen (§3.4); its lock names this path
+├── CLAUDE.md                       <- builder entry point (Claude Code reads it from the root)
+├── docs/                           <- every other document (owner, 2026-11-12, F-071):
+│   ├── COMPARISON.md               <- side-by-side comparison (R5)
+│   ├── MEDUSA_SKILL.md             <- the only allowed Medusa reference, per version
+│   ├── BACKEND_PATTERNS_SKILL.md   <- design patterns mapped to Medusa extension points
+│   ├── DEV_FLOW.md                 <- the builder's cycle and gates
+│   ├── TASKS.md                    <- tasks, decisions, findings, handoff
+│   ├── PRE_DEPLOY_AUDIT.md         <- 10-check audit before staging or production (§8)
+│   └── PLAN_LOCK.md, …             <- owner notes, handovers, plan proposals
 ├── .claude/                        <- builder settings and the plan lock hook (§3.4)
 ├── .github/                        <- CI matrix (one entry per deployable) and the weekly update check
 ├── scripts/                        <- plain shell scripts, no package.json
@@ -132,7 +136,7 @@ Names are lowercase kebab-case, because they become Dokploy build paths, image n
 - `pnpm install --frozen-lockfile` everywhere (CI, Docker, local checks). A build never resolves new versions on its own.
 - **Public imports only:** `@medusajs/framework/*`, `@medusajs/medusa/*`, `@medusajs/medusa/core-flows`, `@medusajs/admin-sdk`, `@medusajs/ui`. Never from `dist/` paths.
 - **Licensed Medusa features are not used.** Since 2.22 the RBAC module and the `auth-oidc` provider need a `MEDUSA_LICENSE_KEY` (F-042). Cashiers, sellers and vendors are custom actor types.
-- **Security fixes in dependencies** (`pnpm audit --prod`): first refresh the lockfile within the ranges Medusa and the starters already allow. A `pnpm.overrides` entry is a deviation that needs owner approval and a `TASKS.md` entry (E-A6).
+- **Security fixes in dependencies** (`pnpm audit --prod`): first refresh the lockfile within the ranges Medusa and the starters already allow. A `pnpm.overrides` entry is a deviation that needs owner approval and a `docs/TASKS.md` entry (E-A6).
 
 ### 3.3 Tests that protect updates
 
@@ -146,7 +150,7 @@ This file is frozen for the builder:
 - **The hook:** `.claude/hooks/protect-build-plan.sh`, wired in `.claude/settings.json`. It blocks Claude's file tools and shell writes on `BUILD_PLAN.md`, `.build-plan.sha256`, the hook and `.claude/settings.json`.
 - **The switch:** the hook lets the edits through only while the owner's git-ignored switch `.claude/plan-unlocked` exists in that checkout. Only the owner creates or removes it, from their own terminal (`docs/PLAN_LOCK.md`); Claude never does.
 - **The checks:** `scripts/test-plan-lock.sh` tests the lock and runs in `scripts/guard.sh`. CI fails until `.build-plan.sha256` matches, so every revision is recorded.
-- **Between revisions:** findings go to `TASKS.md`, and a proposed revision goes to `docs/`.
+- **Between revisions:** findings go to `docs/TASKS.md`, and a proposed revision goes to `docs/`.
 
 ---
 
@@ -372,7 +376,7 @@ Each scenario lists:
 - client apps and env
 - acceptance criteria
 
-**MVP** = first release; **Later** = after launch. "As built" notes record decisions taken while building (details and evidence in `TASKS.md`).
+**MVP** = first release; **Later** = after launch. "As built" notes record decisions taken while building (details and evidence in `docs/TASKS.md`).
 
 ### 6.1 Ecommerce — `ecommerce/`
 
@@ -624,7 +628,7 @@ Rules for the order:
   - one Medusa update done with `scripts/update-medusa.sh`
   - each app redeployed alone once, to prove independence
 - **Don't start two "L" phases at the same time.**
-- **Staging may wait (owner; F-034, F-044):** a phase's code can be finished and merged while its staging run and exit checklist wait for the owner. Those items stay open in `TASKS.md` and are done before that category goes live.
+- **Staging may wait (owner; F-034, F-044):** a phase's code can be finished and merged while its staging run and exit checklist wait for the owner. Those items stay open in `docs/TASKS.md` and are done before that category goes live.
 
 **Status 2026-11-11:**
 - Phase 0: done.
@@ -654,9 +658,9 @@ For each deployable, the script:
 
 **Release:**
 
-0. **Pre-deploy audit:** before a category's first staging or production deploy, run `PRE_DEPLOY_AUDIT.md` for it.
+0. **Pre-deploy audit:** before a category's first staging or production deploy, run `docs/PRE_DEPLOY_AUDIT.md` for it.
    - **What it checks:** 10 checks (authorization, reset tokens, input, CORS, rate limits, errors, indexes, logging, secrets, rollback), plus `pnpm audit --prod`.
-   - **Report:** goes in `<category>/AUDIT-<date>.md`, and every FIX becomes a `TASKS.md` task.
+   - **Report:** goes in `<category>/AUDIT-<date>.md`, and every FIX becomes a `docs/TASKS.md` task.
    - **Going live:** a category goes live only when every row is PASS, N/A or an owner-accepted RISK.
 1. **Release notes:** read them for every version skipped (breaking changes are called out there), and run any codemod they list.
 2. **Back up the database.** The official revert is `medusa db:rollback <module…>` for each module that migrated, then reinstalling the old versions; the backup is the fallback. The daily backups (§5) run regardless.
@@ -670,7 +674,7 @@ For each deployable, the script:
 - **Updating:** a human then runs `scripts/update-medusa.sh <category>` on a branch, and CI checks the PR.
 - **Deploying:** merging redeploys only the changed deployables (Dokploy watch paths).
 
-**Before every merge** (owner rule, DEV_FLOW §7.1): check the diff against `MEDUSA_SKILL.md` and update every related document. The required CI check is `ci-ok`, and PRs squash-merge.
+**Before every merge** (owner rule, DEV_FLOW §7.1): check the diff against `docs/MEDUSA_SKILL.md` and update every related document. The required CI check is `ci-ok`, and PRs squash-merge.
 
 ### 8.1 Starter updates
 
@@ -688,7 +692,7 @@ Medusa package updates for clients go through the update script.
 
 ## 9. Verified technical notes
 
-A throwaway prototype on Medusa 2.21.1 and pnpm 12.6.0 tested this plan before Phase 0. These findings still hold. `MEDUSA_SKILL.md` has the full, per-version reference.
+A throwaway prototype on Medusa 2.21.1 and pnpm 12.6.0 tested this plan before Phase 0. These findings still hold. `docs/MEDUSA_SKILL.md` has the full, per-version reference.
 
 | Topic | Finding |
 |---|---|
@@ -709,7 +713,7 @@ A throwaway prototype on Medusa 2.21.1 and pnpm 12.6.0 tested this plan before P
 
 ## 10. Decisions and risks
 
-**Decisions** (evidence in `TASKS.md` → *Decisions log*)
+**Decisions** (evidence in `docs/TASKS.md` → *Decisions log*)
 
 | # | Decision | Choice | Decided |
 |---|---|---|---|
@@ -743,7 +747,7 @@ Also decided for Ecommerce:
 | R-g | No usable admin roles → every admin user has full access, so cashiers, sellers and vendors never get admin users (custom actor types). RBAC is behind `MEDUSA_FF_RBAC`, enabling it isn't documented, and since 2.22 it needs a paid `MEDUSA_LICENSE_KEY` (F-001, F-035, F-042) | every phase |
 | R-h | Two server replicas migrating at once (only per-module advisory locks, F-004) → scale to 1 during deploys | every deploy |
 | R-i | Advisories inside `@medusajs/*` that Medusa's own ranges can't fix yet (after 2.22.6: only `zod` 4.2.0, pinned by the starter) → accepted as low risk and re-checked on every update (§3.2, E-A6) | every update |
-| R-j | Apps on different Medusa versions drift apart (all on 2.22.6 since 2026-11-10) → `MEDUSA_SKILL.md` records facts per version; older apps move forward with `update-medusa.sh` | ongoing |
+| R-j | Apps on different Medusa versions drift apart (all on 2.22.6 since 2026-11-10) → `docs/MEDUSA_SKILL.md` records facts per version; older apps move forward with `update-medusa.sh` | ongoing |
 | R-k | Flaky tests block unrelated PRs → tests control or wait for background work (§3.3, F-065) | ongoing |
 
 ---
@@ -752,6 +756,7 @@ Also decided for Ecommerce:
 
 | Rev | Date | What changed |
 |---|---|---|
+| 10 | 2026-11-12 | Builder documents moved into `docs/` (owner request, F-071): §2 tree, R5 and every path. `BUILD_PLAN.md` and `CLAUDE.md` stay at the root. |
 | 9 | 2026-11-11 | Clean rewrite: one current description per topic, history moved here. Versions 2.22.6 / `@medusajs/ui` 4.2.13. Wholesale (§6.4) and Reseller (§6.5) as built. Decisions D9–D11. pnpm release-age rule (§3.2) and flaky-test rule (§3.3, R-k). TASKS F-055 to F-065, V-06. |
 | 8 | 2026-11-06 | Versions 2.22.3; apps may sit on different Medusa versions (F-044); plan lock hook (F-054); local Podman stacks (F-043, F-050 to F-052); POS and Booking details (F-036 to F-049); pre-deploy audit, alerts, `pnpm audit` triage. |
 | 7 | 2026-10-15 | Re-check of Medusa 2.21.2 and the starters (F-034, F-035); RBAC still flag-only; Phase 2 started before the Ecommerce production deploy, POS copied from Ecommerce. |
