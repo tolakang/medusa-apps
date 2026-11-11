@@ -163,6 +163,35 @@ medusaIntegrationTestRunner({
           process.env.RESELLER_PAYOUT_DAY = original
         }
       })
+
+      // REVIEW_FIXES B10: a payout waits for a refund that holds a
+      // commission's lock, then sees what the refund changed.
+      it("a payout doesn't mark paid a commission a refund cancelled meanwhile", async () => {
+        const sok = await seller("sok")
+        const refunded = await commission(sok.id, 10, { status: "approved" })
+        const other = await commission(sok.id, 5, { status: "approved" })
+
+        let release: () => void = () => {}
+        const held = new Promise<void>((resolve) => (release = resolve))
+        const holding = getContainer()
+          .resolve(Modules.LOCKING)
+          .execute(`seller-commission:${refunded.order_id}`, () => held, { timeout: 5, expire: 60 })
+        await new Promise((resolve) => setTimeout(resolve, 100))
+
+        const payout = api.post(`/admin/sellers/${sok.id}/payouts`, {}, admin)
+        await new Promise((resolve) => setTimeout(resolve, 1500))
+        // The payout is waiting: nothing is paid yet.
+        expect(await statusOf(other.id)).toEqual("approved")
+
+        // The "refund" cancels the commission while it holds the lock.
+        await sellers().updateSellerCommissions({ id: refunded.id, status: "cancelled" })
+        release()
+        await holding
+        await payout
+
+        expect(await statusOf(refunded.id)).toEqual("cancelled")
+        expect(await statusOf(other.id)).toEqual("paid")
+      })
     })
   },
 })

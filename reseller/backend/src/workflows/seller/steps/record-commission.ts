@@ -1,7 +1,7 @@
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
 import { SELLER_MODULE } from "../../../modules/seller"
-import { commissionAmount, commissionRateFor } from "../../../modules/seller/commission"
+import { commissionAmount, commissionBase, commissionRateFor } from "../../../modules/seller/commission"
 import SellerModuleService from "../../../modules/seller/service"
 import type { InferTypeOf } from "@medusajs/framework/types"
 import { SellerCommission } from "../../../modules/seller/models/seller-commission"
@@ -35,7 +35,15 @@ export const recordSellerCommissionStep = createStep(
       data: [order],
     } = await query.graph({
       entity: "order",
-      fields: ["id", "status", "is_draft_order", "total", "currency_code", "sales_channel_id"],
+      fields: [
+        "id",
+        "status",
+        "is_draft_order",
+        "item_total",
+        "item_tax_total",
+        "currency_code",
+        "sales_channel_id",
+      ],
       filters: { id: input.order_id },
     })
     if (!order || order.is_draft_order || order.status === "draft" || !order.sales_channel_id) {
@@ -54,14 +62,16 @@ export const recordSellerCommissionStep = createStep(
       return new StepResponse({ commission: null, created: false }, null)
     }
 
-    const total = Number(order.total)
+    // `order_total` holds the commission's base: the items after discounts,
+    // without tax and shipping (D11, TASKS P5-12).
+    const base = commissionBase(order)
     const rate = commissionRateFor(seller)
     const commission = await sellers.createSellerCommissions({
       seller_id: seller.id,
       order_id: order.id,
-      order_total: total,
+      order_total: base,
       rate,
-      amount: commissionAmount(total, rate),
+      amount: commissionAmount(base, rate),
       currency_code: order.currency_code,
     })
     return new StepResponse({ commission, created: true }, commission.id)
