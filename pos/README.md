@@ -68,12 +68,12 @@ After the first deploy, every service can be redeployed, rebuilt or rolled back 
 
 Cashiers are **not** admin users: they are the custom actor type `cashier` and can only use `/pos/*` (TASKS P2-03). Sign-up is invite-only:
 
-1. An admin invites the cashier: `POST /admin/pos/cashiers` `{ "name", "email" }` (list: `GET /admin/pos/cashiers`).
+1. An admin invites the cashier: `POST /admin/pos/cashiers` `{ "name", "email" }` (list: `GET /admin/pos/cashiers`). The answer carries an **`invite_code`**; give it to the cashier.
 2. The cashier registers that email: `POST /auth/cashier/emailpass/register` `{ "email", "password" }` (at least 8 characters) → registration token.
-3. The cashier accepts with that token: `POST /pos/cashiers/accept` (`Authorization: Bearer <token>`). An email without an active invitation is refused.
+3. The cashier accepts with that token and the code: `POST /pos/cashiers/accept` `{ "invite_code" }` (`Authorization: Bearer <token>`). An email without an active invitation is refused, and so is a wrong code: knowing the invited email isn't enough to take the account.
 4. From then on: `POST /auth/cashier/emailpass` → token for `/pos/*` (e.g. `GET /pos/cashiers/me`).
 
-Setting a cashier's `is_active` to false (`POST /admin/pos/cashiers/:id` `{ "is_active": false }`) locks them out at once, including tokens already issued. Sign-up and sign-in have the same per-IP limits as customers.
+Setting a cashier's `is_active` to false (`POST /admin/pos/cashiers/:id` `{ "is_active": false }`) locks them out at once, including tokens already issued. Sign-up, sign-in, accepting and password reset have per-IP limits like customers; the till app passes each cashier's own IP (`SHOPPER_IP_SECRET` in the backend and the till app).
 
 ## Shop setup and selling (API, TASKS P2-06)
 

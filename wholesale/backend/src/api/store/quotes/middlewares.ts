@@ -5,6 +5,10 @@ import {
 } from "@medusajs/framework";
 import { MiddlewareRoute } from "@medusajs/medusa";
 import {
+  oneOrderPerCompanyAtATime,
+  signedInCustomer,
+} from "../company-order-lock";
+import {
   listQuotesTransformQueryConfig,
   retrieveQuoteTransformQueryConfig,
 } from "./query-config";
@@ -54,6 +58,8 @@ export const storeQuotesMiddlewares: MiddlewareRoute[] = [
     method: ["POST"],
     matcher: "/store/quotes/:id/accept",
     middlewares: [
+      // REVIEW_FIXES B6: the same lock as checkout.
+      oneOrderPerCompanyAtATime(signedInCustomer),
       validateAndTransformBody(AcceptQuote),
       validateAndTransformQuery(
         GetQuoteParams,

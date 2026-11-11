@@ -4,6 +4,7 @@ import {
 } from "@medusajs/medusa/core-flows";
 import { OrderStatus } from "@medusajs/framework/utils";
 import { createWorkflow } from "@medusajs/framework/workflows-sdk";
+import { ensureInvoiceWorkflow } from "../../invoice/ensure-invoice";
 import { updateOrderWorkflow } from "../../order/workflows/update-order";
 import { validateQuoteAcceptanceStep } from "../steps/validate-quote-acceptance";
 import { validateQuoteBuyerStep } from "../steps/validate-quote-buyer";
@@ -51,6 +52,12 @@ export const customerAcceptQuoteWorkflow = createWorkflow(
         is_draft_order: false,
         status: OrderStatus.PENDING,
       },
+    });
+
+    // The quote is an order now: its invoice is issued today, so the payment
+    // terms run from the acceptance (REVIEW_FIXES B2).
+    ensureInvoiceWorkflow.runAsStep({
+      input: { order_id: quote.draft_order_id },
     });
   }
 );

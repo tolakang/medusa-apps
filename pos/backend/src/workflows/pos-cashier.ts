@@ -6,6 +6,7 @@ import {
   WorkflowResponse,
 } from "@medusajs/framework/workflows-sdk"
 import { setAuthAppMetadataStep } from "@medusajs/medusa/core-flows"
+import { inviteCodeMatches } from "../lib/invite-code"
 import { POS_MODULE } from "../modules/pos"
 import type PosModuleService from "../modules/pos/service"
 
@@ -51,6 +52,8 @@ export const createPosCashierWorkflow = createWorkflow(
   }
 )
 
+export const WRONG_INVITE_CODE_MESSAGE =
+  "This invite code isn't right. Ask the shop admin for the code of your invitation."
 export const NO_INVITATION_MESSAGE =
   "There is no active cashier invitation for this email. Ask the shop admin to add you."
 
@@ -58,7 +61,7 @@ export const NO_INVITATION_MESSAGE =
 // (emailpass: provider identity entity_id = the email).
 const findInvitedPosCashierStep = createStep(
   "find-invited-pos-cashier",
-  async (input: { auth_identity_id: string }, { container }) => {
+  async (input: { auth_identity_id: string; invite_code: string }, { container }) => {
     const auth = container.resolve(Modules.AUTH)
     const identity = await auth.retrieveAuthIdentity(input.auth_identity_id, {
       relations: ["provider_identities"],
@@ -69,6 +72,11 @@ const findInvitedPosCashierStep = createStep(
     if (!cashier || !cashier.is_active) {
       throw new MedusaError(MedusaError.Types.NOT_ALLOWED, NO_INVITATION_MESSAGE)
     }
+    // The email alone proves nothing (anyone can register it first), so the
+    // code the admin gave with the invitation is needed too (REVIEW_FIXES B11).
+    if (!inviteCodeMatches("cashier", cashier.id, input.invite_code)) {
+      throw new MedusaError(MedusaError.Types.NOT_ALLOWED, WRONG_INVITE_CODE_MESSAGE)
+    }
     return new StepResponse(cashier)
   }
 )
@@ -78,7 +86,7 @@ const findInvitedPosCashierStep = createStep(
 // later step fails.
 export const acceptPosCashierInviteWorkflow = createWorkflow(
   "accept-pos-cashier-invite",
-  function (input: { auth_identity_id: string }) {
+  function (input: { auth_identity_id: string; invite_code: string }) {
     const cashier = findInvitedPosCashierStep(input)
     setAuthAppMetadataStep({
       authIdentityId: input.auth_identity_id,

@@ -20,7 +20,7 @@ export default function LoginPage() {
       <div className="card w-full max-w-sm p-6">
         <h1 className="text-2xl font-semibold">POS counter</h1>
         <p className="mt-1 text-ui-fg-subtle">
-          {mode === "login" ? "Sign in to open the till." : "First time here? Set the password for your invited email."}
+          {mode === "login" ? "Sign in to open the till." : "First time here? Set a password with your invited email and invite code."}
         </p>
 
         <form action={mode === "login" ? loginAction : setupAction} className="mt-6 flex flex-col gap-3">
@@ -52,6 +52,20 @@ export default function LoginPage() {
             <label className="flex flex-col gap-1">
               <span className="text-sm font-medium">Repeat password</span>
               <input className="field" name="confirm" type="password" autoComplete="new-password" minLength={8} required />
+            </label>
+          )}
+          {mode === "setup" && (
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-medium">Invite code</span>
+              <input
+                className="field uppercase"
+                name="invite_code"
+                autoComplete="off"
+                autoCapitalize="characters"
+                placeholder="XXXXX-XXXXX"
+                maxLength={40}
+                required
+              />
             </label>
           )}
 

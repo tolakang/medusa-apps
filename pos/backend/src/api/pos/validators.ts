@@ -8,6 +8,13 @@ import { POS_PAYMENT_METHODS } from "../../workflows/pos-checkout"
 // Money as entered at the till (e.g. 50 or 12.5), never negative.
 const cash = z.number().finite().min(0)
 
+// The code the admin gave with the invitation (REVIEW_FIXES B11).
+export const PostPosCashierAccept = z
+  .object({ invite_code: z.string().trim().min(1).max(40) })
+  .strict()
+
+export type PostPosCashierAcceptType = z.infer<typeof PostPosCashierAccept>
+
 export const PostPosShiftOpen = z.object({
   register_id: z.string().min(1),
   opening_cash: cash,

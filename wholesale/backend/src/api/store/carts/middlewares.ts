@@ -1,5 +1,6 @@
 import { authenticate, validateAndTransformBody } from "@medusajs/framework";
 import { MiddlewareRoute } from "@medusajs/medusa";
+import { cartCustomer, oneOrderPerCompanyAtATime } from "../company-order-lock";
 import { StoreAddLineItemsBulk } from "./validators";
 
 export const storeCartsMiddlewares: MiddlewareRoute[] = [
@@ -12,6 +13,12 @@ export const storeCartsMiddlewares: MiddlewareRoute[] = [
       authenticate("customer", ["session", "bearer"]),
       validateAndTransformBody(StoreAddLineItemsBulk),
     ],
+  },
+  {
+    // REVIEW_FIXES B6: checkouts of one company run one after the other.
+    method: ["POST"],
+    matcher: "/store/carts/:id/complete",
+    middlewares: [oneOrderPerCompanyAtATime(cartCustomer)],
   },
   {
     method: ["POST"],

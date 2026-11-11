@@ -10,38 +10,40 @@ type SpendWindowCompany = {
   spending_limit_reset_frequency?: `${ModuleCompanySpendingLimitResetFrequency}` | null;
 };
 
+// The window a spending limit counts orders in, from its start to `now`.
+// Windows are in UTC (the timezone the servers run in), so they don't move
+// with the machine's local time, and `now` is never changed: the starter set
+// the day's start with `now.setHours(0, 0, 0, 0)`, which also moved the end to
+// midnight, so a daily limit never counted the day's earlier orders
+// (REVIEW_FIXES B1).
 export function getSpendWindow(
-  company: SpendWindowCompany | null | undefined
+  company: SpendWindowCompany | null | undefined,
+  now: Date = new Date()
 ): {
   start: Date;
   end: Date;
 } {
-  if (!company) {
-    return { start: new Date(0), end: new Date() };
-  }
+  const end = new Date(now);
+  const year = end.getUTCFullYear();
+  const month = end.getUTCMonth();
+  const day = end.getUTCDate();
 
-  const now = new Date();
-  const resetFrequency = company.spending_limit_reset_frequency;
-
-  switch (resetFrequency) {
-    case ModuleCompanySpendingLimitResetFrequency.NEVER:
-      return { start: new Date(0), end: now }; // Never resets
+  switch (company?.spending_limit_reset_frequency) {
     case ModuleCompanySpendingLimitResetFrequency.DAILY:
-      return { start: new Date(now.setHours(0, 0, 0, 0)), end: now }; // Window is the current day up to now
+      return { start: new Date(Date.UTC(year, month, day)), end };
     case ModuleCompanySpendingLimitResetFrequency.WEEKLY:
-      const startOfWeek = new Date(now);
-      startOfWeek.setDate(now.getDate() - now.getDay());
-      startOfWeek.setHours(0, 0, 0, 0);
-      return { start: startOfWeek, end: now }; // Window is the current week up to now, starting on Sunday
-    case ModuleCompanySpendingLimitResetFrequency.MONTHLY:
+      // The week starts on Sunday.
       return {
-        start: new Date(now.getFullYear(), now.getMonth(), 1),
-        end: now,
-      }; // Window is the current month up to now
+        start: new Date(Date.UTC(year, month, day - end.getUTCDay())),
+        end,
+      };
+    case ModuleCompanySpendingLimitResetFrequency.MONTHLY:
+      return { start: new Date(Date.UTC(year, month, 1)), end };
     case ModuleCompanySpendingLimitResetFrequency.YEARLY:
-      return { start: new Date(now.getFullYear(), 0, 1), end: now }; // Window is the current year up to now
+      return { start: new Date(Date.UTC(year, 0, 1)), end };
     default:
-      return { start: new Date(0), end: now }; // Default to never resetting
+      // "never", or no company: every order counts.
+      return { start: new Date(0), end };
   }
 }
 

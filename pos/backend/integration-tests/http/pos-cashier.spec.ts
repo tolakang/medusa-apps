@@ -46,8 +46,10 @@ medusaIntegrationTestRunner({
 
       const invite = async (email: string, name = "Sokha") => {
         const { data } = await api.post("/admin/pos/cashiers", { name, email }, await adminAuth())
-        return data.cashier
+        // The admin hands this code to the cashier (REVIEW_FIXES B11).
+        return { ...data.cashier, invite_code: data.invite_code as string }
       }
+      const code = (invited: { invite_code: string }) => ({ invite_code: invited.invite_code })
       const register = async (email: string) => {
         const { data } = await api.post("/auth/cashier/emailpass/register", { email, password: PASSWORD })
         return data.token as string
@@ -62,9 +64,17 @@ medusaIntegrationTestRunner({
         expect(cashier).toEqual(
           expect.objectContaining({ email: "cashier.one@example.com", name: "Sokha", is_active: true })
         )
+        expect(cashier.invite_code).toMatch(/^[A-Z2-9]{5}-[A-Z2-9]{5}$/)
 
         const registration = await register("cashier.one@example.com")
-        const { data: accepted } = await api.post("/pos/cashiers/accept", {}, bearer(registration))
+        // The invited email alone isn't enough: no code or a wrong code is refused.
+        expect((await fail(api.post("/pos/cashiers/accept", {}, bearer(registration)))).status).toEqual(400)
+        const wrong = await fail(
+          api.post("/pos/cashiers/accept", { invite_code: "AAAAA-AAAAA" }, bearer(registration))
+        )
+        expect(wrong.status).toEqual(400)
+        expect(wrong.data?.message).toContain("invite code")
+        const { data: accepted } = await api.post("/pos/cashiers/accept", code(cashier), bearer(registration))
         expect(accepted.cashier.id).toEqual(cashier.id)
 
         const token = await signIn("cashier.one@example.com")
@@ -72,12 +82,14 @@ medusaIntegrationTestRunner({
         expect(me.cashier).toEqual(expect.objectContaining({ id: cashier.id, email: cashier.email }))
 
         // A signed-in cashier can't accept again.
-        expect((await fail(api.post("/pos/cashiers/accept", {}, bearer(token)))).status).toEqual(400)
+        expect((await fail(api.post("/pos/cashiers/accept", code(cashier), bearer(token)))).status).toEqual(400)
       })
 
       it("refuses a registration without an invitation", async () => {
         const registration = await register("stranger@example.com")
-        const res = await fail(api.post("/pos/cashiers/accept", {}, bearer(registration)))
+        const res = await fail(
+          api.post("/pos/cashiers/accept", { invite_code: "AAAAA-AAAAA" }, bearer(registration))
+        )
         expect(res.status).toEqual(400)
         expect(res.data?.message).toContain("no active cashier invitation")
 
@@ -95,7 +107,7 @@ medusaIntegrationTestRunner({
 
       it("a deactivated cashier is locked out at once", async () => {
         const cashier = await invite("leaver@example.com")
-        await api.post("/pos/cashiers/accept", {}, bearer(await register("leaver@example.com")))
+        await api.post("/pos/cashiers/accept", code(cashier), bearer(await register("leaver@example.com")))
         const token = await signIn("leaver@example.com")
         expect((await api.get("/pos/cashiers/me", bearer(token))).status).toEqual(200)
 
@@ -110,13 +122,15 @@ medusaIntegrationTestRunner({
         await getContainer()
           .resolve<PosModuleService>(POS_MODULE)
           .updatePosCashiers({ id: cashier.id, is_active: false })
-        const res = await fail(api.post("/pos/cashiers/accept", {}, bearer(await register("inactive@example.com"))))
+        const res = await fail(
+          api.post("/pos/cashiers/accept", code(cashier), bearer(await register("inactive@example.com")))
+        )
         expect(res.status).toEqual(400)
       })
 
       it("cashiers can't use the admin API, and admins or customers can't use /pos", async () => {
-        await invite("till@example.com")
-        await api.post("/pos/cashiers/accept", {}, bearer(await register("till@example.com")))
+        const till = await invite("till@example.com")
+        await api.post("/pos/cashiers/accept", code(till), bearer(await register("till@example.com")))
         const cashierToken = await signIn("till@example.com")
 
         // P2-13 (acceptance): a cashier token can't call /admin/*.

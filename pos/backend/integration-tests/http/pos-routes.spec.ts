@@ -44,7 +44,7 @@ medusaIntegrationTestRunner({
 
         const { data: invited } = await api.post("/admin/pos/cashiers", { name: "Sokha", email: "sokha@example.com" }, admin)
         const { data: reg } = await api.post("/auth/cashier/emailpass/register", { email: "sokha@example.com", password: PASSWORD })
-        await api.post("/pos/cashiers/accept", {}, bearer(reg.token))
+        await api.post("/pos/cashiers/accept", { invite_code: invited.invite_code }, bearer(reg.token))
         const { data: login } = await api.post("/auth/cashier/emailpass", { email: "sokha@example.com", password: PASSWORD })
         const cashier = bearer(login.token)
 
