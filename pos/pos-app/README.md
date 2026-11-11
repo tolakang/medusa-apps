@@ -2,7 +2,7 @@
 
 The shop counter app (TASKS P2-10): a Next.js **PWA** for the shop's tablets (decision D5). Cashiers sign in, pick a register, open a shift, scan items, add a customer, take payment (cash, card or QR), print the receipt and close the shift. It runs on top of the POS backend routes (`../backend`, TASKS P2-06).
 
-Plain Next.js 15 + `@medusajs/js-sdk` 2.21.2, as the web client standard asks for portals and the POS app; Tailwind with `@medusajs/ui-preset`.
+Plain Next.js **16.4.5** + `@medusajs/js-sdk` **2.22.6** (TASKS V-04, V-06; started on Next.js 15 and 2.21.2), as the web client standard asks for portals and the POS app; Tailwind with `@medusajs/ui-preset`.
 
 ## How it works
 
