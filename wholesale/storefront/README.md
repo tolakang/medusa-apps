@@ -45,7 +45,15 @@ Wholesale changes:
 - Removed: the "Invite employees" card (a starter stub that only said "Not implemented"), the "Deploy to Medusa Cloud" banner, and the Vercel Analytics script.
 - The starter's catalog and checkout for AI agents (UCP under `/ucp` and `/.well-known/ucp`, `/buy` links, `llms.txt`, product Markdown, `sitemap.xml`) answer 404 while sign-in is required, because they show products and prices to anyone. With `NEXT_PUBLIC_REQUIRE_LOGIN=false` they work as in the starter.
 
-**Limit of "sign-in first":** it hides the shop's pages. The Store API itself still answers anyone who has the publishable key (which is in the page source). Hiding prices from the API too would need the backend to require a customer on the product routes (TASKS F-068, owner decision).
+**Sign-in on the backend too (TASKS F-068):** with `WHOLESALE_REQUIRE_LOGIN` on (the backend's default), the Store API's product, variant and search routes need a signed-in customer, so the publishable key alone reads no products or prices. For that:
+
+- **Session check:** the middleware asks the backend whether the session token is still good (remembered for a minute per token). A missing, expired or foreign token goes to sign-in.
+- **Search:** the browser searches through this app's `/api/search`, which adds the buyer's token (it is in an httpOnly cookie).
+- **Crawlers:** `sitemap.xml` is empty and `robots.txt` disallows everything while sign-in is required.
+
+Keep the two switches the same: `NEXT_PUBLIC_REQUIRE_LOGIN` here and `WHOLESALE_REQUIRE_LOGIN` on the backend.
+
+**Refused orders:** when the backend refuses to place an order (spending limit, credit limit, approval, company status), checkout shows the backend's reason. The starter threw it from a server action, which production builds replace with a generic error.
 
 ## Env
 

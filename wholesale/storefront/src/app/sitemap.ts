@@ -27,9 +27,18 @@ async function listAll<T>(fetchPage: (offset: number) => Promise<Page<T>>) {
   }
 }
 
+// Built on request, never at build time: the build must not call the backend
+// (BUILD_PLAN.md §4.2, change 5). While sign-in is required the middleware
+// answers 404 here, and a guest can't read products anyway (TASKS F-068).
+export const dynamic = "force-dynamic"
+
 type Entry = { handle?: string | null; updated_at?: string | Date | null }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  if (process.env.NEXT_PUBLIC_REQUIRE_LOGIN !== "false") {
+    return []
+  }
+
   const query = { fields: "handle,updated_at", limit: PAGE_SIZE }
 
   const [origin, regions, products, categories, collections] =

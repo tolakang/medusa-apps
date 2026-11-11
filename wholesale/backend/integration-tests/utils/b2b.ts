@@ -40,6 +40,7 @@ export async function setupB2b(api, container) {
     "/store/products?fields=id,variants.id&limit=1&order=handle",
     store()
   );
+  const productId: string = data.products[0].id;
   const variantId: string = data.products[0].variants[0].id;
 
   let emails = 0;
@@ -183,6 +184,7 @@ export async function setupB2b(api, container) {
   return {
     key,
     regionId: region.id as string,
+    productId,
     variantId,
     store,
     register,
