@@ -62,7 +62,7 @@ Five auditors (security, backend correctness, web clients, CI and Docker, drift 
 | [ ] | T4 | low-med | The pin check lets `>=2.22.6` and `2.x` through; nothing checks all `@medusajs/*` share one version. | `scripts/guard.sh:69` | Require `^[0-9]+\.[0-9]+\.[0-9]+$` and one distinct version (except `@medusajs/ui`). |
 | [ ] | T10 | low | Dockerfile header comments say `Build Path = /<category>/<app>` (wrong per plan §5, F-011) and "STATUS: ready template". | `*/backend/Dockerfile:4,9`, `{wholesale,marketplace}/storefront/Dockerfile`, `marketplace/vendor-portal/Dockerfile` | Copy the pos / storefront header wording. `wholesale/storefront` done with P4-08. |
 | [ ] | T7 | low | Guard patterns are narrow: no `@ts-expect-error`, `zod/v4` missed, the entrypoint check is satisfied by a comment. | `scripts/guard.sh:87,95,118` | Widen the regexes; grep the `db:migrate` line itself, ignoring comments. |
-| [ ] | T9 | low | The reseller local stack has no `seller-portal`; wholesale has no local stack (plan §4.3). | `reseller/docker-compose.local.yml`; `wholesale/` | Add a seller-portal service copied from pos-app. Wholesale's file was added with P4-08 (validated, not yet started). |
+| [ ] | T9 | low | The reseller local stack has no `seller-portal`; wholesale has no local stack (plan §4.3). | `reseller/docker-compose.local.yml`; `wholesale/` | Add a seller-portal service copied from pos-app. Wholesale's file was added with P4-08 and run end to end on 2026-11-12 (P4-10). |
 | [ ] | T5 | low | Guard check 12 prints "skip" and passes when the base ref is missing (doesn't happen in CI today). | `scripts/guard.sh:119-120` | `fail` instead of `skip` when `CI=true`. |
 | [ ] | T6 | low | The env-file check misses `.env.production.local`. | `scripts/guard.sh:41` | Regex `\.env(\.[^/]+)*$`. |
 | [ ] | T8 | low | The CI matrix is hand-written; a new deployable with code would not be built. | `.github/workflows/ci.yml:34-45` | A guard check that every deployable with a `package.json` is in the matrix. |
@@ -74,6 +74,15 @@ Five auditors (security, backend correctness, web clients, CI and Docker, drift 
 |---|---|---|---|---|---|
 | [ ] | B10 | medium | A payout can mark as paid a commission a refund has just cancelled: it lists, then updates, without the per-order lock. Same for the approve step. | R `workflows/seller/steps/payout.ts:13-58` | Lock `commissions.map(c => "seller-commission:" + c.order_id)` (array key), re-list inside the lock, then update. |
 | [ ] | P5-12 | — | Commission still on the order total, not items only (D11). Already a task in `TASKS.md`. | R `steps/record-commission.ts:57`, `modules/seller/commission.ts:54` | See TASKS P5-12. |
+
+### Found later, outside a full review
+
+| ✓ | ID | Sev | Problem | Where | Best fix |
+|---|---|---|---|---|---|
+| [ ] | X1 | low | The worker logs `Cannot read properties of undefined (reading 'product_id')` on `product-option.created` (seen while seeding, 2026-11-12, F-069). Ecommerce fixed this helper for shared product options (F-023); the wholesale backend has the starter's copy. | `wholesale/backend/src/search/helpers/resolve-product-ids.ts` | Port the F-023 fix from `ecommerce/backend/src/search/helpers/resolve-product-ids.ts`. |
+| [ ] | X2 | low | The sign-in page logs one `Error: Unauthorized` per view: the account dashboard slot is rendered for guests too and asks for approvals. | `wholesale/storefront/src/modules/account/templates/account-layout` (via `@dashboard/layout.tsx`) | Skip the approvals call when there is no customer. |
+| [ ] | X3 | low | `wholesale/storefront` keeps a cart cookie whose cart no longer exists: checkout answers 404 until something is added to the cart. | `wholesale/storefront/src/lib/data/cart.ts` (`retrieveCart`) | Clear the cookie when the backend says the cart is not found. |
+| [ ] | X4 | medium | Any signed-in customer can read the wholesale catalog and prices, also one whose company is still `pending` (F-068 stopped at "signed in"). | `wholesale/backend/src/api/store/catalog/middlewares.ts` | Owner decision: also require an employee of an `approved` company when `WHOLESALE_REQUIRE_APPROVAL=true`. |
 
 ### Rejected or by design
 

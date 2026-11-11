@@ -482,9 +482,22 @@ export async function placeOrder(
   const ordersTag = await getCacheTag("orders")
   const approvalsTag = await getCacheTag("approvals")
 
+  // A refused order (spending or credit limit, approval, company status) is
+  // returned, not thrown: a server action's thrown message is hidden from the
+  // browser in production, and the buyer needs to read the backend's reason.
   const response = await sdk.store.cart
     .complete(id, {}, headers)
-    .catch(medusaError)
+    .catch(
+      (e) =>
+        ({
+          type: "cart",
+          error: {
+            message: (e as Error)?.message || "The order could not be placed.",
+            name: "not_allowed",
+            type: "not_allowed",
+          },
+        }) as HttpTypes.StoreCompleteCartResponse
+    )
 
   if (response.type === "cart") {
     return response

@@ -117,6 +117,43 @@ const isAgentPath = (request: NextRequest) => {
   )
 }
 
+// Is this session token still good? Asked from the backend (it verifies the
+// token), and remembered for a minute per token so pages don't each pay for
+// the call. A token that is missing, expired, or signed for another backend
+// sends the buyer to sign-in instead of to pages whose product calls the
+// backend would refuse (TASKS F-068). If the backend can't be reached the
+// buyer is let through; the page then shows its own error.
+const SESSION_CHECK_TTL_MS = 60 * 1000
+const checkedSessions = new Map<string, { valid: boolean; at: number }>()
+
+async function sessionValid(token: string | undefined) {
+  if (!token) {
+    return false
+  }
+  const known = checkedSessions.get(token)
+  if (known && known.at > Date.now() - SESSION_CHECK_TTL_MS) {
+    return known.valid
+  }
+  let valid = true
+  try {
+    const res = await fetch(`${BACKEND_URL}/store/customers/me?fields=id`, {
+      headers: {
+        "x-publishable-api-key": PUBLISHABLE_API_KEY!,
+        authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    })
+    valid = res.status !== 401 && res.status !== 403 && res.status !== 404
+  } catch {
+    return true
+  }
+  if (checkedSessions.size > 5000) {
+    checkedSessions.clear()
+  }
+  checkedSessions.set(token, { valid, at: Date.now() })
+  return valid
+}
+
 /**
  * Middleware to handle sign-in, region selection and cache id.
  */
@@ -152,14 +189,19 @@ export async function middleware(request: NextRequest) {
     REQUIRE_LOGIN &&
     countryCode &&
     (urlHasCountryCode || isRoot) &&
-    !request.cookies.get("_medusa_jwt")
+    !request.nextUrl.pathname.includes(".")
   ) {
     const page = request.nextUrl.pathname.split("/")[2] ?? ""
-    if (!PUBLIC_PAGES.includes(page) && !request.nextUrl.pathname.includes(".")) {
-      return NextResponse.redirect(
+    if (
+      !PUBLIC_PAGES.includes(page) &&
+      !(await sessionValid(request.cookies.get("_medusa_jwt")?.value))
+    ) {
+      const signIn = NextResponse.redirect(
         `${request.nextUrl.origin}/${countryCode}/account`,
         307
       )
+      signIn.cookies.delete("_medusa_jwt")
+      return signIn
     }
   }
 

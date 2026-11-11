@@ -34,8 +34,31 @@ export const indexedCurrency = (currencyCode: string) => {
 export const priceAttribute = (field: PriceField, currencyCode: string) =>
   `${field}_${indexedCurrency(currencyCode)}`
 
+// In the browser, searches go through this app's own /api/search route,
+// which adds the signed-in buyer's token (it lives in an httpOnly cookie, and
+// the backend's search route needs a customer, TASKS F-068). On the server
+// the SDK is used directly.
+const browserSearch: MedusaSdkLike = {
+  client: {
+    fetch: async (_path, init) => {
+      const res = await fetch("/api/search", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(init?.body ?? {}),
+      })
+      if (!res.ok) {
+        throw new Error(`Search failed (${res.status})`)
+      }
+      return res.json()
+    },
+  },
+}
+
 export const { searchClient } = createInstantSearchAdapter({
-  sdk: sdk as unknown as MedusaSdkLike,
+  sdk:
+    typeof window === "undefined"
+      ? (sdk as unknown as MedusaSdkLike)
+      : browserSearch,
   path: "/store/search",
   // Range widgets read `facets_stats`, which the adapter only produces for
   // fields listed here. The price fields are declared with a `stats` facet on
