@@ -87,7 +87,7 @@ services:
         NEXT_PUBLIC_MEDUSA_BACKEND_URL: http://localhost:9000
         NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: ${STOREFRONT_PUBLISHABLE_KEY:-pk_set_me}
         NEXT_PUBLIC_BASE_URL: http://localhost:8000
-        NEXT_PUBLIC_DEFAULT_REGION: dk
+        NEXT_PUBLIC_DEFAULT_REGION: kh
     container_name: ecommerce-local-storefront
     network_mode: service:backend
     depends_on:

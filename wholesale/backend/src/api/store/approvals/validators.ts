@@ -24,6 +24,10 @@ export const StoreGetApprovals = createFindParams()
   .strict();
 
 export type StoreUpdateApprovalType = z.infer<typeof StoreUpdateApproval>;
-export const StoreUpdateApproval = z.object({
-  status: z.string(),
-});
+// REVIEW_FIXES B16: a decision, nothing else (the starter took any string,
+// so "pending" could be set again, and any extra field).
+export const StoreUpdateApproval = z
+  .object({
+    status: z.enum(["approved", "rejected"]),
+  })
+  .strict();

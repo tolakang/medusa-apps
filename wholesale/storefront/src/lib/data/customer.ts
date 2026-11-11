@@ -8,7 +8,7 @@ import { track } from "@vercel/analytics/server"
 import { revalidateTag } from "next/cache"
 import { redirect } from "next/navigation"
 import { retrieveCart, updateCart } from "./cart"
-import { createCompany } from "./companies"
+import { createCompany, joinCompany } from "./companies"
 import {
   getAuthHeaders,
   getCacheOptions,
@@ -91,6 +91,20 @@ export async function signup(_currentState: unknown, formData: FormData) {
     })
 
     await setAuthToken(loginToken as string)
+
+    // A colleague's join code (REVIEW_FIXES B14): join that company instead
+    // of creating one.
+    const joinCode = String(formData.get("join_code") ?? "").trim()
+    if (joinCode) {
+      const joined = await joinCompany(joinCode)
+      if (joined.error) {
+        return joined.error
+      }
+      const customerTag = await getCacheTag("customers")
+      revalidateTag(customerTag, { expire: 0 })
+      await transferCart()
+      return { customer: createdCustomer, company: joined.company }
+    }
 
     const companyForm = {
       name: formData.get("company_name") as string,

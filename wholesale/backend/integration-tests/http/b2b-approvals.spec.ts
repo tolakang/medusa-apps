@@ -73,12 +73,29 @@ medusaIntegrationTestRunner({
         expect(add.status).toEqual(400);
         expect(add.data.message).toContain("pending approval");
 
-        // An admin of another company can't decide it.
+        // An admin of another company can't decide it, and gets the same
+        // answer as for an approval that doesn't exist (REVIEW_FIXES B16).
         const other = await b2b.company();
         const otherAdmin = await b2b.employee(other.id, { is_admin: true });
-        expect((await decide(approval.id, otherAdmin.token, "approved")).status).not.toEqual(200);
+        expect((await decide(approval.id, otherAdmin.token, "approved")).status).toEqual(404);
+        expect((await decide("appr_missing", otherAdmin.token, "approved")).status).toEqual(404);
+        // Only a decision, nothing else.
+        expect((await decide(approval.id, admin.token, "pending")).status).toEqual(400);
+        expect(
+          (
+            await call(
+              api.post(
+                `/store/approvals/${approval.id}`,
+                { status: "approved", handled_by: "someone" },
+                b2b.store(admin.token)
+              )
+            )
+          ).status
+        ).toEqual(400);
 
         expect((await decide(approval.id, admin.token, "approved")).status).toEqual(200);
+        // A decided approval can't be decided again.
+        expect((await decide(approval.id, admin.token, "rejected")).status).toEqual(400);
 
         const afterApproval = await call(
           api.post(

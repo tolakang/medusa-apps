@@ -57,8 +57,20 @@ medusaIntegrationTestRunner({
         }
       });
 
-      it("serves a signed-in customer, and guests again when switched off", async () => {
-        const buyer = await b2b.register();
+      it("X4: a signed-in customer without an approved company is refused", async () => {
+        const loner = await b2b.register();
+        const pendingCo = await b2b.company({ status: "pending" });
+        const waiting = await b2b.employee(pendingCo.id);
+        for (const token of [loner.token, waiting.token]) {
+          const res = await call(api.get("/store/products", b2b.store(token)));
+          expect(res.status).toEqual(403);
+          expect(res.data.message).toContain("isn't approved");
+        }
+      });
+
+      it("serves an employee of an approved company, and guests again when switched off", async () => {
+        const company = await b2b.company();
+        const buyer = await b2b.employee(company.id);
         const signedIn = await call(
           api.get(
             `/store/products?region_id=${b2b.regionId}&fields=*variants.calculated_price&limit=1`,

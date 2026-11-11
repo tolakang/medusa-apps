@@ -88,7 +88,7 @@ Minimum test set per task:
 ```bash
 docker build -t <category>-<app>:check <category>/<app>
 ```
-Backend: run the image once with `MEDUSA_WORKER_MODE=server` (health 200) and once with `worker` + `DISABLE_MEDUSA_ADMIN=true` + `RUN_MIGRATIONS=false` (process starts, no HTTP admin). Clients: the image starts and serves its port.
+Backend: run the image once with `MEDUSA_WORKER_MODE=server` (health 200) and once with `worker` + `DISABLE_MEDUSA_ADMIN=true` + `RUN_MIGRATIONS=false` (process starts, no HTTP admin). Clients: the image starts and serves its port. `scripts/verify.sh <deployable> --image` does all of this (backend: `/health` and `/app/` 200 in server mode, then the worker still running after 25 s; clients: the server answers on its port).
 
 ### Gate 5: Guardrails (repo root; each line must print nothing unless noted)
 `scripts/guard.sh <category|all>` runs these checks and more (CI job `guard`); the lines below show what they mean, for a manual check. `D` = the deployable folder.

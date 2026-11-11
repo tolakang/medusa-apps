@@ -2,10 +2,9 @@ import type {
   AuthenticatedMedusaRequest,
   MedusaResponse,
 } from "@medusajs/framework";
-import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils";
+import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
 import { requireCompanyMember } from "../../../../../utils/b2b-access";
-import { loadBuyer } from "../../../../../utils/load-b2b-buyer";
-import { createEmployeesWorkflow } from "../../../../../workflows/employee/workflows";
+import { companyJoinCode } from "../../../../../utils/company-invite";
 import { storeEmployeeFields } from "../../query-config";
 import { StoreCreateEmployeeType } from "../../validators";
 
@@ -27,7 +26,11 @@ export const GET = async (
   res.json({ employees, count: employees.length });
 };
 
-// A company admin adds a customer who isn't in a company yet.
+// A company admin invites a colleague by email (REVIEW_FIXES B14): the
+// answer is a join code for that email, which the admin gives the colleague.
+// Nobody is added until the colleague, signed in with that email, joins with
+// the code (POST /store/companies/join). Nothing about any customer is
+// returned, so the route can't be used to look people up.
 export const POST = async (
   req: AuthenticatedMedusaRequest<StoreCreateEmployeeType>,
   res: MedusaResponse
@@ -37,42 +40,11 @@ export const POST = async (
     req.auth_context.actor_id,
     { admin: true }
   );
-  const { customer_id, spending_limit, is_admin } = req.validatedBody;
-
-  const customer = await loadBuyer(req.scope, customer_id);
-  if (!customer) {
-    throw new MedusaError(MedusaError.Types.NOT_FOUND, "Customer not found");
-  }
-  if (customer.employee) {
-    throw new MedusaError(
-      MedusaError.Types.NOT_ALLOWED,
-      "This customer already belongs to a company."
-    );
-  }
-
-  const { result: created } = await createEmployeesWorkflow.run({
-    input: {
-      employeeData: {
-        customer_id,
-        spending_limit: spending_limit ?? 0,
-        is_admin: !!is_admin,
-        company_id: member.employee.company.id,
-      },
-      customerId: customer_id,
+  const email = req.validatedBody.email.trim().toLowerCase();
+  res.json({
+    invitation: {
+      email,
+      join_code: companyJoinCode(member.employee.company.id, email),
     },
-    container: req.scope,
   });
-
-  const {
-    data: [employee],
-  } = await req.scope.resolve(ContainerRegistrationKeys.QUERY).graph(
-    {
-      entity: "employee",
-      fields: storeEmployeeFields,
-      filters: { id: created.id },
-    },
-    { throwIfKeyNotFound: true }
-  );
-
-  res.json({ employee });
 };

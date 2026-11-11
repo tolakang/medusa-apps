@@ -88,7 +88,7 @@ services:
         NEXT_PUBLIC_MEDUSA_BACKEND_URL: http://localhost:9000
         NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: ${STOREFRONT_PUBLISHABLE_KEY:-pk_set_me}
         NEXT_PUBLIC_BASE_URL: http://localhost:8000
-        NEXT_PUBLIC_DEFAULT_REGION: dk
+        NEXT_PUBLIC_DEFAULT_REGION: kh
     container_name: reseller-local-storefront
     network_mode: service:backend
     depends_on:
@@ -97,6 +97,17 @@ services:
       NODE_ENV: production
       PORT: "8000"
       MEDUSA_BACKEND_URL: http://localhost:9000
+
+  # Seller portal (TASKS P5-08): server-side calls only, like the POS app.
+  seller-portal:
+    build: ./seller-portal
+    container_name: reseller-local-seller-portal
+    depends_on:
+      backend: { condition: service_healthy }
+    ports: ["3000:3000"]
+    environment:
+      MEDUSA_BACKEND_URL: http://backend:9000
+      COOKIE_SECRET: local-only-seller-portal-cookie-secret
 
 volumes:
   postgres_data:

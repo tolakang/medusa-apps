@@ -40,37 +40,43 @@ Done 2026-11-12 (PR #153). Choices: spending windows are in UTC (B1). B5 is an `
 
 ### Batch 3: Wholesale data exposure
 
+Done 2026-11-12 (PR #154). B14 got a consent flow: a company admin asks for a **join code** for a colleague's email (`POST /store/companies/me/employees` `{ email }`), and the colleague, signed in with that email, joins with it (`POST /store/companies/join`, or the "I have a join code" option at sign-up). Nothing about any customer is returned to the admin. X4: the catalog needs an employee of an **approved** company (owner: "Fix those"); others see why on their account page.
+
 | ✓ | ID | Sev | Problem | Where | Best fix |
 |---|---|---|---|---|---|
-| [ ] | B12 | medium | Bulk add-to-cart accepts any `?fields=` (no `allowed` list; defaults `*customer`, `*company`), so a cart id can expose coworkers' emails and phones. | W `api/store/carts/middlewares.ts:16-23`, `[id]/line-items/bulk/route.ts`, `query-config.ts` | `allowed` / `disallowed` in the query config, explicit customer fields, `authenticate("customer")` and a `cart.customer_id === actor_id` check. |
-| [ ] | B14 | medium | A company admin can add any customer by id without consent; the response shows their email and phone. | W `api/store/companies/me/employees/route.ts:40-77` | Invite by email, accepted by the customer on an authenticated route. At least: require an email match and drop the PII from the response. |
-| [ ] | B13 | low-med | Quote routes return `*messages.admin` (admin user records) and accept any `fields`. | W `api/store/quotes/query-config.ts:7-8` | Name the admin fields (`messages.admin.first_name`), add `allowed` / `disallowed`. |
-| [ ] | B16 | low-med | Approval decision: `status: z.string()` (not strict, not an enum), no pending check, 404 vs 403 reveals other companies' ids. | W `api/store/approvals/validators.ts:27-29`, `[id]/route.ts`, `middlewares.ts:15-45` | `z.object({ status: z.enum(["approved","rejected"]) }).strict()`, refuse unless pending, one 404 for "not found or not yours". |
+| [x] #154 | B12 | medium | Bulk add-to-cart accepts any `?fields=` (no `allowed` list; defaults `*customer`, `*company`), so a cart id can expose coworkers' emails and phones. | W `api/store/carts/middlewares.ts:16-23`, `[id]/line-items/bulk/route.ts`, `query-config.ts` | `allowed` / `disallowed` in the query config, explicit customer fields, `authenticate("customer")` and a `cart.customer_id === actor_id` check. |
+| [x] #154 | B14 | medium | A company admin can add any customer by id without consent; the response shows their email and phone. | W `api/store/companies/me/employees/route.ts:40-77` | Invite by email, accepted by the customer on an authenticated route. At least: require an email match and drop the PII from the response. |
+| [x] #154 | B13 | low-med | Quote routes return `*messages.admin` (admin user records) and accept any `fields`. | W `api/store/quotes/query-config.ts:7-8` | Name the admin fields (`messages.admin.first_name`), add `allowed` / `disallowed`. |
+| [x] #154 | B16 | low-med | Approval decision: `status: z.string()` (not strict, not an enum), no pending check, 404 vs 403 reveals other companies' ids. | W `api/store/approvals/validators.ts:27-29`, `[id]/route.ts`, `middlewares.ts:15-45` | `z.object({ status: z.enum(["approved","rejected"]) }).strict()`, refuse unless pending, one 404 for "not found or not yours". |
 
 ### Batch 4: Storefronts and portals
 
+Done 2026-11-12 (PR #155). C5 also covers the POS app, which sent the till to sign-in on any backend error.
+
 | ✓ | ID | Sev | Problem | Where | Best fix |
 |---|---|---|---|---|---|
-| [ ] | C1 | medium | Stale order status after an admin refund or cancel (plan §4.2 change 10, F-052, fixed only in booking). | `{ecommerce,pos,reseller}/storefront/src/lib/data/orders.ts:26,72` | `cache: "no-store"` in both reads, copied from `booking-services/storefront/src/lib/data/orders.ts`. |
-| [ ] | C5 | medium | Any backend error (e.g. 502) signs every seller out; neither the portal nor the POS app has an error page. | `reseller/seller-portal/src/lib/server/seller.ts:26`; no `error.tsx` / `global-error.tsx` in `seller-portal` or `pos-app` | Sign out only on 401/403, throw otherwise; add `app/error.tsx` and `global-error.tsx` like the storefronts. |
-| [ ] | C2 | low | `/store/locales` called on every page view (a 404 each time; plan §4.2 change 11, F-051). | `{ecommerce,pos,reseller}/storefront/src/lib/data/locales.ts:15-28` | Port booking's `STOREFRONT_LOCALES` guard and `.env.example` line. |
-| [ ] | C3 | low | Wrong default region: compose `dk` in ecommerce and reseller; Dockerfile `"us"` in ecommerce, booking and reseller storefronts (`.env.example` and pos say `kh`). | `ecommerce/docker-compose.local.yml:90`, `reseller/docker-compose.local.yml:91`, `*/storefront/Dockerfile:35` | `kh` everywhere, as pos. |
-| [ ] | C6 | low | The seller portal signs out on a GET, so a link on another site can sign a seller out. | `reseller/seller-portal/src/app/logout/route.ts:5-8` | Don't clear the cookie when `sec-fetch-site` is `cross-site`. |
+| [x] #155 | C1 | medium | Stale order status after an admin refund or cancel (plan §4.2 change 10, F-052, fixed only in booking). | `{ecommerce,pos,reseller}/storefront/src/lib/data/orders.ts:26,72` | `cache: "no-store"` in both reads, copied from `booking-services/storefront/src/lib/data/orders.ts`. |
+| [x] #155 | C5 | medium | Any backend error (e.g. 502) signs every seller out; neither the portal nor the POS app has an error page. | `reseller/seller-portal/src/lib/server/seller.ts:26`; no `error.tsx` / `global-error.tsx` in `seller-portal` or `pos-app` | Sign out only on 401/403, throw otherwise; add `app/error.tsx` and `global-error.tsx` like the storefronts. |
+| [x] #155 | C2 | low | `/store/locales` called on every page view (a 404 each time; plan §4.2 change 11, F-051). | `{ecommerce,pos,reseller}/storefront/src/lib/data/locales.ts:15-28` | Port booking's `STOREFRONT_LOCALES` guard and `.env.example` line. |
+| [x] #155 | C3 | low | Wrong default region: compose `dk` in ecommerce and reseller; Dockerfile `"us"` in ecommerce, booking and reseller storefronts (`.env.example` and pos say `kh`). | `ecommerce/docker-compose.local.yml:90`, `reseller/docker-compose.local.yml:91`, `*/storefront/Dockerfile:35` | `kh` everywhere, as pos. |
+| [x] #155 | C6 | low | The seller portal signs out on a GET, so a link on another site can sign a seller out. | `reseller/seller-portal/src/app/logout/route.ts:5-8` | Don't clear the cookie when `sec-fetch-site` is `cross-site`. |
 
 ### Batch 5: Tooling and CI
 
+Done 2026-11-12 (PR #156). T1 in code: guard check 1b fails a branch that changes the plan or its lock without the owner's `plan-revision` label, and `.github/CODEOWNERS` is added. **Still the owner's:** turning on "Require review from Code Owners" in the `main` ruleset (docs/PLAN_LOCK.md).
+
 | ✓ | ID | Sev | Problem | Where | Best fix |
 |---|---|---|---|---|---|
-| [ ] | T1 | high | A PR can change the frozen plan and auto-merge: guard only checks plan = checksum; no CODEOWNERS. | `scripts/guard.sh:34`, `.github/workflows/ci.yml` | Code: CI fails when the PR diff touches `BUILD_PLAN.md`, `.build-plan.sha256` or the lock files (DEV_FLOW Gate 5's diff check). **Owner:** add `.github/CODEOWNERS` and turn on code-owner review in the `main` ruleset. |
-| [ ] | T2 | medium | `verify.sh --image` only smoke-tests the backend server on `/health`; DEV_FLOW Gate 4 also asks for worker mode, `/app/` 200 and client images serving their port. | `scripts/verify.sh:86-113` | Add a worker run (still running after N s), `curl /app/`, and a client run with a port check. |
-| [ ] | T4 | low-med | The pin check lets `>=2.22.6` and `2.x` through; nothing checks all `@medusajs/*` share one version. | `scripts/guard.sh:69` | Require `^[0-9]+\.[0-9]+\.[0-9]+$` and one distinct version (except `@medusajs/ui`). |
-| [ ] | T10 | low | Dockerfile header comments say `Build Path = /<category>/<app>` (wrong per plan §5, F-011) and "STATUS: ready template". | `*/backend/Dockerfile:4,9`, `{wholesale,marketplace}/storefront/Dockerfile`, `marketplace/vendor-portal/Dockerfile` | Copy the pos / storefront header wording. `wholesale/storefront` done with P4-08. |
-| [ ] | T7 | low | Guard patterns are narrow: no `@ts-expect-error`, `zod/v4` missed, the entrypoint check is satisfied by a comment. | `scripts/guard.sh:87,95,118` | Widen the regexes; grep the `db:migrate` line itself, ignoring comments. |
-| [ ] | T9 | low | The reseller local stack has no `seller-portal`; wholesale has no local stack (plan §4.3). | `reseller/docker-compose.local.yml`; `wholesale/` | Add a seller-portal service copied from pos-app. Wholesale's file was added with P4-08 and run end to end on 2026-11-12 (P4-10). |
-| [ ] | T5 | low | Guard check 12 prints "skip" and passes when the base ref is missing (doesn't happen in CI today). | `scripts/guard.sh:119-120` | `fail` instead of `skip` when `CI=true`. |
-| [ ] | T6 | low | The env-file check misses `.env.production.local`. | `scripts/guard.sh:41` | Regex `\.env(\.[^/]+)*$`. |
-| [ ] | T8 | low | The CI matrix is hand-written; a new deployable with code would not be built. | `.github/workflows/ci.yml:34-45` | A guard check that every deployable with a `package.json` is in the matrix. |
-| [ ] | T3 | low | Actions pinned to tags, not commit SHAs. | `ci.yml:22,66,67,70`, `medusa-update-check.yml:19-20` | Pin to SHAs with a version comment (optional). |
+| [x] #156 | T1 | high | A PR can change the frozen plan and auto-merge: guard only checks plan = checksum; no CODEOWNERS. | `scripts/guard.sh:34`, `.github/workflows/ci.yml` | Code: CI fails when the PR diff touches `BUILD_PLAN.md`, `.build-plan.sha256` or the lock files (DEV_FLOW Gate 5's diff check). **Owner:** add `.github/CODEOWNERS` and turn on code-owner review in the `main` ruleset. |
+| [x] #156 | T2 | medium | `verify.sh --image` only smoke-tests the backend server on `/health`; DEV_FLOW Gate 4 also asks for worker mode, `/app/` 200 and client images serving their port. | `scripts/verify.sh:86-113` | Add a worker run (still running after N s), `curl /app/`, and a client run with a port check. |
+| [x] #156 | T4 | low-med | The pin check lets `>=2.22.6` and `2.x` through; nothing checks all `@medusajs/*` share one version. | `scripts/guard.sh:69` | Require `^[0-9]+\.[0-9]+\.[0-9]+$` and one distinct version (except `@medusajs/ui`). |
+| [x] #156 | T10 | low | Dockerfile header comments say `Build Path = /<category>/<app>` (wrong per plan §5, F-011) and "STATUS: ready template". | `*/backend/Dockerfile:4,9`, `{wholesale,marketplace}/storefront/Dockerfile`, `marketplace/vendor-portal/Dockerfile` | Copy the pos / storefront header wording. `wholesale/storefront` done with P4-08. |
+| [x] #156 | T7 | low | Guard patterns are narrow: no `@ts-expect-error`, `zod/v4` missed, the entrypoint check is satisfied by a comment. | `scripts/guard.sh:87,95,118` | Widen the regexes; grep the `db:migrate` line itself, ignoring comments. |
+| [x] #156 | T9 | low | The reseller local stack has no `seller-portal`; wholesale has no local stack (plan §4.3). | `reseller/docker-compose.local.yml`; `wholesale/` | Add a seller-portal service copied from pos-app. Wholesale's file was added with P4-08 and run end to end on 2026-11-12 (P4-10). |
+| [x] #156 | T5 | low | Guard check 12 prints "skip" and passes when the base ref is missing (doesn't happen in CI today). | `scripts/guard.sh:119-120` | `fail` instead of `skip` when `CI=true`. |
+| [x] #156 | T6 | low | The env-file check misses `.env.production.local`. | `scripts/guard.sh:41` | Regex `\.env(\.[^/]+)*$`. |
+| [x] #156 | T8 | low | The CI matrix is hand-written; a new deployable with code would not be built. | `.github/workflows/ci.yml:34-45` | A guard check that every deployable with a `package.json` is in the matrix. |
+| [x] #156 | T3 | low | Actions pinned to tags, not commit SHAs. | `ci.yml:22,66,67,70`, `medusa-update-check.yml:19-20` | Pin to SHAs with a version comment (optional). |
 
 ### Reseller
 
@@ -83,10 +89,10 @@ Done 2026-11-12 (PR #153). Choices: spending windows are in UTC (B1). B5 is an `
 
 | ✓ | ID | Sev | Problem | Where | Best fix |
 |---|---|---|---|---|---|
-| [ ] | X1 | low | The worker logs `Cannot read properties of undefined (reading 'product_id')` on `product-option.created` (seen while seeding, 2026-11-12, F-069). Ecommerce fixed this helper for shared product options (F-023); the wholesale backend has the starter's copy. | `wholesale/backend/src/search/helpers/resolve-product-ids.ts` | Port the F-023 fix from `ecommerce/backend/src/search/helpers/resolve-product-ids.ts`. |
-| [ ] | X2 | low | The sign-in page logs one `Error: Unauthorized` per view: the account dashboard slot is rendered for guests too and asks for approvals. | `wholesale/storefront/src/modules/account/templates/account-layout` (via `@dashboard/layout.tsx`) | Skip the approvals call when there is no customer. |
-| [ ] | X3 | low | `wholesale/storefront` keeps a cart cookie whose cart no longer exists: checkout answers 404 until something is added to the cart. | `wholesale/storefront/src/lib/data/cart.ts` (`retrieveCart`) | Clear the cookie when the backend says the cart is not found. |
-| [ ] | X4 | medium | Any signed-in customer can read the wholesale catalog and prices, also one whose company is still `pending` (F-068 stopped at "signed in"). | `wholesale/backend/src/api/store/catalog/middlewares.ts` | Owner decision: also require an employee of an `approved` company when `WHOLESALE_REQUIRE_APPROVAL=true`. |
+| [x] #154 | X1 | low | The worker logs `Cannot read properties of undefined (reading 'product_id')` on `product-option.created` (seen while seeding, 2026-11-12, F-069). Ecommerce fixed this helper for shared product options (F-023); the wholesale backend has the starter's copy. | `wholesale/backend/src/search/helpers/resolve-product-ids.ts` | Port the F-023 fix from `ecommerce/backend/src/search/helpers/resolve-product-ids.ts`. |
+| [x] #154 | X2 | low | The sign-in page logs one `Error: Unauthorized` per view: the account dashboard slot is rendered for guests too and asks for approvals. | `wholesale/storefront/src/modules/account/templates/account-layout` (via `@dashboard/layout.tsx`) | Skip the approvals call when there is no customer. |
+| [x] #154 | X3 | low | `wholesale/storefront` keeps a cart cookie whose cart no longer exists: checkout answers 404 until something is added to the cart. | `wholesale/storefront/src/lib/data/cart.ts` (`retrieveCart`) | Clear the cookie when the backend says the cart is not found. |
+| [x] #154 | X4 | medium | Any signed-in customer can read the wholesale catalog and prices, also one whose company is still `pending` (F-068 stopped at "signed in"). | `wholesale/backend/src/api/store/catalog/middlewares.ts` | Owner decision: also require an employee of an `approved` company when `WHOLESALE_REQUIRE_APPROVAL=true`. |
 
 ### Rejected or by design
 

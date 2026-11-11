@@ -1,48 +1,11 @@
-import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import {
   authenticate,
-  AuthenticatedMedusaRequest,
-  MedusaNextFunction,
-  MedusaResponse,
   validateAndTransformBody,
   validateAndTransformQuery,
 } from "@medusajs/framework";
 import { MiddlewareRoute } from "@medusajs/medusa";
-import { ApprovalType } from "../../../types/approval";
 import { approvalTransformQueryConfig } from "./query-config";
 import { StoreGetApprovals, StoreUpdateApproval } from "./validators";
-
-const ensureApprovalType = async (
-  req: AuthenticatedMedusaRequest,
-  res: MedusaResponse,
-  next: MedusaNextFunction
-) => {
-  const { id } = req.params;
-
-  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
-
-  const {
-    data: [approval],
-  } = await query.graph({
-    entity: "approval",
-    fields: ["type"],
-    filters: { id },
-  });
-
-  if (!approval) {
-    res.status(404).json({ message: "Approval not found" });
-    return;
-  }
-
-  const approvalType = approval.type as unknown as ApprovalType;
-
-  if (approvalType !== ApprovalType.ADMIN) {
-    res.status(403).json({ message: "Forbidden" });
-    return;
-  }
-
-  next();
-};
 
 export const storeApprovalsMiddlewares: MiddlewareRoute[] = [
   {
@@ -66,9 +29,8 @@ export const storeApprovalsMiddlewares: MiddlewareRoute[] = [
   {
     method: ["POST"],
     matcher: "/store/approvals/:id",
-    middlewares: [
-      ensureApprovalType,
-      validateAndTransformBody(StoreUpdateApproval),
-    ],
+    // The route checks type, company and status itself and answers the
+    // same 404 for "not found" and "not yours" (REVIEW_FIXES B16).
+    middlewares: [validateAndTransformBody(StoreUpdateApproval)],
   },
 ];
