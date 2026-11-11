@@ -28,7 +28,6 @@ Deployables without code yet (`wholesale/storefront` and all of `marketplace/`) 
 - [`DEV_FLOW.md`](./DEV_FLOW.md) — build → verify → test → evidence-based fix cycle → commit → push.
 - [`CLAUDE.md`](./CLAUDE.md) — builder entry point: reading order and non-negotiable rules.
 - [`docs/PLAN_LOCK.md`](./docs/PLAN_LOCK.md) — owner's note: the commands to unlock and lock `BUILD_PLAN.md` for Claude.
-- [`docs/PLAN_REVISION_9_PROPOSAL.md`](./docs/PLAN_REVISION_9_PROPOSAL.md) — where the frozen plan no longer matches the built apps, with the text to change, for the owner's next revision.
 - [`PRE_DEPLOY_AUDIT.md`](./PRE_DEPLOY_AUDIT.md) — the security and readiness audit to run per category before it goes live.
 - [`BACKEND_PATTERNS_SKILL.md`](./BACKEND_PATTERNS_SKILL.md) — backend design patterns mapped to Medusa's own mechanisms (skill `backend-patterns`).
 
@@ -39,4 +38,4 @@ Deployables without code yet (`wholesale/storefront` and all of `marketplace/`) 
 3. **Not a monorepo.** Every deployable (backend, storefront, portal, app) is independent: own `package.json`, lockfile, `Dockerfile`, `.env.example`. Nothing is shared; clients reach their backend only over HTTP.
 4. **One business = one app.** Combine scenarios by adding modules to one app, never by syncing two apps.
 
-Versions (2026-11-10): Medusa 2.22.6 in every app (npm `latest`, a security release, as the starters), Node `>=22.23.4`, Next.js 16.4.5, pnpm 12.17.0. Details and update plan: `BUILD_PLAN.md` Revision 8. Starters: `medusajs/dtc-starter`, `medusajs/b2b-starter`.
+Versions (2026-11-10): Medusa 2.22.6 in every app (npm `latest`, a security release, as the starters), Node `>=22.23.4`, Next.js 16.4.5, pnpm 12.17.0. Details and update plan: `BUILD_PLAN.md` Revision 9 (2026-11-11). Starters: `medusajs/dtc-starter`, `medusajs/b2b-starter`.
