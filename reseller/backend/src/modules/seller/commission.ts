@@ -19,6 +19,24 @@ export function commissionRateFor(
   return own === null || own === undefined ? defaultCommissionRate(env) : Number(own)
 }
 
+/**
+ * What a commission is earned on (owner D11, TASKS P5-12): the order's items
+ * after discounts, without tax and shipping. Tax isn't the shop's money and
+ * shipping is a cost passed on. `item_total` is after discounts with tax;
+ * taking off `item_tax_total` works for tax-inclusive and tax-exclusive
+ * prices alike (OrderDTO, @medusajs/types).
+ */
+export function commissionBase(order: {
+  item_total?: unknown
+  item_tax_total?: unknown
+}) {
+  const base = MathBN.sub(
+    MathBN.convert((order.item_total as number) ?? 0),
+    MathBN.convert((order.item_tax_total as number) ?? 0)
+  )
+  return Math.max(0, MathBN.convert(base, 2).toNumber())
+}
+
 /** rate percent of the base, rounded to cents, never below 0. */
 export function commissionAmount(base: number, rate: number) {
   if (base <= 0 || rate <= 0) {
@@ -32,15 +50,22 @@ export type CommissionAdjustment =
   | { action: "cancel" }
   | { action: "amount"; amount: number }
 
+export type CommissionEvent =
+  | { kind: "canceled" }
+  // `order_grand_total`: everything the customer paid, which refunds are
+  // taken from. Missing (older callers) = the commission's own base.
+  | { kind: "refunded"; refunded_total: number; order_grand_total?: number }
+
 /**
  * What an order's cancellation or refund does to its commission: nothing to a
  * paid or cancelled one (a paid one is clawed back by the payout, P5-05);
- * a cancelled order cancels it; a refund recalculates it on what the shop
- * kept, and cancels it when nothing is left.
+ * a cancelled order cancels it; a refund recalculates it on the share of the
+ * order the shop kept (refunds are of the whole order, the commission base is
+ * its items only), and cancels it when nothing is left.
  */
 export function adjustCommission(
   commission: { status: string; order_total: number; rate: number; amount: number },
-  event: { kind: "canceled" } | { kind: "refunded"; refunded_total: number }
+  event: CommissionEvent
 ): CommissionAdjustment {
   if (commission.status === "cancelled") {
     return { action: "none", reason: "already cancelled" }
@@ -51,7 +76,13 @@ export function adjustCommission(
   if (event.kind === "canceled") {
     return { action: "cancel" }
   }
-  const kept = Number(commission.order_total) - Number(event.refunded_total)
+  const base = Number(commission.order_total)
+  const paidTotal = Number(event.order_grand_total ?? base)
+  const refunded = Number(event.refunded_total)
+  if (refunded >= paidTotal || base <= 0) {
+    return { action: "cancel" }
+  }
+  const kept = paidTotal > 0 ? (base * (paidTotal - refunded)) / paidTotal : 0
   if (kept <= 0) {
     return { action: "cancel" }
   }

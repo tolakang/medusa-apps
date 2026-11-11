@@ -8,6 +8,7 @@ import seedInitialData from "../../src/scripts/seed-initial-data"
 import seed from "../../src/scripts/seed"
 import { SELLER_MODULE } from "../../src/modules/seller"
 import SellerModuleService from "../../src/modules/seller/service"
+import { commissionAmount, commissionBase } from "../../src/modules/seller/commission"
 
 jest.setTimeout(240 * 1000)
 
@@ -102,6 +103,17 @@ medusaIntegrationTestRunner({
           await new Promise((resolve) => setTimeout(resolve, 250))
         }
 
+        // Commission on the items only (D11, TASKS P5-12).
+        const {
+          data: [totals],
+        } = await getContainer()
+          .resolve(ContainerRegistrationKeys.QUERY)
+          .graph({
+            entity: "order",
+            fields: ["item_total", "item_tax_total"],
+            filters: { id: order.id },
+          })
+
         const { data } = await api.get("/sellers/me/orders", sok.auth)
         expect(data.count).toEqual(1)
         expect(data.orders[0]).toEqual({
@@ -112,7 +124,7 @@ medusaIntegrationTestRunner({
           currency_code: "usd",
           total: order.total,
           items: [{ title: expect.any(String), quantity: 1 }],
-          commission: { amount: Math.round(order.total * 10) / 100, status: "pending" },
+          commission: { amount: commissionAmount(commissionBase(totals), 10), status: "pending" },
         })
         expect(JSON.stringify(data)).not.toContain("buyer@shop.test")
         expect(JSON.stringify(data)).not.toContain("012 345 678")

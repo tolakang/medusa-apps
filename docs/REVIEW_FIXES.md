@@ -76,8 +76,8 @@ Done 2026-11-12 (PR #153). Choices: spending windows are in UTC (B1). B5 is an `
 
 | ✓ | ID | Sev | Problem | Where | Best fix |
 |---|---|---|---|---|---|
-| [ ] | B10 | medium | A payout can mark as paid a commission a refund has just cancelled: it lists, then updates, without the per-order lock. Same for the approve step. | R `workflows/seller/steps/payout.ts:13-58` | Lock `commissions.map(c => "seller-commission:" + c.order_id)` (array key), re-list inside the lock, then update. |
-| [ ] | P5-12 | — | Commission still on the order total, not items only (D11). Already a task in `TASKS.md`. | R `steps/record-commission.ts:57`, `modules/seller/commission.ts:54` | See TASKS P5-12. |
+| [x] #157 | B10 | medium | A payout can mark as paid a commission a refund has just cancelled: it lists, then updates, without the per-order lock. Same for the approve step. | R `workflows/seller/steps/payout.ts:13-58` | Lock `commissions.map(c => "seller-commission:" + c.order_id)` (array key), re-list inside the lock, then update. |
+| [x] #157 | P5-12 | — | Commission still on the order total, not items only (D11). Already a task in `TASKS.md`. | R `steps/record-commission.ts:57`, `modules/seller/commission.ts:54` | See TASKS P5-12. |
 
 ### Found later, outside a full review
 
