@@ -296,6 +296,7 @@ export async function initiatePaymentSession(
   data: {
     provider_id: string
     context?: Record<string, unknown>
+    data?: Record<string, unknown>
   }
 ) {
   const headers = {
@@ -310,6 +311,46 @@ export async function initiatePaymentSession(
       return resp
     })
     .catch(medusaError)
+}
+
+// ABA PayWay (TASKS P4-12, as ecommerce P1-03): starts a fresh PayWay session
+// right before the buyer leaves for PayWay (new transaction ID and request
+// time), with the delivery contact for PayWay's page. Returns the signed form
+// the browser posts to PayWay; the signature is made on the backend. Returns
+// `{ error }` instead of throwing (a server action's message is hidden in
+// production builds).
+export async function startPaywayPayment(): Promise<
+  { checkout_url: string; form: Record<string, string> } | { error: string }
+> {
+  const cart = await retrieveCart()
+  if (!cart) {
+    return { error: "No existing cart found when starting the payment" }
+  }
+  const address = cart.shipping_address
+  try {
+    const response = await initiatePaymentSession(cart, {
+      provider_id: "pp_payway_payway",
+      data: {
+        country_code: address?.country_code,
+        firstname: address?.first_name,
+        lastname: address?.last_name,
+        phone: address?.phone,
+        email: cart.email,
+      },
+    })
+    const session = response?.payment_collection?.payment_sessions?.find(
+      (s) => s.provider_id === "pp_payway_payway"
+    )
+    const data = session?.data as
+      | { checkout_url?: string; form?: Record<string, string> }
+      | undefined
+    if (!data?.checkout_url || !data.form) {
+      return { error: "Could not start the PayWay payment. Please try again." }
+    }
+    return { checkout_url: data.checkout_url, form: data.form }
+  } catch (e) {
+    return { error: (e as Error)?.message || "Could not start the PayWay payment." }
+  }
 }
 
 export async function applyPromotions(codes: string[]) {

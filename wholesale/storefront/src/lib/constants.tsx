@@ -30,6 +30,12 @@ export const paymentInfoMap: Record<
     title: "Pay by invoice",
     icon: <FilePlus />,
   },
+  // ABA PayWay (TASKS P4-12): prepaid companies pay with ABA Pay, KHQR or a
+  // card on PayWay's own page.
+  pp_payway_payway: {
+    title: "ABA PayWay (ABA Pay, KHQR, cards)",
+    icon: <CreditCard />,
+  },
   // Add more payment providers here
 }
 
@@ -159,4 +165,26 @@ export const currencySymbolMap: Record<string, string> = {
   lkr: "₨",
   mmk: "K",
   uzs: "лв",
+}
+
+export const PAYWAY_PROVIDER_ID = "pp_payway_payway"
+export const isPayway = (providerId?: string) => providerId === PAYWAY_PROVIDER_ID
+
+/**
+ * The payment methods a company may use (TASKS P4-12, backend
+ * src/utils/payment-terms-provider.ts): with PayWay on offer, prepaid
+ * companies pay with PayWay and companies on net terms by invoice. Without
+ * PayWay, everything on offer.
+ */
+export const paymentMethodsForTerms = <T extends { id: string }>(
+  methods: T[],
+  paymentTerms?: string | null
+): T[] => {
+  if (!methods.some((method) => isPayway(method.id))) {
+    return methods
+  }
+  const prepaid = !paymentTerms || paymentTerms === "prepaid"
+  return methods.filter((method) =>
+    prepaid ? isPayway(method.id) : method.id === "pp_system_default"
+  )
 }
