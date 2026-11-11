@@ -1,3 +1,4 @@
+import { paymentMethodsForTerms } from "@/lib/constants"
 import { listCartShippingMethods } from "@/lib/data/fulfillment"
 import { listCartPaymentMethods } from "@/lib/data/payment"
 import ApprovalStatusBanner from "@/modules/cart/components/approval-status-banner"
@@ -67,7 +68,13 @@ export default async function CheckoutForm({
         {(customer?.employee?.is_admin &&
           cart.approval_status?.status === ApprovalStatusType.APPROVED) ||
         !requiresApproval ? (
-          <Payment cart={cart} availablePaymentMethods={paymentMethods} />
+          <Payment
+            cart={cart}
+            availablePaymentMethods={paymentMethodsForTerms(
+              paymentMethods ?? [],
+              cart.company?.payment_terms
+            )}
+          />
         ) : null}
       </div>
     </div>

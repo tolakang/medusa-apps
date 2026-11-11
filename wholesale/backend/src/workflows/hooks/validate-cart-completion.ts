@@ -3,6 +3,7 @@ import { StepResponse } from "@medusajs/framework/workflows-sdk";
 import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils";
 import { getCartApprovalStatus } from "../../utils/get-cart-approval-status";
 import { assertBuyerCanSpend } from "../../utils/b2b-spend-checks";
+import { assertProviderForTerms } from "../../utils/payment-terms-provider";
 import {
   assertApprovalsGranted,
   assertApprovedCompanyBuyer,
@@ -26,7 +27,7 @@ completeCartWorkflow.hooks.validate(async ({ cart }, { container }) => {
     data: [queryCart],
   } = await query.graph({
     entity: "cart",
-    fields: ["approvals.*"],
+    fields: ["approvals.*", "payment_collection.payment_sessions.provider_id"],
     filters: {
       id: cart.id,
     },
@@ -69,6 +70,14 @@ completeCartWorkflow.hooks.validate(async ({ cart }, { container }) => {
     requiredApprovalTypes(settings, cartTotal, !!buyer!.employee?.is_admin),
     await loadCartApprovals(container, cart.id)
   );
+
+  // P4-12: prepaid companies pay with PayWay, net terms on invoice.
+  const sessions =
+    (queryCart as { payment_collection?: { payment_sessions?: { provider_id?: string }[] } })
+      ?.payment_collection?.payment_sessions ?? [];
+  for (const session of sessions) {
+    assertProviderForTerms(session?.provider_id, company.payment_terms);
+  }
 
   // Employee spending limit and, on net terms, company credit limit.
   await assertBuyerCanSpend(container, buyer!, company, cartTotal);

@@ -15,6 +15,7 @@ Next.js B2B buyer shop for the wholesale business project. Standard: `BUILD_PLAN
 - **Quick order** (`/account/quick-order`): paste `SKU, quantity` lines or upload a CSV; found SKUs go into the cart in one request, unknown ones are listed.
 - **Reorder:** on an order's page, one button puts its items in the cart again at today's prices.
 - **Invoices** (`/account/invoices`): number, dates, terms, total, amount due, PDF. A company admin sees the whole company's. The PDF downloads through `/api/invoices/<order id>`, because the buyer's token is in an httpOnly cookie.
+- **Paying** (TASKS P4-12): with PayWay set up on the backend, prepaid companies see only "ABA PayWay" and pay on PayWay's page (back at `/checkout/payway-return`); companies on net terms see only "Pay by invoice". Without PayWay, everyone pays by invoice.
 - **From the starter, unchanged:** quotes, approvals, bulk add from the product table, cart export to CSV, checkout with "Pay by invoice" (the system payment provider).
 
 ## Changes to the starter

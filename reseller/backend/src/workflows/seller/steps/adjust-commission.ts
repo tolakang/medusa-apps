@@ -30,18 +30,32 @@ export const adjustSellerCommissionStep = createStep(
     }
 
     let refunded_total = 0
+    let order_grand_total: number | undefined
     if (input.kind === "refunded") {
       const {
         data: [order],
       } = await container.resolve(ContainerRegistrationKeys.QUERY).graph({
         entity: "order",
-        fields: ["id", "payment_collections.refunded_amount"],
+        fields: [
+          "id",
+          "total",
+          "payment_collections.captured_amount",
+          "payment_collections.refunded_amount",
+        ],
         filters: { id: input.order_id },
       })
       refunded_total = (order?.payment_collections ?? []).reduce(
         (sum, collection) => sum + Number(collection?.refunded_amount ?? 0),
         0
       )
+      // What the customer paid: the captured amount. The order's `total`
+      // goes down with refunds (verified 2.22.6), so it can't be the base of
+      // the share kept.
+      const captured = (order?.payment_collections ?? []).reduce(
+        (sum, collection) => sum + Number(collection?.captured_amount ?? 0),
+        0
+      )
+      order_grand_total = captured > 0 ? captured : order ? Number(order.total) : undefined
     }
 
     const plan = adjustCommission(
@@ -51,7 +65,9 @@ export const adjustSellerCommissionStep = createStep(
         rate: Number(commission.rate),
         amount: Number(commission.amount),
       },
-      input.kind === "canceled" ? { kind: "canceled" } : { kind: "refunded", refunded_total }
+      input.kind === "canceled"
+        ? { kind: "canceled" }
+        : { kind: "refunded", refunded_total, order_grand_total }
     )
     if (plan.action === "none") {
       if (plan.reason === "already paid out") {

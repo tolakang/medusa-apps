@@ -8,6 +8,7 @@ import {
 import seedInitialData from "../../src/scripts/seed-initial-data"
 import seed from "../../src/scripts/seed"
 import { SELLER_MODULE } from "../../src/modules/seller"
+import { commissionAmount, commissionBase } from "../../src/modules/seller/commission"
 import SellerModuleService from "../../src/modules/seller/service"
 import { createSellerWorkflow } from "../../src/workflows/seller/create-seller"
 import { recordSellerCommissionWorkflow } from "../../src/workflows/seller/record-commission"
@@ -38,6 +39,21 @@ medusaIntegrationTestRunner({
           value = await read()
         }
         return value
+      }
+
+      // The commission base of an order: its items after discounts, without
+      // tax and shipping (D11, TASKS P5-12).
+      const baseOf = async (orderId: string) => {
+        const {
+          data: [order],
+        } = await getContainer()
+          .resolve(ContainerRegistrationKeys.QUERY)
+          .graph({
+            entity: "order",
+            fields: ["item_total", "item_tax_total", "total", "shipping_total"],
+            filters: { id: orderId },
+          })
+        return { base: commissionBase(order), total: Number(order.total), shipping: Number(order.shipping_total) }
       }
 
       // A guest buys one T-shirt with the given publishable key.
@@ -170,12 +186,16 @@ medusaIntegrationTestRunner({
           () => commissionsOf(order.id),
           (list) => list.length > 0
         )
+        const { base, total, shipping } = await baseOf(order.id)
+        // Shipping is not part of the base.
+        expect(shipping).toBeGreaterThan(0)
+        expect(base).toBeLessThan(total)
         expect(commission).toEqual(
           expect.objectContaining({
             seller_id: seller.seller.id,
-            order_total: order.total,
+            order_total: base,
             rate: 12.5,
-            amount: Math.round(order.total * 12.5) / 100,
+            amount: commissionAmount(base, 12.5),
             currency_code: order.currency_code,
             status: "pending",
           })
@@ -203,7 +223,8 @@ medusaIntegrationTestRunner({
           (list) => list.length > 0
         )
         expect(commission.rate).toEqual(10)
-        expect(commission.amount).toEqual(Math.round(order.total * 10) / 100)
+        const { base } = await baseOf(order.id)
+        expect(commission.amount).toEqual(commissionAmount(base, 10))
       })
 
       it("P5-10: orders in your own channel, or a pending or suspended seller's, earn none", async () => {
@@ -255,7 +276,9 @@ medusaIntegrationTestRunner({
 
         const partial = Math.round(order.total * 50) / 100
         await api.post(`/admin/payments/${paymentId}/refund`, { amount: partial }, admin)
-        const expected = Math.round((order.total - partial) * 10) / 100
+        // The share of the order the shop kept, applied to the item base.
+        const { base } = await baseOf(order.id)
+        const expected = commissionAmount((base * (order.total - partial)) / order.total, 10)
         const [afterPartial] = await eventually(
           () => commissionsOf(order.id),
           (list) => Number(list[0]?.amount) === expected
