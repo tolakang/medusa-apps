@@ -1,8 +1,8 @@
 # Wholesale — `wholesale/`
 
-> **Sellers buy your products in bulk (B2B).** Phase 4, in progress (started 2026-11-10): backend tasks P4-01 to P4-07 merged; next the storefront (P4-08). Scope: [BUILD_PLAN.md §6.4](../BUILD_PLAN.md).
+> **Sellers buy your products in bulk (B2B).** Phase 4, in progress (started 2026-11-10): backend (P4-01 to P4-07) and storefront (P4-08) built; open: P4-10 to P4-13. Scope: [BUILD_PLAN.md §6.4](../BUILD_PLAN.md).
 >
-> `backend/` has app code: the official `b2b-starter` backend (companies, employees, quotes, approvals) on Medusa 2.22.6, see [backend/README.md](backend/README.md) (TASKS P4-01). `storefront/` still holds only the **template** `Dockerfile` and `.env.example`; its code comes with P4-08, and until then a Dokploy build of that folder fails at `COPY package.json`.
+> `backend/` has app code: the official `b2b-starter` backend (companies, employees, quotes, approvals) on Medusa 2.22.6, see [backend/README.md](backend/README.md) (TASKS P4-01). `storefront/` is the `b2b-starter` storefront, a buyer shop behind sign-in with quick order by SKU / CSV, reorder, invoices, quotes and company users, see [storefront/README.md](storefront/README.md) (TASKS P4-08).
 
 This folder is **one complete business project**. Copy the whole folder's setup into one Dokploy project and every piece deploys on its own.
 
@@ -13,10 +13,12 @@ wholesale/
 │   ├── Dockerfile
 │   ├── docker-entrypoint.sh
 │   ├── .env.example
-│   └── src/                 modules company, quote, approval
-└── storefront/              customer storefront
-    ├── Dockerfile
-    └── .env.example
+│   └── src/                 modules company, quote, approval, invoice
+├── storefront/              B2B buyer shop (from b2b-starter; README.md lists the changes)
+│   ├── Dockerfile
+│   ├── .env.example
+│   └── src/
+└── docker-compose.local.yml local stack (Dokploy ignores it)
 ```
 
 ## Dokploy project: `wholesale`

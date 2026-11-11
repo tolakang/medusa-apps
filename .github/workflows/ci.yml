@@ -40,6 +40,7 @@ jobs:
           - booking-services/backend
           - booking-services/storefront
           - wholesale/backend
+          - wholesale/storefront
           - reseller/backend
           - reseller/storefront
           - reseller/seller-portal

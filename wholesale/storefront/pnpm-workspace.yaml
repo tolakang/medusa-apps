@@ -1,0 +1,13 @@
+# pnpm SETTINGS for this app only. No `packages:` key, so this is a single
+# package, not a workspace (BUILD_PLAN.md §4.2).
+
+# Carried over from the b2b-starter root package.json (pnpm.overrides).
+overrides:
+  "@types/react": 19.0.5
+  "@types/react-dom": 19.0.5
+
+# pnpm blocks dependency install scripts unless they are listed here.
+# unrs-resolver: ESLint import resolver (via eslint-config-next); lint is not
+# part of `next build`, so it is declined, as in the other storefronts.
+allowBuilds:
+  unrs-resolver: false
