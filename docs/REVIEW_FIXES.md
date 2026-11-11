@@ -57,18 +57,20 @@ Done 2026-11-12 (PR #152). B11 was fixed with a one-time **invite code** instead
 
 ### Batch 5: Tooling and CI
 
+Done 2026-11-12 (PR #156). T1 in code: guard check 1b fails a branch that changes the plan or its lock without the owner's `plan-revision` label, and `.github/CODEOWNERS` is added. **Still the owner's:** turning on "Require review from Code Owners" in the `main` ruleset (docs/PLAN_LOCK.md).
+
 | ✓ | ID | Sev | Problem | Where | Best fix |
 |---|---|---|---|---|---|
-| [ ] | T1 | high | A PR can change the frozen plan and auto-merge: guard only checks plan = checksum; no CODEOWNERS. | `scripts/guard.sh:34`, `.github/workflows/ci.yml` | Code: CI fails when the PR diff touches `BUILD_PLAN.md`, `.build-plan.sha256` or the lock files (DEV_FLOW Gate 5's diff check). **Owner:** add `.github/CODEOWNERS` and turn on code-owner review in the `main` ruleset. |
-| [ ] | T2 | medium | `verify.sh --image` only smoke-tests the backend server on `/health`; DEV_FLOW Gate 4 also asks for worker mode, `/app/` 200 and client images serving their port. | `scripts/verify.sh:86-113` | Add a worker run (still running after N s), `curl /app/`, and a client run with a port check. |
-| [ ] | T4 | low-med | The pin check lets `>=2.22.6` and `2.x` through; nothing checks all `@medusajs/*` share one version. | `scripts/guard.sh:69` | Require `^[0-9]+\.[0-9]+\.[0-9]+$` and one distinct version (except `@medusajs/ui`). |
-| [ ] | T10 | low | Dockerfile header comments say `Build Path = /<category>/<app>` (wrong per plan §5, F-011) and "STATUS: ready template". | `*/backend/Dockerfile:4,9`, `{wholesale,marketplace}/storefront/Dockerfile`, `marketplace/vendor-portal/Dockerfile` | Copy the pos / storefront header wording. `wholesale/storefront` done with P4-08. |
-| [ ] | T7 | low | Guard patterns are narrow: no `@ts-expect-error`, `zod/v4` missed, the entrypoint check is satisfied by a comment. | `scripts/guard.sh:87,95,118` | Widen the regexes; grep the `db:migrate` line itself, ignoring comments. |
-| [ ] | T9 | low | The reseller local stack has no `seller-portal`; wholesale has no local stack (plan §4.3). | `reseller/docker-compose.local.yml`; `wholesale/` | Add a seller-portal service copied from pos-app. Wholesale's file was added with P4-08 and run end to end on 2026-11-12 (P4-10). |
-| [ ] | T5 | low | Guard check 12 prints "skip" and passes when the base ref is missing (doesn't happen in CI today). | `scripts/guard.sh:119-120` | `fail` instead of `skip` when `CI=true`. |
-| [ ] | T6 | low | The env-file check misses `.env.production.local`. | `scripts/guard.sh:41` | Regex `\.env(\.[^/]+)*$`. |
-| [ ] | T8 | low | The CI matrix is hand-written; a new deployable with code would not be built. | `.github/workflows/ci.yml:34-45` | A guard check that every deployable with a `package.json` is in the matrix. |
-| [ ] | T3 | low | Actions pinned to tags, not commit SHAs. | `ci.yml:22,66,67,70`, `medusa-update-check.yml:19-20` | Pin to SHAs with a version comment (optional). |
+| [x] #156 | T1 | high | A PR can change the frozen plan and auto-merge: guard only checks plan = checksum; no CODEOWNERS. | `scripts/guard.sh:34`, `.github/workflows/ci.yml` | Code: CI fails when the PR diff touches `BUILD_PLAN.md`, `.build-plan.sha256` or the lock files (DEV_FLOW Gate 5's diff check). **Owner:** add `.github/CODEOWNERS` and turn on code-owner review in the `main` ruleset. |
+| [x] #156 | T2 | medium | `verify.sh --image` only smoke-tests the backend server on `/health`; DEV_FLOW Gate 4 also asks for worker mode, `/app/` 200 and client images serving their port. | `scripts/verify.sh:86-113` | Add a worker run (still running after N s), `curl /app/`, and a client run with a port check. |
+| [x] #156 | T4 | low-med | The pin check lets `>=2.22.6` and `2.x` through; nothing checks all `@medusajs/*` share one version. | `scripts/guard.sh:69` | Require `^[0-9]+\.[0-9]+\.[0-9]+$` and one distinct version (except `@medusajs/ui`). |
+| [x] #156 | T10 | low | Dockerfile header comments say `Build Path = /<category>/<app>` (wrong per plan §5, F-011) and "STATUS: ready template". | `*/backend/Dockerfile:4,9`, `{wholesale,marketplace}/storefront/Dockerfile`, `marketplace/vendor-portal/Dockerfile` | Copy the pos / storefront header wording. `wholesale/storefront` done with P4-08. |
+| [x] #156 | T7 | low | Guard patterns are narrow: no `@ts-expect-error`, `zod/v4` missed, the entrypoint check is satisfied by a comment. | `scripts/guard.sh:87,95,118` | Widen the regexes; grep the `db:migrate` line itself, ignoring comments. |
+| [x] #156 | T9 | low | The reseller local stack has no `seller-portal`; wholesale has no local stack (plan §4.3). | `reseller/docker-compose.local.yml`; `wholesale/` | Add a seller-portal service copied from pos-app. Wholesale's file was added with P4-08 and run end to end on 2026-11-12 (P4-10). |
+| [x] #156 | T5 | low | Guard check 12 prints "skip" and passes when the base ref is missing (doesn't happen in CI today). | `scripts/guard.sh:119-120` | `fail` instead of `skip` when `CI=true`. |
+| [x] #156 | T6 | low | The env-file check misses `.env.production.local`. | `scripts/guard.sh:41` | Regex `\.env(\.[^/]+)*$`. |
+| [x] #156 | T8 | low | The CI matrix is hand-written; a new deployable with code would not be built. | `.github/workflows/ci.yml:34-45` | A guard check that every deployable with a `package.json` is in the matrix. |
+| [x] #156 | T3 | low | Actions pinned to tags, not commit SHAs. | `ci.yml:22,66,67,70`, `medusa-update-check.yml:19-20` | Pin to SHAs with a version comment (optional). |
 
 ### Reseller
 

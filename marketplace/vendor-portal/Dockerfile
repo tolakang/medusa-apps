@@ -1,7 +1,9 @@
 # =====================================================================
 # marketplace / vendor-portal — Next.js (vendor portal)
 #
-# Dokploy: Build Type = Dockerfile, Build Path = /marketplace/vendor-portal
+# Dokploy: Build Type = Dockerfile, Build Path = /,
+#   Docker File = marketplace/vendor-portal/Dockerfile, Docker Context Path = marketplace/vendor-portal,
+#   Watch Paths = marketplace/vendor-portal/**   (BUILD_PLAN.md §5; F-011)
 #   Environment -> Build-time Arguments: the ARG values below
 #   Environment -> Runtime variables   : see .env.example
 #   Domain -> port 3000

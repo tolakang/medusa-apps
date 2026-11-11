@@ -1,0 +1,10 @@
+# Code owners (REVIEW_FIXES T1). With "Require review from Code Owners" on
+# in the `main` ruleset (GitHub → Settings → Rules), a PR that touches these
+# files can't merge, auto-merge included, until the owner approves or merges
+# it themselves. The setting is the owner's to turn on.
+/BUILD_PLAN.md                         @tolakang
+/.build-plan.sha256                    @tolakang
+/.claude/                              @tolakang
+/scripts/guard.sh                      @tolakang
+/scripts/test-plan-lock.sh             @tolakang
+/.github/                              @tolakang
