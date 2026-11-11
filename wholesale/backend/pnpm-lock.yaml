@@ -166,6 +166,9 @@ importers:
 
   .:
     dependencies:
+      '@fontsource/kantumruy-pro':
+        specifier: 5.3.0
+        version: 5.3.0
       '@hookform/resolvers':
         specifier: 5.5.7
         version: 5.5.7(@sinclair/typebox@0.34.52)(ajv@8.13.0)(react-hook-form@7.83.0(react@18.3.1))(zod@4.2.0)
@@ -922,6 +925,9 @@ packages:
 
   '@foliojs-fork/restructure@2.0.2':
     resolution: {integrity: sha512-59SgoZ3EXbkfSX7b63tsou/SDGzwUEK6MuB5sKqgVK1/XE0fxmpsOb9DQI8LXW3KfGnAjImCGhhEb7uPPAUVNA==}
+
+  '@fontsource/kantumruy-pro@5.3.0':
+    resolution: {integrity: sha512-pNspQPQGjG+fYx7YRHmjYodOhcHE4vCfxjPuefX7Qzydt4crLHCqrCk2VYiqLjJ9b/WKg1CEAMHKE3f/MAKHQA==}
 
   '@graphql-codegen/core@6.2.2':
     resolution: {integrity: sha512-bClqhA2ZITWKiEYd5A87KaU93YBC8o1++B3Y0FpYIZPZfGEWEwbhyvUkrSKrXqUagwM7c0h77f7DB4oR6vBgpQ==}
@@ -3846,6 +3852,7 @@ packages:
 
   axios-retry@4.5.0:
     resolution: {integrity: sha512-aR99oXhpEDGo0UuAlYcn2iGRds30k366Zfa05XWScR9QaQD4JYiP3/1Qt1u7YlefUOK+cn0CcwoL1oefavQUlQ==}
+    deprecated: axios-retry is no longer maintained. See https://github.com/softonic/axios-retry for alternatives.
     peerDependencies:
       axios: 0.x || 1.x
 
@@ -7677,6 +7684,8 @@ snapshots:
       png-js: 1.1.0
 
   '@foliojs-fork/restructure@2.0.2': {}
+
+  '@fontsource/kantumruy-pro@5.3.0': {}
 
   '@graphql-codegen/core@6.2.2(graphql@17.1.0)':
     dependencies:
