@@ -47,13 +47,15 @@ Done 2026-11-12 (PR #152). B11 was fixed with a one-time **invite code** instead
 
 ### Batch 4: Storefronts and portals
 
+Done 2026-11-12 (PR #155). C5 also covers the POS app, which sent the till to sign-in on any backend error.
+
 | ✓ | ID | Sev | Problem | Where | Best fix |
 |---|---|---|---|---|---|
-| [ ] | C1 | medium | Stale order status after an admin refund or cancel (plan §4.2 change 10, F-052, fixed only in booking). | `{ecommerce,pos,reseller}/storefront/src/lib/data/orders.ts:26,72` | `cache: "no-store"` in both reads, copied from `booking-services/storefront/src/lib/data/orders.ts`. |
-| [ ] | C5 | medium | Any backend error (e.g. 502) signs every seller out; neither the portal nor the POS app has an error page. | `reseller/seller-portal/src/lib/server/seller.ts:26`; no `error.tsx` / `global-error.tsx` in `seller-portal` or `pos-app` | Sign out only on 401/403, throw otherwise; add `app/error.tsx` and `global-error.tsx` like the storefronts. |
-| [ ] | C2 | low | `/store/locales` called on every page view (a 404 each time; plan §4.2 change 11, F-051). | `{ecommerce,pos,reseller}/storefront/src/lib/data/locales.ts:15-28` | Port booking's `STOREFRONT_LOCALES` guard and `.env.example` line. |
-| [ ] | C3 | low | Wrong default region: compose `dk` in ecommerce and reseller; Dockerfile `"us"` in ecommerce, booking and reseller storefronts (`.env.example` and pos say `kh`). | `ecommerce/docker-compose.local.yml:90`, `reseller/docker-compose.local.yml:91`, `*/storefront/Dockerfile:35` | `kh` everywhere, as pos. |
-| [ ] | C6 | low | The seller portal signs out on a GET, so a link on another site can sign a seller out. | `reseller/seller-portal/src/app/logout/route.ts:5-8` | Don't clear the cookie when `sec-fetch-site` is `cross-site`. |
+| [x] #155 | C1 | medium | Stale order status after an admin refund or cancel (plan §4.2 change 10, F-052, fixed only in booking). | `{ecommerce,pos,reseller}/storefront/src/lib/data/orders.ts:26,72` | `cache: "no-store"` in both reads, copied from `booking-services/storefront/src/lib/data/orders.ts`. |
+| [x] #155 | C5 | medium | Any backend error (e.g. 502) signs every seller out; neither the portal nor the POS app has an error page. | `reseller/seller-portal/src/lib/server/seller.ts:26`; no `error.tsx` / `global-error.tsx` in `seller-portal` or `pos-app` | Sign out only on 401/403, throw otherwise; add `app/error.tsx` and `global-error.tsx` like the storefronts. |
+| [x] #155 | C2 | low | `/store/locales` called on every page view (a 404 each time; plan §4.2 change 11, F-051). | `{ecommerce,pos,reseller}/storefront/src/lib/data/locales.ts:15-28` | Port booking's `STOREFRONT_LOCALES` guard and `.env.example` line. |
+| [x] #155 | C3 | low | Wrong default region: compose `dk` in ecommerce and reseller; Dockerfile `"us"` in ecommerce, booking and reseller storefronts (`.env.example` and pos say `kh`). | `ecommerce/docker-compose.local.yml:90`, `reseller/docker-compose.local.yml:91`, `*/storefront/Dockerfile:35` | `kh` everywhere, as pos. |
+| [x] #155 | C6 | low | The seller portal signs out on a GET, so a link on another site can sign a seller out. | `reseller/seller-portal/src/app/logout/route.ts:5-8` | Don't clear the cookie when `sec-fetch-site` is `cross-site`. |
 
 ### Batch 5: Tooling and CI
 
