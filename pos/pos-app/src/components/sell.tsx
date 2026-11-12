@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { api, type Customer, type LookupVariant, type PaymentMethod, type ReceiptOrder, type Register, type Shift } from "@/lib/api"
 import {
   addLine,
@@ -31,6 +31,12 @@ export function Sell({ register, shift }: { register: Register; shift: Shift }) 
   const [promo, setPromo] = useState("")
   const [choices, setChoices] = useState<LookupVariant[] | null>(null)
   const [message, setMessage] = useState<{ tone: "error" | "info"; text: string } | null>(null)
+  // This sale's id (review 2, S7): new whenever the sale changes, the same
+  // for every try of one sale.
+  const saleRef = useRef("")
+  useEffect(() => {
+    saleRef.current = crypto.randomUUID()
+  }, [cart, customer, promo])
   const [looking, setLooking] = useState(false)
   const [paying, setPaying] = useState(false)
   const [done, setDone] = useState<Done | null>(null)
@@ -61,7 +67,14 @@ export function Sell({ register, shift }: { register: Register; shift: Shift }) 
   }
 
   const pay = async (method: PaymentMethod, tendered: number | null) => {
-    const body: Record<string, unknown> = { shift_id: shift.id, items: checkoutItems(cart), payment_method: method }
+    const body: Record<string, unknown> = {
+      shift_id: shift.id,
+      items: checkoutItems(cart),
+      payment_method: method,
+      // Same id when "Complete sale" is pressed again after a lost answer, so
+      // the backend doesn't record the sale twice (review 2, S7).
+      client_ref: saleRef.current,
+    }
     if (customer) body.customer_id = customer.id
     if (promo.trim()) body.promo_codes = [promo.trim()]
     const { order } = await api<{ order: ReceiptOrder }>("checkout", { method: "POST", body })

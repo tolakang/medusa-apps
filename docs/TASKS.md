@@ -323,9 +323,9 @@
 
 **Done 2026-11-12** (owner: "Fix those"). All 29 verified findings and four found later (X1–X4) were fixed in PRs #152 to #158; the list (`docs/REVIEW_FIXES.md`) was deleted when every row was ticked, as the owner asked. It is in git history (`git show c0e62c49:docs/REVIEW_FIXES.md` for the first version). A later full review starts a new list.
 
-## Review fixes · `docs/REVIEW_FIXES.md` (review 2, 2026-11-12)
+## Review fixes (second review, risky areas, 2026-11-12)
 
-Multi-agent review of the risky areas before staging (owner: "add multi-agent to review on the risky areas"): money, access, stock and orders. 16 findings confirmed by challenger agents, to be **fixed later in one go** in the file's five batches, one PR each; delete the file (and this section) when every row is ticked. Highest: M2 (PayWay refunds never reach Medusa, so commissions on refunded orders are paid and captured PayWay orders can't be cancelled) and S3 (accepted wholesale quotes reserve no stock).
+**Done 2026-11-13** (owner: "Fix all"). All 16 findings (money, access, stock and orders; 2 high, 9 medium, 5 low) were fixed in PRs #179 to #183, one per batch; the list (`docs/REVIEW_FIXES.md`) was deleted in #183 when every row was ticked. It is in git history (`git show 122a55ac:docs/REVIEW_FIXES.md`). Owner follow-ups: set `PAYWAY_RSA_PUBLIC_KEY` (refunds) in every PayWay app and `VENDOR_PORTAL_URL` in marketplace. A later review starts a new list.
 
 ---
 
@@ -438,6 +438,8 @@ The newest note is first. Older notes stay below as history; where they differ, 
 **2026-11-12 (review 2 fixes, batch 3):** Marketplace (A1, S1, S2, S6, M4, A3) done: vendor products can't borrow another vendor's inventory item; store carts refuse the split's metadata keys; a failed split keeps the paid order's stock; cancelling an order cancels its vendor orders; payout runs lock out commission cancels and settlements; vendors confirm their email before sign-in and approval (portal `/verify-account`, `VENDOR_PORTAL_URL`). Not covered: a real owner whose email was squatted before the squatter confirmed it still can't register (the unconfirmed vendor stays pending and can't be approved or used; the admin can suspend it). Marketplace HTTP 24 suites 97/97, unit 130, portal build + tests.
 
 **2026-11-12 (review 2 fixes, batch 4):** Booking (S4, S5) done: order bookings confirmed under the resource lock with a slot re-check (expired-but-free kept, taken → error log), release job skips completed carts, cancelled orders free their times. Booking unit 160, modules 70, HTTP 26 suites 99/99.
+
+**2026-11-12 (review 2 fixes, batch 5):** POS and shared jobs (S7, S8) done: a POS sale retried with the same `client_ref` returns the recorded sale; the unverified-account cleanup pages through identities (ecommerce, pos, booking-services, reseller, marketplace). POS HTTP 22 suites 77/77, unit 136, pos-app 11; `anti-abuse.spec.ts` 5/5 in each app.
 
 **2026-11-12 (review 2 fixes, batch 2):** Wholesale (S3, A2, M3) done: accepted quotes reserve stock, collections no longer show products and tier prices to guests, PayWay payments start only for carts that checkout would accept; storefront spending window fixed (UTC, B1 port). Tests: `b2b-quote-stock.spec.ts` (new), `b2b-payway.spec.ts` and `catalog-login.spec.ts` extended; wholesale HTTP 53/53.
 

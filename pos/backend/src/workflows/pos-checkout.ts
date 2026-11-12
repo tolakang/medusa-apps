@@ -1,4 +1,5 @@
 import type { CreateOrderWorkflowInput } from "@medusajs/medusa/core-flows"
+import type { MedusaContainer } from "@medusajs/framework/types"
 import {
   ContainerRegistrationKeys,
   MathBN,
@@ -55,7 +56,44 @@ export type PosCheckoutInput = {
   customer_id?: string
   email?: string
   promo_codes?: string[]
+  // The POS app's id for this sale (review 2, S7).
+  client_ref?: string
 }
+
+export const POS_CLIENT_REF_KEY = "pos_client_ref"
+
+export const POS_SALE_RECORDED_MESSAGE = "This sale is already recorded."
+
+// The order of a sale already recorded on this shift with this client_ref.
+export async function findPosSale(
+  container: MedusaContainer,
+  shiftId: string,
+  clientRef: string
+): Promise<string | null> {
+  const {
+    data: [shift],
+  } = await container.resolve(ContainerRegistrationKeys.QUERY).graph({
+    entity: "pos_shift",
+    fields: ["id", "orders.id", "orders.metadata"],
+    filters: { id: shiftId },
+  })
+  const order = (shift?.orders ?? []).find((o) => o?.metadata?.[POS_CLIENT_REF_KEY] === clientRef)
+  return (order?.id as string | undefined) ?? null
+}
+
+// The POS app retried after the answer was lost (Wi-Fi drop): refuse to
+// record the sale twice. Runs under the shift lock, so a retry that waited
+// for a slow first try finds it too; the route then answers with the sale
+// already recorded (review 2, S7).
+const refuseRepeatedPosSaleStep = createStep(
+  "refuse-repeated-pos-sale",
+  async (input: PosCheckoutInput, { container }) => {
+    if (input.client_ref && (await findPosSale(container, input.shift_id, input.client_ref))) {
+      throw new MedusaError(MedusaError.Types.DUPLICATE_ERROR, POS_SALE_RECORDED_MESSAGE)
+    }
+    return new StepResponse(null)
+  }
+)
 
 const validatePosCheckoutStep = createStep(
   "validate-pos-checkout",
@@ -265,6 +303,7 @@ export const posCheckoutWorkflow = createWorkflow("pos-checkout", function (inpu
   // Same key as close-pos-shift: a sale and the shift close never interleave.
   const lockKey = transform({ input }, ({ input }) => `pos-shift:${input.shift_id}`)
   acquireLockStep({ key: lockKey, timeout: 10, ttl: 120 })
+  refuseRepeatedPosSaleStep(input)
   const context = validatePosCheckoutStep(input)
   const stockInput = transform({ input, context }, ({ input, context }) => ({
     items: input.items,
@@ -291,7 +330,12 @@ export const posCheckoutWorkflow = createWorkflow("pos-checkout", function (inpu
       // variant items itself, like the admin route's items without them).
       items: input.items.map((i) => ({ variant_id: i.variant_id, quantity: i.quantity })) as CreateOrderWorkflowInput["items"],
       promo_codes: input.promo_codes ?? [],
-      metadata: { pos_register_id: context.register_id, pos_shift_id: input.shift_id, pos_cashier_id: input.cashier_id },
+      metadata: {
+        pos_register_id: context.register_id,
+        pos_shift_id: input.shift_id,
+        pos_cashier_id: input.cashier_id,
+        ...(input.client_ref ? { [POS_CLIENT_REF_KEY]: input.client_ref } : {}),
+      },
     }
     return data
   })

@@ -40,6 +40,9 @@ export const PostPosCheckout = z.object({
   customer_id: z.string().min(1).optional(),
   email: z.string().trim().email().optional(),
   promo_codes: z.array(z.string().trim().min(1)).max(10).optional(),
+  // The POS app's id for this sale, so a retry after a network error returns
+  // the sale instead of recording it twice (review 2, S7).
+  client_ref: z.string().uuid().optional(),
 })
 export type PostPosCheckoutType = z.infer<typeof PostPosCheckout>
 
