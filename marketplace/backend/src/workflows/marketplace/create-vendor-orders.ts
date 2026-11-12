@@ -391,7 +391,7 @@ export const createVendorOrdersWorkflow = createWorkflow(
     const parent = parentOrderStep(parentOrderId)
     const existing = existingChildrenStep(parent)
 
-    const created = when({ existing }, ({ existing }) => !existing).then(() => {
+    const created = when("create-vendor-children", { existing }, ({ existing }) => !existing).then(() => {
       const groups = groupVendorItemsStep(parent)
       const children = createVendorOrdersStep({ parent, groups })
       const links = transform({ children }, ({ children }) =>
