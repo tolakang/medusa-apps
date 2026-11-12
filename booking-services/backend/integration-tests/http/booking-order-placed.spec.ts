@@ -1,6 +1,7 @@
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import {
+  cancelOrderWorkflow,
   createDefaultsWorkflow,
   createShippingProfilesWorkflow,
 } from "@medusajs/medusa/core-flows"
@@ -10,6 +11,7 @@ import { BOOKING_MODULE } from "../../src/modules/booking"
 import type BookingModuleService from "../../src/modules/booking/service"
 import { addBookingToCartWorkflow } from "../../src/workflows/add-booking-to-cart"
 import { confirmOrderBookingsWorkflow } from "../../src/workflows/confirm-order-bookings"
+import { releaseExpiredHoldsWorkflow } from "../../src/workflows/release-expired-holds"
 
 // TASKS P3-07 (BUILD_PLAN §6.3): the order.placed subscriber confirms the
 // order's bookings and links them to the order; running it again changes
@@ -18,8 +20,12 @@ jest.setTimeout(240 * 1000)
 
 const day = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().slice(0, 10)
 const slot = (h: number) => ({
-  starts_at: `${day}T0${h}:00:00.000Z`,
-  ends_at: `${day}T0${h + 1}:00:00.000Z`,
+  starts_at: `${day}T${String(h).padStart(2, "0")}:00:00.000Z`,
+  ends_at: `${day}T${String(h + 1).padStart(2, "0")}:00:00.000Z`,
+})
+const slotDates = (h: number) => ({
+  starts_at: new Date(slot(h).starts_at),
+  ends_at: new Date(slot(h).ends_at),
 })
 
 medusaIntegrationTestRunner({
@@ -180,6 +186,58 @@ medusaIntegrationTestRunner({
           filters: { id: holds },
         })
         expect(links).toEqual([{ id: holds[0], status: "confirmed", order: expect.objectContaining({ id: orderId }) }])
+      })
+
+      it("a paid booking whose hold ran out is kept if its time is still free, and the release job leaves it alone (review 2, S4)", async () => {
+        const { orderId, holds } = await checkout([6])
+        await waitConfirmed(holds)
+        // As if the order.placed confirmation were still queued after the
+        // hold ran out.
+        const past = new Date(Date.now() - 60_000)
+        await booking().updateBookings({ id: holds[0], status: "pending", hold_expires_at: past })
+
+        // The cart is complete, so the release job skips it.
+        await releaseExpiredHoldsWorkflow(getContainer()).run({ input: {} })
+        expect((await booking().retrieveBooking(holds[0])).status).toEqual("pending")
+
+        // Even when it was already marked expired, confirmation keeps it.
+        await booking().updateBookings({ id: holds[0], status: "expired" })
+        const { result } = await confirmOrderBookingsWorkflow(getContainer()).run({ input: { order_id: orderId } })
+        expect(result).toEqual(holds)
+        expect((await booking().retrieveBooking(holds[0])).status).toEqual("confirmed")
+      })
+
+      it("a paid booking whose time was taken after its hold ran out is reported, not overbooked (review 2, S4)", async () => {
+        const { orderId, holds } = await checkout([7])
+        await waitConfirmed(holds)
+        await booking().updateBookings({
+          id: holds[0],
+          status: "expired",
+          hold_expires_at: new Date(Date.now() - 60_000),
+        })
+        // Someone else holds the only place now.
+        const other = await booking().createHold({ resource_id: resourceId, ...slotDates(7) })
+
+        const { result } = await confirmOrderBookingsWorkflow(getContainer()).run({ input: { order_id: orderId } })
+        expect(result).toEqual([])
+        expect((await booking().retrieveBooking(holds[0])).status).toEqual("expired")
+        expect((await booking().retrieveBooking(other.id)).status).toEqual("pending")
+      })
+
+      it("cancelling the order frees its booked time (review 2, S5)", async () => {
+        const { orderId, holds } = await checkout([8])
+        await waitConfirmed(holds)
+
+        await cancelOrderWorkflow(getContainer()).run({ input: { order_id: orderId } })
+
+        let status = ""
+        for (let i = 0; i < 40 && status !== "cancelled"; i++) {
+          status = (await booking().retrieveBooking(holds[0])).status
+          if (status !== "cancelled") await new Promise((r) => setTimeout(r, 250))
+        }
+        expect(status).toEqual("cancelled")
+        const check = await booking().checkSlot({ resource_id: resourceId, ...slotDates(8) })
+        expect(check.available).toBe(true)
       })
 
       it("does nothing for an order without bookings", async () => {
