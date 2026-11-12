@@ -2,12 +2,13 @@ import type {
   AuthenticatedMedusaRequest,
   MedusaResponse,
 } from "@medusajs/framework/http"
-import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
 import { MARKETPLACE_MODULE } from "../../../../modules/marketplace"
 import type MarketplaceModuleService from "../../../../modules/marketplace/service"
 import { ADMIN_VENDOR_FIELDS } from "../route"
 import type { PostAdminVendorType } from "../validators"
 import { ensureVendorStockLocation } from "../../../../lib/vendor-stock"
+import { emailVerified, VENDOR_EMAIL_NOT_VERIFIED_MESSAGE } from "../../../../lib/vendor-email"
 
 const vendorById = async (req: AuthenticatedMedusaRequest, id: string) => {
   const {
@@ -31,6 +32,15 @@ export const POST = async (
   res: MedusaResponse
 ) => {
   const vendor = await vendorById(req, req.params.id)
+  // Approval needs a vendor admin whose sign-in email is confirmed, so a
+  // shop signed up with someone else's address can't go live (review 2, A3).
+  if (req.validatedBody.status === "active" && vendor.status !== "active") {
+    const emails = (vendor.admins ?? []).map((a) => a?.email).filter(Boolean) as string[]
+    const checks = await Promise.all(emails.map((email) => emailVerified(req.scope, email)))
+    if (!checks.some(Boolean)) {
+      throw new MedusaError(MedusaError.Types.NOT_ALLOWED, VENDOR_EMAIL_NOT_VERIFIED_MESSAGE)
+    }
+  }
   await req.scope
     .resolve<MarketplaceModuleService>(MARKETPLACE_MODULE)
     .updateVendors({ id: vendor.id, ...req.validatedBody })

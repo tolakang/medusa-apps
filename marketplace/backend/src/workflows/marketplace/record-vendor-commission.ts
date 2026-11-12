@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto"
 import {
   ContainerRegistrationKeys,
 } from "@medusajs/framework/utils"
@@ -5,14 +6,17 @@ import {
   createStep,
   createWorkflow,
   StepResponse,
+  transform,
   WorkflowResponse,
 } from "@medusajs/framework/workflows-sdk"
+import { acquireLockStep, releaseLockStep } from "@medusajs/medusa/core-flows"
 import { MARKETPLACE_MODULE } from "../../modules/marketplace"
 import type MarketplaceModuleService from "../../modules/marketplace/service"
 import {
   commissionAmount,
   commissionBase,
   commissionRateFor,
+  PAYOUTS_LOCK,
   vendorPayoutAmount,
 } from "../../lib/vendor-commission"
 
@@ -127,6 +131,12 @@ export const cancelVendorCommissionStep = createStep(
 export const cancelVendorCommissionWorkflow = createWorkflow(
   "cancel-vendor-commission",
   function (input: { order_id: string }) {
-    return new WorkflowResponse(cancelVendorCommissionStep(input.order_id))
+    // Waits for a payout run, so a commission it is approving can't be
+    // cancelled under it (review 2, S6).
+    const ownerId = transform(input, () => `vendor-commission-cancel:${randomUUID()}`)
+    acquireLockStep({ key: PAYOUTS_LOCK, ownerId, timeout: 60, ttl: 30 })
+    const result = cancelVendorCommissionStep(input.order_id)
+    releaseLockStep({ key: PAYOUTS_LOCK, ownerId })
+    return new WorkflowResponse(result)
   }
 )

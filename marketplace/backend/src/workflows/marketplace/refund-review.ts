@@ -1,11 +1,15 @@
+import { randomUUID } from "node:crypto"
 import type { MedusaContainer } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys, MathBN, MedusaError } from "@medusajs/framework/utils"
 import {
   createStep,
   createWorkflow,
   StepResponse,
+  transform,
   WorkflowResponse,
 } from "@medusajs/framework/workflows-sdk"
+import { acquireLockStep, releaseLockStep } from "@medusajs/medusa/core-flows"
+import { PAYOUTS_LOCK } from "../../lib/vendor-commission"
 import { MARKETPLACE_MODULE } from "../../modules/marketplace"
 import type MarketplaceModuleService from "../../modules/marketplace/service"
 import { CHILD_ORDERS_KEY, PARENT_ORDER_KEY } from "./create-vendor-orders"
@@ -147,6 +151,11 @@ const settleRefundReviewStep = createStep(
 export const settleRefundReviewWorkflow = createWorkflow(
   "settle-refund-review",
   function (input: SettleInput) {
-    return new WorkflowResponse(settleRefundReviewStep(input))
+    // One at a time with a payout run (review 2, S6).
+    const ownerId = transform(input, () => `vendor-refund-settle:${randomUUID()}`)
+    acquireLockStep({ key: PAYOUTS_LOCK, ownerId, timeout: 60, ttl: 30 })
+    const result = settleRefundReviewStep(input)
+    releaseLockStep({ key: PAYOUTS_LOCK, ownerId })
+    return new WorkflowResponse(result)
   }
 )

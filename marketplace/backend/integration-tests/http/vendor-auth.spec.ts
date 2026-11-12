@@ -10,6 +10,9 @@ import {
 } from "../../src/workflows/marketplace/create-vendor"
 import { MARKETPLACE_MODULE } from "../../src/modules/marketplace"
 import type MarketplaceModuleService from "../../src/modules/marketplace/service"
+import { VERIFY_EMAIL_TEMPLATE } from "../../src/lib/auth-email"
+import { VENDOR_EMAIL_NOT_VERIFIED_MESSAGE } from "../../src/lib/vendor-email"
+import { confirmVendorEmail } from "../helpers/vendor-email"
 
 jest.setTimeout(120 * 1000)
 
@@ -61,10 +64,17 @@ medusaIntegrationTestRunner({
         admin = bearer(data.token)
       })
 
-      const register = (email: string, password = "vendor-pass-1") =>
-        call(
+      // Registers, then confirms the email as the emailed link would (A3;
+      // the link itself is tested below).
+      const register = async (email: string, password = "vendor-pass-1", confirm = true) => {
+        const res = await call(
           api.post("/auth/vendor/emailpass/register", { email, password }, { headers: freshIp() })
         )
+        if (confirm && res.status === 200) {
+          await confirmVendorEmail(getContainer(), email)
+        }
+        return res
+      }
       const login = async (email: string, password = "vendor-pass-1") =>
         (await api.post("/auth/vendor/emailpass", { email, password }, { headers: freshIp() }))
           .data.token as string
@@ -113,6 +123,47 @@ medusaIntegrationTestRunner({
         expect(me.status).toBe(200)
         expect(me.data.vendor_admin.id).toEqual(created.data.vendor_admin.id)
         expect(me.data.vendor.status).toBe("pending")
+      })
+
+      it("a vendor confirms their email through the portal's link before signing in or being approved (review 2, A3)", async () => {
+        const email = "new@vendor.test"
+        const registered = await register(email, "vendor-pass-1", false)
+        const created = await call(api.post("/vendors", { name: "New Shop" }, bearer(registered.data.token)))
+        expect(created.status).toBe(201)
+
+        // Not confirmed: the admin can't approve it, and sign-in asks for it.
+        const refused = await approve(created.data.vendor.id)
+        expect(refused.status).toBe(400)
+        expect(refused.data.message).toEqual(VENDOR_EMAIL_NOT_VERIFIED_MESSAGE)
+        const first = await call(
+          api.post("/auth/vendor/emailpass", { email, password: "vendor-pass-1" }, { headers: freshIp() })
+        )
+        expect(first.data.verification_required).toBe(true)
+
+        // The portal asks for the email; its link opens the portal.
+        await api.post(
+          "/auth/verification/request",
+          { entity_id: email, entity_type: "email", metadata: { actor: "vendor" } },
+          bearer(first.data.token)
+        )
+        const query = getContainer().resolve("query")
+        let url: URL | null = null
+        for (let i = 0; i < 40 && !url; i++) {
+          const { data } = await query.graph({
+            entity: "notification",
+            fields: ["data"],
+            filters: { to: email, template: VERIFY_EMAIL_TEMPLATE },
+          })
+          const link = (data[0]?.data as { url?: string } | undefined)?.url
+          url = link ? new URL(link) : null
+          if (!url) await new Promise((r) => setTimeout(r, 250))
+        }
+        expect(url!.origin + url!.pathname).toEqual(`${PORTAL}/verify-account`)
+        await api.post("/auth/verification/confirm", { code: url!.searchParams.get("token") })
+
+        expect((await approve(created.data.vendor.id)).status).toBe(200)
+        const token = await login(email)
+        expect((await call(api.get("/vendors/me", bearer(token)))).status).toBe(200)
       })
 
       it("the admin's email comes from the registration, not the body", async () => {
