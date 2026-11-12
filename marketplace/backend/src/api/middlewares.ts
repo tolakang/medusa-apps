@@ -19,11 +19,51 @@ import {
   requireCaptcha,
   requireStrongPassword,
 } from './auth-guards'
+import { requireVendor, vendorCors } from './vendor-auth'
+import { PostVendorCreate } from './vendors/validators'
+import { PostAdminVendor } from './admin/vendors/validators'
 
 // The product index declares filterable `status` and `sales_channel_ids`, so
 // the route narrows it to published products in the key's sales channels.
 export default defineMiddlewares({
   routes: [
+    {
+      // Vendor portal routes (TASKS P6-03): VENDOR_CORS, then a signed-in
+      // vendor admin of an active vendor on every /vendors route
+      // (vendor-auth.ts); sign-up (POST /vendors) takes a registration token.
+      matcher: '/vendors*',
+      middlewares: [vendorCors, requireVendor],
+    },
+    {
+      method: ['POST'],
+      matcher: '/vendors',
+      middlewares: [
+        limitPerIp('vendor_create', AUTH_LIMITS.signup, 60),
+        validateAndTransformBody(PostVendorCreate),
+      ],
+    },
+    {
+      // Vendor sign-up and sign-in: the same per-IP limits and password rule
+      // as customers. A new vendor waits for the admin's approval.
+      method: ['POST'],
+      matcher: '/auth/vendor/emailpass/register',
+      middlewares: [limitPerIp('vendor_signup', AUTH_LIMITS.signup, 60), requireStrongPassword],
+    },
+    {
+      method: ['POST'],
+      matcher: '/auth/vendor/emailpass',
+      middlewares: [limitPerIp('vendor_login', AUTH_LIMITS.login, 60)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/auth/vendor/emailpass/reset-password',
+      middlewares: [limitPerIp('vendor_password_reset', AUTH_LIMITS.password_reset, 60)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/vendors/:id',
+      middlewares: [validateAndTransformBody(PostAdminVendor)],
+    },
     {
       method: ['POST'],
       matcher: '/store/search',
