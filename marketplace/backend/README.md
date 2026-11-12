@@ -7,7 +7,7 @@ Medusa **2.22.6** backend for the marketplace business project (vendors sell the
 - `.env.example` keeps the plan §6.6 settings from the old template: `MARKETPLACE_DEFAULT_COMMISSION_RATE`, `MARKETPLACE_REQUIRE_PRODUCT_APPROVAL`, `MARKETPLACE_PAYOUT_DAY`, `VENDOR_CORS` (read from P6-03 on).
 - Local stack: `../docker-compose.local.yml` (same host ports as the other categories; run one at a time).
 
-The vendor features (P6-01 onwards) are added on top. The ecommerce notes below apply unchanged.
+The vendor features (P6-01 onwards) are added on top. **P6-01:** module `marketplace` (`src/modules/marketplace`): `vendor` (handle, name, email, logo, status pending / active / suspended, commission rate; null = `MARKETPLACE_DEFAULT_COMMISSION_RATE`), `vendor_admin` (the people who sign in for a vendor; one per email) and `vendor_payout` (amount, currency, period `YYYY-MM`, status pending / paid / cancelled, `paid_at`, `reference`; one per vendor, period and currency). The ecommerce notes below apply unchanged.
 
 ---
 
