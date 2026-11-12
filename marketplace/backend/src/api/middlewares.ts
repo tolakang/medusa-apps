@@ -23,6 +23,7 @@ import { requireVendor, vendorCors } from './vendor-auth'
 import { PostVendorCreate } from './vendors/validators'
 import { AdminCreateProduct } from '@medusajs/medusa/api/admin/products/validators'
 import { PostAdminVendor } from './admin/vendors/validators'
+import { PostAdminVendorPayoutPay } from './admin/vendor-payouts/validators'
 
 // The product index declares filterable `status` and `sales_channel_ids`, so
 // the route narrows it to published products in the key's sales channels.
@@ -66,6 +67,11 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/auth/vendor/emailpass/reset-password',
       middlewares: [limitPerIp('vendor_password_reset', AUTH_LIMITS.password_reset, 60)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/vendor-payouts/:id/pay',
+      middlewares: [validateAndTransformBody(PostAdminVendorPayoutPay)],
     },
     {
       method: ['POST'],
