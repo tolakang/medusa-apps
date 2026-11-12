@@ -435,6 +435,8 @@ Checked 2026-11-06. Each item is its own branch and PR, through `scripts/update-
 
 The newest note is first. Older notes stay below as history; where they differ, the newer one wins.
 
+**2026-11-12 (review 2 fixes, batch 2):** Wholesale (S3, A2, M3) done: accepted quotes reserve stock, collections no longer show products and tier prices to guests, PayWay payments start only for carts that checkout would accept; storefront spending window fixed (UTC, B1 port). Tests: `b2b-quote-stock.spec.ts` (new), `b2b-payway.spec.ts` and `catalog-login.spec.ts` extended; wholesale HTTP 53/53.
+
 **2026-11-12 (review 2 fixes, batch 1):** Owner: "Fix all". Batch 1 of `docs/REVIEW_FIXES.md` (PayWay money: M2, M1, M5) done; see P1-03. Owner: set `PAYWAY_RSA_PUBLIC_KEY`. Next: batches 2 to 5.
 
 **2026-11-12 (Reseller Sellers page):** Owner: "Yes, add route and page" for F-081. P5-13 done: admin **Sellers** page and `POST /admin/sellers/:id` (activate, suspend, name, domain, commission rate). Open: P5-11 and the other staging runs and phase exits (owner), P1-20.

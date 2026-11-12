@@ -1,11 +1,10 @@
 import {
   confirmOrderEditRequestWorkflow,
+  convertDraftOrderWorkflow,
   useRemoteQueryStep,
 } from "@medusajs/medusa/core-flows";
-import { OrderStatus } from "@medusajs/framework/utils";
 import { createWorkflow } from "@medusajs/framework/workflows-sdk";
 import { ensureInvoiceWorkflow } from "../../invoice/ensure-invoice";
-import { updateOrderWorkflow } from "../../order/workflows/update-order";
 import { validateQuoteAcceptanceStep } from "../steps/validate-quote-acceptance";
 import { validateQuoteBuyerStep } from "../steps/validate-quote-buyer";
 import { updateQuotesWorkflow } from "./update-quote";
@@ -13,8 +12,13 @@ import { updateQuotesWorkflow } from "./update-quote";
 /*
   A workflow that accepts a quote by a customer. 
   
-  Once the customer accepts the quote, any staged changes made on the draft order is then committed.
-  The draft order is then converted to an actual order ready for processing.
+  Once the customer accepts the quote, the draft order becomes an order with
+  core's convertDraftOrderWorkflow, which reserves stock for every item and
+  emits order.placed (MEDUSA_SKILL "Draft orders"); the merchant's staged
+  changes are then committed, and the order edit swaps the reservations of
+  the items it added or changed. Before review 2 (S3) the draft was only
+  flagged as an order, so unchanged items had no reservation: the shop
+  could oversell them and staff couldn't fulfil the order.
 */
 export const customerAcceptQuoteWorkflow = createWorkflow(
   "customer-accept-quote",
@@ -39,18 +43,14 @@ export const customerAcceptQuoteWorkflow = createWorkflow(
       input: [{ id: input.quote_id, status: "accepted" }],
     });
 
+    convertDraftOrderWorkflow.runAsStep({
+      input: { id: quote.draft_order_id },
+    });
+
     confirmOrderEditRequestWorkflow.runAsStep({
       input: {
         order_id: quote.draft_order_id,
         confirmed_by: input.customer_id,
-      },
-    });
-
-    updateOrderWorkflow.runAsStep({
-      input: {
-        id: quote.draft_order_id,
-        is_draft_order: false,
-        status: OrderStatus.PENDING,
       },
     });
 

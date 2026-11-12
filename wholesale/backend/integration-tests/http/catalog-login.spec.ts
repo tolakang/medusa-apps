@@ -55,6 +55,18 @@ medusaIntegrationTestRunner({
         for (const path of ["/store/regions", "/store/product-categories", "/store/collections"]) {
           expect((await call(api.get(path, b2b.store()))).status).toEqual(200);
         }
+
+        // ...but not their products and prices (review 2, A2).
+        expect(
+          (
+            await call(
+              api.get(
+                "/store/collections?fields=id,*products,*products.variants.prices",
+                b2b.store()
+              )
+            )
+          ).status
+        ).toEqual(401);
       });
 
       it("X4: a signed-in customer without an approved company is refused", async () => {
@@ -83,6 +95,13 @@ medusaIntegrationTestRunner({
         ).toBeGreaterThan(0);
         expect(
           (await call(api.get("/store/product-variants", b2b.store(buyer.token)))).status
+        ).toEqual(200);
+        expect(
+          (
+            await call(
+              api.get("/store/collections?fields=id,*products", b2b.store(buyer.token))
+            )
+          ).status
         ).toEqual(200);
 
         process.env.WHOLESALE_REQUIRE_LOGIN = "false";
