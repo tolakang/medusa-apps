@@ -2,8 +2,9 @@
 # marketplace / vendor-portal — Next.js (vendor portal)
 #
 # Dokploy: Build Type = Dockerfile, Build Path = /,
-#   Docker File = marketplace/vendor-portal/Dockerfile, Docker Context Path = marketplace/vendor-portal,
-#   Watch Paths = marketplace/vendor-portal/**   (BUILD_PLAN.md §5; F-011)
+#   Docker File = marketplace/vendor-portal/Dockerfile,
+#   Docker Context Path = marketplace/vendor-portal,
+#   Watch Paths = marketplace/vendor-portal/**
 #   Environment -> Build-time Arguments: the ARG values below
 #   Environment -> Runtime variables   : see .env.example
 #   Domain -> port 3000
@@ -11,8 +12,9 @@
 # NEXT_PUBLIC_* values are baked into the JS bundle at build time, so
 # changing one requires a rebuild (Dokploy: Rebuild).
 #
-# STATUS: ready template. Builds once the app code is added
-# (BUILD_PLAN.md §4.2). Requires `output: "standalone"` in next.config.
+# STATUS: app code added (TASKS P6-09). next.config.js sets
+# `output: "standalone"`; the build needs no backend and no build args (the
+# NEXT_PUBLIC_* values below are only a fallback for MEDUSA_BACKEND_URL).
 # =====================================================================
 ARG NODE_VERSION=22
 

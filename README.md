@@ -2,7 +2,7 @@
 
 Standalone [Medusa](https://medusajs.com) backends, one per commerce scenario, each deployable on its own with Dokploy.
 
-> **Status (2026-11-12):** Phase 1 (Ecommerce) built and on staging; production (P1-08) is next. Phases 2 (POS), 3 (Booking services), 4 (Wholesale) and 5 (Reseller) have their code done; their staging runs and exit checklists (P2-14, P3-18, P4-11, P5-11) wait for the owner. Phase 6 (Marketplace) not started. Details: [`docs/TASKS.md`](./docs/TASKS.md) → *Session handoff*.
+> **Status (2026-11-12):** Phase 1 (Ecommerce) built and on staging; production (P1-08) is next. Phases 2 to 6 (POS, Booking services, Wholesale, Reseller, Marketplace) have their code done; their staging runs and exit checklists (P2-14, P3-18, P4-11, P5-11, P6-13) wait for the owner. Details: [`docs/TASKS.md`](./docs/TASKS.md) → *Session handoff*.
 
 Each folder is **one business project** (one Dokploy project). Inside it, every deployable has its own `Dockerfile` and `.env.example` and deploys independently.
 
@@ -13,11 +13,10 @@ Each folder is **one business project** (one Dokploy project). Inside it, every 
 | [`booking-services/`](./booking-services) | Appointments, classes, tickets, rentals | `/booking-services/backend`, `/booking-services/storefront` | Built — Phase 3 (copy of Ecommerce; exit P3-18 pending) |
 | [`wholesale/`](./wholesale) | Sellers buy your products in bulk | `/wholesale/backend`, `/wholesale/storefront` | Built — Phase 4 (exit P4-11 waits for the owner) |
 | [`reseller/`](./reseller) | Sellers sell your products, you ship | `/reseller/backend`, `/reseller/storefront`, `/reseller/seller-portal` | Built — Phase 5 (exit P5-11 waits for the owner) |
-| [`marketplace/`](./marketplace) | Vendors sell their own products | `/marketplace/backend`, `/marketplace/storefront`, `/marketplace/vendor-portal` | In progress — Phase 6 (backend and storefront copied from Ecommerce; vendor features next) |
+| [`marketplace/`](./marketplace) | Vendors sell their own products | `/marketplace/backend`, `/marketplace/storefront`, `/marketplace/vendor-portal` | Built — Phase 6 (exit P6-13 waits for the owner) |
 
 Each category's `README.md` is its Dokploy guide: services, build paths, ports, env and first-deploy order.
 
-Deployables without code yet (`marketplace/vendor-portal`) hold **ready templates** (`Dockerfile`, `.env.example`); a Dokploy build of them fails at `COPY package.json` until their phase adds the code.
 
 ## Documents
 

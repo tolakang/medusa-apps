@@ -1,8 +1,8 @@
 # Marketplace — `marketplace/`
 
-> **Vendors sell their own products.** In progress — Phase 6. Scope: [BUILD_PLAN.md §6.6](../BUILD_PLAN.md).
+> **Vendors sell their own products.** Code done — Phase 6 (exit P6-13 waits for the owner's staging run). Scope: [BUILD_PLAN.md §6.6](../BUILD_PLAN.md).
 >
-> `backend/` and `storefront/` are a **full copy of Ecommerce** (owner 2026-11-12, TASKS F-072); the vendor features are added task by task (P6-01 onwards). `vendor-portal/` is still a **ready template** (`Dockerfile`, `.env.example`) until P6-09; a Dokploy build of it fails at `COPY package.json` until then. Local stack: `docker-compose.local.yml` (backend, worker, storefront).
+> `backend/` and `storefront/` are a **full copy of Ecommerce** (owner 2026-11-12, TASKS F-072); the vendor features are added task by task (P6-01 onwards). `vendor-portal/` is a Next.js app copied from Reseller's seller portal (P6-09). Local stack: `docker-compose.local.yml` (backend, worker, storefront, vendor portal).
 
 This folder is **one complete business project**. Copy the whole folder's setup into one Dokploy project and every piece deploys on its own.
 

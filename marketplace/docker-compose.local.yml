@@ -98,5 +98,17 @@ services:
       PORT: "8000"
       MEDUSA_BACKEND_URL: http://localhost:9000
 
+  # Vendor portal (TASKS P6-09): server-side calls only, like Reseller's
+  # seller portal.
+  vendor-portal:
+    build: ./vendor-portal
+    container_name: marketplace-local-vendor-portal
+    depends_on:
+      backend: { condition: service_healthy }
+    ports: ["3000:3000"]
+    environment:
+      MEDUSA_BACKEND_URL: http://backend:9000
+      COOKIE_SECRET: local-only-vendor-portal-cookie-secret
+
 volumes:
   postgres_data:
