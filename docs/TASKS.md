@@ -430,6 +430,8 @@ Checked 2026-11-06. Each item is its own branch and PR, through `scripts/update-
 
 The newest note is first. Older notes stay below as history; where they differ, the newer one wins.
 
+**2026-11-12 (plan Revision 12):** Owner: "approve to record". `BUILD_PLAN.md` Revision 12 records the Marketplace as built (P6-01 to P6-15, F-072 to F-080): §6.6, the status lines and §7, and the revision history. P6-14 (refunds held and flagged, F-078) and P6-15 (vendor stock, F-080) are done. Open: P6-13 and the other staging runs and phase exits (owner), P1-20 (needs the owner's Google OAuth client).
+
 **2026-11-12 (Phase 6 code done):** P6-01 to P6-12 done (PRs #163 to #171 and the P6-09 PR): marketplace backend, storefront and vendor portal. Owner decisions this phase: full copy of Ecommerce (F-072), shipping split across vendors (F-076). Open for the owner: **P6-13** (staging run and exit, like P2-14, P3-18, P4-11, P5-11), refunds against vendor commissions (F-078), vendor stock (F-080), and a plan revision for the marketplace as built (F-072 to F-080).
 
 **2026-11-12 (Phase 6 started):** Owner: "start Phase 6, staging later". `marketplace/backend` and `marketplace/storefront` are now a full copy of Ecommerce at `main` `eaacbfa` (F-072), with CI entries and `marketplace/docker-compose.local.yml`. `marketplace/vendor-portal` stays a template until P6-09. P6-01 (module `marketplace`) done on top of it. P6-02 (links) and P6-03 (vendor sign-up, approval, `/vendors` access) done too. P6-04 (`create-vendor-product`) and P6-05 (`complete-vendor`, child orders; P6-12 proven) done too. P6-06 (commissions, payouts; P6-11 proven) done too. P6-07 (admin screens) and P6-08 (storefront: Sold by, shop pages, `complete-vendor`; PayWay webhook split, F-079) and P6-09 (vendor portal; P6-10 proven) done too. **Phase 6 code is complete**; P6-13 (phase exit) waits for the owner's staging run, like P2-14, P3-18, P4-11 and P5-11. Staging runs (P2-14, P3-18, P4-11, P5-11) still wait for the owner.
@@ -479,7 +481,7 @@ The newest note is first. Older notes stay below as history; where they differ, 
 
 ## Plan deviations & findings log
 
-Record anything where verified evidence differs from or adds to `BUILD_PLAN.md`. The plan is **not** edited to match; it changes only in owner-approved revisions (Revision 5, 2026-09-29, took in F-001 to F-028; Revision 9, 2026-11-11, a clean rewrite, took in everything up to F-065 and D9 to D11; Revision 10, 2026-11-12, took in F-071; Revision 11, 2026-11-12, took in F-066 to F-070).
+Record anything where verified evidence differs from or adds to `BUILD_PLAN.md`. The plan is **not** edited to match; it changes only in owner-approved revisions (Revision 5, 2026-09-29, took in F-001 to F-028; Revision 9, 2026-11-11, a clean rewrite, took in everything up to F-065 and D9 to D11; Revision 10, 2026-11-12, took in F-071; Revision 11, 2026-11-12, took in F-066 to F-070; Revision 12, 2026-11-12, took in F-072 to F-080).
 
 | # | Date | Plan § | Finding | Evidence | Action | Approved by |
 |---|---|---|---|---|---|---|
