@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto"
 import type { CreateOrderDTO, MedusaContainer } from "@medusajs/framework/types"
 import {
   ContainerRegistrationKeys,
@@ -156,7 +157,9 @@ export function childOrderData(
 ): CreateOrderDTO {
   return {
     region_id: parent.region_id,
-    customer_id: parent.customer_id,
+    // No customer_id: a customer's account lists the orders they placed
+    // (the parent), not the vendors' copies (TASKS P6-08). The email and
+    // addresses are kept for the vendor's delivery.
     sales_channel_id: parent.sales_channel_id,
     email: parent.email,
     currency_code: parent.currency_code,
@@ -366,29 +369,20 @@ const existingChildrenStep = createStep(
   }
 )
 
-// create-vendor-orders (BUILD_PLAN §6.6, TASKS P6-05), as in the official
-// Vendors example: under a lock on the cart, completeCartWorkflow makes the
-// parent order (the one the customer pays); then, unless the parent already
-// has its children (a retried call), one child order per vendor (a copy of
-// its items, holding their stock reservations), each linked to its vendor
-// (P6-02).
-export const createVendorOrdersWorkflow = createWorkflow(
-  "create-vendor-orders",
-  function (input: { cart_id: string }) {
-    useQueryGraphStep({
-      entity: "cart",
-      fields: ["id"],
-      filters: { id: input.cart_id },
-      options: { throwIfKeyNotFound: true },
-    })
+// split-vendor-order (TASKS P6-05, P6-08, F-079): one parent order's vendor
+// child orders, under a lock on the order, unless it already has them. Both
+// ways an order is placed run it: create-vendor-orders (the storefront's
+// complete-vendor) and the order.placed subscriber (a cart completed any
+// other way, e.g. by PayWay's webhook before the customer comes back). The
+// lock and the parent's child_order_ids keep them from making two sets.
+export const splitVendorOrderWorkflow = createWorkflow(
+  "split-vendor-order",
+  function (input: { order_id: string }) {
+    const key = transform(input, (i) => `vendor-split:${i.order_id}`)
+    const ownerId = transform(input, () => `vendor-split:${randomUUID()}`)
+    acquireLockStep({ key, ownerId, timeout: 10, ttl: 30 })
 
-    acquireLockStep({ key: input.cart_id, timeout: 2, ttl: 10 })
-
-    const { id: parentOrderId } = completeCartWorkflow.runAsStep({
-      input: { id: input.cart_id },
-    })
-
-    const parent = parentOrderStep(parentOrderId)
+    const parent = parentOrderStep(input.order_id)
     const existing = existingChildrenStep(parent)
 
     const created = when("create-vendor-children", { existing }, ({ existing }) => !existing).then(() => {
@@ -410,15 +404,48 @@ export const createVendorOrdersWorkflow = createWorkflow(
       return children
     })
 
-    releaseLockStep({ key: input.cart_id })
+    releaseLockStep({ key, ownerId })
 
     const result = transform(
-      { parentOrderId, existing, created },
-      ({ parentOrderId, existing, created }): CreateVendorOrdersResult => ({
-        parent_order_id: parentOrderId,
+      { input, existing, created },
+      ({ input, existing, created }): CreateVendorOrdersResult => ({
+        parent_order_id: input.order_id,
         child_orders: existing ?? created ?? [],
       })
     )
     return new WorkflowResponse(result)
+  }
+)
+
+// create-vendor-orders (BUILD_PLAN §6.6, TASKS P6-05), as in the official
+// Vendors example: under a lock on the cart, completeCartWorkflow makes the
+// parent order (the one the customer pays); then split-vendor-order makes
+// one child order per vendor (a copy of its items, holding their stock
+// reservations), each linked to its vendor (P6-02), unless the parent
+// already has them (a retried call, or the order.placed subscriber was
+// first).
+export const createVendorOrdersWorkflow = createWorkflow(
+  "create-vendor-orders",
+  function (input: { cart_id: string }) {
+    useQueryGraphStep({
+      entity: "cart",
+      fields: ["id"],
+      filters: { id: input.cart_id },
+      options: { throwIfKeyNotFound: true },
+    })
+
+    acquireLockStep({ key: input.cart_id, timeout: 2, ttl: 10 })
+
+    const { id: parentOrderId } = completeCartWorkflow.runAsStep({
+      input: { id: input.cart_id },
+    })
+
+    const split = splitVendorOrderWorkflow.runAsStep({
+      input: { order_id: parentOrderId },
+    })
+
+    releaseLockStep({ key: input.cart_id })
+
+    return new WorkflowResponse(split)
   }
 )

@@ -15,7 +15,18 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     data: [order],
   } = await req.scope.resolve(ContainerRegistrationKeys.QUERY).graph({
     entity: "order",
-    fields: ["id", "display_id", "email", "currency_code", "total", "status", "created_at"],
+    // The storefront redirects to /<country>/order/<id>/confirmed with the
+    // shipping address's country (lib/data/cart.ts placeOrder).
+    fields: [
+      "id",
+      "display_id",
+      "email",
+      "currency_code",
+      "total",
+      "status",
+      "created_at",
+      "shipping_address.country_code",
+    ],
     filters: { id: result.parent_order_id },
   })
   res.json({ type: "order", order, vendor_orders: result.child_orders })

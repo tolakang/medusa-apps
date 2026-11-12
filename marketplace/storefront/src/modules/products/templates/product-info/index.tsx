@@ -4,9 +4,12 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 
 type ProductInfoProps = {
   product: HttpTypes.StoreProduct
+  // The marketplace vendor selling it (TASKS P6-08); none for the
+  // marketplace's own products.
+  vendor?: { handle: string; name: string } | null
 }
 
-const ProductInfo = ({ product }: ProductInfoProps) => {
+const ProductInfo = ({ product, vendor }: ProductInfoProps) => {
   return (
     <div id="product-info">
       <div className="flex flex-col gap-y-4 lg:max-w-[500px] mx-auto">
@@ -25,6 +28,17 @@ const ProductInfo = ({ product }: ProductInfoProps) => {
         >
           {product.title}
         </Heading>
+        {vendor && (
+          <Text className="text-small-regular text-ui-fg-subtle" data-testid="product-vendor">
+            Sold by{" "}
+            <LocalizedClientLink
+              href={`/vendors/${vendor.handle}`}
+              className="text-ui-fg-interactive hover:underline"
+            >
+              {vendor.name}
+            </LocalizedClientLink>
+          </Text>
+        )}
 
         <Text
           className="text-medium text-ui-fg-subtle whitespace-pre-line"

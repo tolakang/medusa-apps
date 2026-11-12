@@ -453,8 +453,15 @@ export async function placeOrder(cartId?: string) {
     ...(await getAuthHeaders()),
   }
 
-  const cartRes = await sdk.store.cart
-    .complete(id, {}, headers)
+  // Marketplace checkout (TASKS P6-08, plan §6.6): the backend's
+  // complete-vendor route completes the cart into the customer's order and
+  // splits it into one order per vendor. Same answer shape as the core
+  // /store/carts/:id/complete for a placed order.
+  const cartRes = await sdk.client
+    .fetch<HttpTypes.StoreCompleteCartResponse>(`/store/carts/${id}/complete-vendor`, {
+      method: "POST",
+      headers,
+    })
     .then(async (cartRes) => {
       const cartCacheTag = await getCacheTag("carts")
       revalidateTag(cartCacheTag, { expire: 0 })
