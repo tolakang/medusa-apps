@@ -7,6 +7,7 @@ import {
 import seedInitialData from "../../src/scripts/seed-initial-data"
 import seed from "../../src/scripts/seed"
 import { MARKETPLACE_MODULE } from "../../src/modules/marketplace"
+import { confirmVendorEmail } from "./vendor-email"
 
 // Shared setup for marketplace HTTP tests (TASKS P6-06 onwards): the
 // Cambodia shop as on staging, admin sign-in, vendor sign-up, and carts ready
@@ -78,6 +79,7 @@ export function marketplaceTestKit(api: Api, getContainer: () => MedusaContainer
       { headers: freshIp() }
     )
     const created = await api.post("/vendors", { name }, bearer(reg.data.token))
+    await confirmVendorEmail(getContainer(), email)
     await api.post(`/admin/vendors/${created.data.vendor.id}`, { status: "active" }, admin)
     const login = await api.post("/auth/vendor/emailpass", { email, password }, { headers: freshIp() })
     return { id: created.data.vendor.id as string, auth: bearer(login.data.token) }

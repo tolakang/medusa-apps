@@ -29,6 +29,24 @@ export function storefrontLink(
   return `${base}/${page}${query ? `?${query}` : ""}`
 }
 
+// The vendor portal's pages (review 2, A3): VENDOR_PORTAL_URL, or the first
+// VENDOR_CORS origin (the portal's origin, as for the admin above).
+export const VENDOR_ACTOR_METADATA = { actor: "vendor" }
+
+export function vendorPortalLink(
+  page: "verify-account",
+  params: Record<string, string>,
+  env: NodeJS.ProcessEnv = process.env
+): string | null {
+  const origin = [env.VENDOR_PORTAL_URL, ...(env.VENDOR_CORS ?? "").split(",")]
+    .map((o) => (o ?? "").trim())
+    .find((o) => /^https?:\/\//.test(o))
+  if (!origin) {
+    return null
+  }
+  return `${origin.replace(/\/+$/, "")}/${page}?${new URLSearchParams(params)}`
+}
+
 // The admin dashboard's own reset page (`<admin>/reset-password`). The admin is
 // served by this backend: admin.backendUrl when it is a full URL, otherwise the
 // first ADMIN_CORS origin (the admin's origin in every deployment here).

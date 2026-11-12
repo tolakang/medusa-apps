@@ -20,6 +20,7 @@ import {
   requireStrongPassword,
 } from './auth-guards'
 import { requireVendor, vendorCors } from './vendor-auth'
+import { refuseExistingInventoryItems, refuseVendorOrderMetadata } from './marketplace-guards'
 import { PostVendorCreate } from './vendors/validators'
 import { PostVendorProductStock } from './vendors/products/[id]/stock/route'
 import { AdminCreateProduct } from '@medusajs/medusa/api/admin/products/validators'
@@ -55,10 +56,11 @@ export default defineMiddlewares({
     },
     {
       // A vendor adds a product (TASKS P6-04): the admin's product body, as
-      // in the official Vendors example.
+      // in the official Vendors example, without links to existing
+      // inventory items (review 2, A1).
       method: ['POST'],
       matcher: '/vendors/products',
-      middlewares: [validateAndTransformBody(AdminCreateProduct)],
+      middlewares: [refuseExistingInventoryItems, validateAndTransformBody(AdminCreateProduct)],
     },
     {
       // Vendor sign-up and sign-in: the same per-IP limits and password rule
@@ -124,7 +126,13 @@ export default defineMiddlewares({
       // Phone numbers: digits only (spaces, +, -, parentheses allowed).
       method: ['POST'],
       matcher: '/store/carts/:id',
-      middlewares: [validatePhoneFields],
+      middlewares: [validatePhoneFields, refuseVendorOrderMetadata],
+    },
+    {
+      // The vendor split's own order metadata keys (review 2, M4).
+      method: ['POST'],
+      matcher: '/store/carts',
+      middlewares: [refuseVendorOrderMetadata],
     },
     {
       // Required contact before the order is placed: the delivery phone in
