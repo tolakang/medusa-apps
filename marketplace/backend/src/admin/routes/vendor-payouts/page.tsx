@@ -57,6 +57,126 @@ const PayoutDetail = ({ id }: { id: string }) => {
   )
 }
 
+type HeldCommission = Commission & {
+  vendor: { id: string; name: string }
+  order: { id: string; display_id: number } | null
+  parent_order: { id: string; display_id: number; captured: number; refunded: number } | null
+}
+
+// Refunds to review (owner, F-078): a commission whose customer order has a
+// refund is held out of payouts until it's settled here. Keep: the vendor
+// gets it as it is; Reduce: the vendor gets the amount you enter; Cancel:
+// nothing for this order. Kept or reduced, the next payout includes it.
+const RefundsToReview = () => {
+  const queryClient = useQueryClient()
+  const [amounts, setAmounts] = useState<Record<string, string>>({})
+  const { data } = useQuery({
+    queryKey: ["marketplace-refunds-to-review"],
+    queryFn: () =>
+      sdk.client.fetch<{ vendor_commissions: HeldCommission[] }>("/admin/vendor-commissions", {
+        query: { refund_review: "to_review" },
+      }),
+  })
+  const settle = useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
+      sdk.client.fetch(`/admin/vendor-commissions/${id}/settle`, { method: "POST", body }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["marketplace-refunds-to-review"] }),
+  })
+  const held = data?.vendor_commissions ?? []
+  if (!held.length) {
+    return null
+  }
+  return (
+    <Container className="flex flex-col gap-y-3">
+      <div>
+        <Heading level="h2">Refunds to review</Heading>
+        <Text className="text-ui-fg-subtle">
+          The customer got money back on these orders. They're held out of payouts until you decide
+          what the vendor gets.
+        </Text>
+      </div>
+      {settle.error && <Text className="text-ui-fg-error">{errorText(settle.error)}</Text>}
+      <Table>
+        <Table.Header>
+          <Table.Row>
+            <Table.HeaderCell>Vendor order</Table.HeaderCell>
+            <Table.HeaderCell>Customer order</Table.HeaderCell>
+            <Table.HeaderCell>Vendor gets</Table.HeaderCell>
+            <Table.HeaderCell />
+          </Table.Row>
+        </Table.Header>
+        <Table.Body>
+          {held.map((c) => (
+            <Table.Row key={c.id}>
+              <Table.Cell>
+                {c.vendor.name}
+                {c.order && (
+                  <>
+                    {" · "}
+                    <a href={adminLink(`/orders/${c.order.id}`)} className="text-ui-fg-interactive hover:underline">
+                      #{c.order.display_id}
+                    </a>
+                  </>
+                )}
+              </Table.Cell>
+              <Table.Cell>
+                {c.parent_order && (
+                  <>
+                    <a href={adminLink(`/orders/${c.parent_order.id}`)} className="text-ui-fg-interactive hover:underline">
+                      #{c.parent_order.display_id}
+                    </a>{" "}
+                    paid {money(c.parent_order.captured, c.currency_code)}, refunded{" "}
+                    {money(c.parent_order.refunded, c.currency_code)}
+                  </>
+                )}
+              </Table.Cell>
+              <Table.Cell>{money(c.payout_amount, c.currency_code)}</Table.Cell>
+              <Table.Cell className="text-right">
+                <div className="flex items-center justify-end gap-2">
+                  <Button
+                    size="small"
+                    variant="secondary"
+                    isLoading={settle.isPending}
+                    onClick={() => settle.mutate({ id: c.id, body: { action: "keep" } })}
+                  >
+                    Keep
+                  </Button>
+                  <Input
+                    size="small"
+                    className="w-24"
+                    placeholder="New amount"
+                    value={amounts[c.id] ?? ""}
+                    onChange={(e) => setAmounts((a) => ({ ...a, [c.id]: e.target.value }))}
+                  />
+                  <Button
+                    size="small"
+                    variant="secondary"
+                    disabled={!amounts[c.id]?.trim()}
+                    isLoading={settle.isPending}
+                    onClick={() =>
+                      settle.mutate({ id: c.id, body: { action: "reduce", payout_amount: Number(amounts[c.id]) } })
+                    }
+                  >
+                    Reduce
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="danger"
+                    isLoading={settle.isPending}
+                    onClick={() => settle.mutate({ id: c.id, body: { action: "cancel" } })}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </Table.Cell>
+            </Table.Row>
+          ))}
+        </Table.Body>
+      </Table>
+    </Container>
+  )
+}
+
 const VendorPayoutsPage = () => {
   const queryClient = useQueryClient()
   const [status, setStatus] = useState("pending")
@@ -77,6 +197,8 @@ const VendorPayoutsPage = () => {
   })
 
   return (
+    <div className="flex flex-col gap-y-3">
+    <RefundsToReview />
     <Container className="flex flex-col gap-y-4">
       <div className="flex items-end justify-between gap-3">
         <div>
@@ -154,6 +276,7 @@ const VendorPayoutsPage = () => {
         </Table>
       )}
     </Container>
+    </div>
   )
 }
 

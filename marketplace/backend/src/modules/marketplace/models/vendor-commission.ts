@@ -30,6 +30,12 @@ export const VendorCommission = model
       .enum(["pending", "approved", "paid", "cancelled"])
       .default("pending"),
     payout_id: model.text().nullable(),
+    // Refunds (owner 2026-11-12, F-078: "hold and flag now, automate
+    // later"). A refund is taken on the parent order, so it can't be matched
+    // to one vendor automatically. to_review: the parent has a refund; the
+    // payout job holds the commission and the admin settles it (keep, reduce
+    // or cancel). settled: the admin did; the next payout includes it.
+    refund_review: model.enum(["none", "to_review", "settled"]).default("none"),
     vendor: model.belongsTo(() => Vendor, { mappedBy: "commissions" }),
   })
   .indexes([{ on: ["order_id"], unique: true }])

@@ -4,6 +4,10 @@ import { MARKETPLACE_MODULE } from "../../src/modules/marketplace"
 import type MarketplaceModuleService from "../../src/modules/marketplace/service"
 import { createVendorPayoutsWorkflow } from "../../src/workflows/marketplace/create-payouts"
 import { cancelVendorCommissionWorkflow } from "../../src/workflows/marketplace/record-vendor-commission"
+import {
+  NOT_TO_REVIEW_MESSAGE,
+  REDUCE_NEEDS_AMOUNT_MESSAGE,
+} from "../../src/workflows/marketplace/refund-review"
 import { IP_SECRET, marketplaceTestKit } from "../helpers/marketplace"
 
 jest.setTimeout(240 * 1000)
@@ -194,6 +198,125 @@ medusaIntegrationTestRunner({
         })
         const [kept] = await marketplace().listVendorCommissions({ order_id: second.order_id })
         expect(kept.status).toBe("approved")
+      })
+
+      // F-078 (owner: "hold and flag now, automate later").
+      const refundParent = async (parentId: string, amount: number) => {
+        const {
+          data: [parent],
+        } = await kit.query().graph({
+          entity: "order",
+          fields: ["payment_collections.payments.id"],
+          filters: { id: parentId },
+        })
+        const paymentId = parent.payment_collections![0]!.payments![0]!.id
+        await api.post(`/admin/payments/${paymentId}/capture`, {}, admin)
+        await api.post(`/admin/payments/${paymentId}/refund`, { amount }, admin)
+      }
+      const eventually = async <T,>(read: () => Promise<T>, ok: (v: T) => boolean) => {
+        let value = await read()
+        for (let i = 0; i < 40 && !ok(value); i++) {
+          await new Promise((r) => setTimeout(r, 250))
+          value = await read()
+        }
+        return value
+      }
+
+      it("a refund on the customer's order holds and flags its vendor commissions (F-078)", async () => {
+        const { res } = await twoVendorOrder()
+        await refundParent(res.data.order.id, 5)
+
+        // payment.refunded flags both vendors' commissions at once.
+        const flagged = await eventually(
+          () => marketplace().listVendorCommissions({}),
+          (list) => list.every((c) => c.refund_review === "to_review")
+        )
+        expect(flagged.map((c) => c.refund_review)).toEqual(["to_review", "to_review"])
+
+        // The payout job holds them: no payout, still pending.
+        expect((await runPayouts()).result).toEqual([])
+        expect((await marketplace().listVendorCommissions({})).every((c) => c.status === "pending")).toBe(true)
+
+        // The report lists them with the customer order's refund.
+        const report = await call(api.get("/admin/vendor-commissions?refund_review=to_review", admin))
+        expect(report.status).toBe(200)
+        expect(report.data.count).toBe(2)
+        expect(report.data.vendor_commissions[0].parent_order).toEqual(
+          expect.objectContaining({ id: res.data.order.id, refunded: 5 })
+        )
+      })
+
+      it("the payout job flags a refund even if the event was missed", async () => {
+        const { res } = await twoVendorOrder()
+        await refundParent(res.data.order.id, 5)
+        const list = await eventually(
+          () => marketplace().listVendorCommissions({}),
+          (l) => l.every((c) => c.refund_review === "to_review")
+        )
+        // As if payment.refunded never arrived.
+        await marketplace().updateVendorCommissions(list.map((c) => ({ id: c.id, refund_review: "none" as const })))
+
+        expect((await runPayouts()).result).toEqual([])
+        expect(
+          (await marketplace().listVendorCommissions({})).map((c) => c.refund_review)
+        ).toEqual(["to_review", "to_review"])
+      })
+
+      it("settled commissions go into the next payout: keep, reduce, cancel", async () => {
+        const { dara, sok, res } = await twoVendorOrder()
+        await refundParent(res.data.order.id, 5)
+        const held = await eventually(
+          () => marketplace().listVendorCommissions({}),
+          (l) => l.every((c) => c.refund_review === "to_review")
+        )
+        const daras = held.find((c) => c.vendor_id === dara.id)!
+        const soks = held.find((c) => c.vendor_id === sok.id)!
+        const settle = (id: string, body: Record<string, unknown>) =>
+          call(api.post(`/admin/vendor-commissions/${id}/settle`, body, admin))
+
+        // Reduce needs an amount below what the vendor gets now.
+        for (const bad of [{ action: "reduce" }, { action: "reduce", payout_amount: Number(daras.payout_amount) + 1 }]) {
+          const r = await settle(daras.id, bad)
+          expect(r.status).toBe(400)
+          expect(r.data.message).toBe(REDUCE_NEEDS_AMOUNT_MESSAGE)
+        }
+        expect((await settle(daras.id, { action: "hide" })).status).toBe(400)
+
+        const reduced = await settle(daras.id, { action: "reduce", payout_amount: 3 })
+        expect(reduced.status).toBe(200)
+        expect(reduced.data.vendor_commission).toEqual(
+          expect.objectContaining({ refund_review: "settled", payout_amount: 3, status: "pending" })
+        )
+        const cancelled = await settle(soks.id, { action: "cancel" })
+        expect(cancelled.data.vendor_commission).toEqual(
+          expect.objectContaining({ refund_review: "settled", status: "cancelled" })
+        )
+        // Once settled, there's nothing to review.
+        const again = await settle(daras.id, { action: "keep" })
+        expect(again.status).toBe(400)
+        expect(again.data.message).toBe(NOT_TO_REVIEW_MESSAGE)
+        expect((await settle("vcom_missing", { action: "keep" })).status).toBe(404)
+
+        // The next payout pays Dara the reduced amount and Sok nothing.
+        const { result } = await runPayouts()
+        expect(result).toEqual([expect.objectContaining({ vendor_id: dara.id, amount: 3 })])
+        expect((await call(api.get("/admin/vendor-commissions?refund_review=to_review", admin))).data.count).toBe(0)
+      })
+
+      it("keep pays the full amount", async () => {
+        const { dara, res } = await twoVendorOrder()
+        await refundParent(res.data.order.id, 1)
+        const held = await eventually(
+          () => marketplace().listVendorCommissions({}),
+          (l) => l.every((c) => c.refund_review === "to_review")
+        )
+        for (const c of held) {
+          expect((await call(api.post(`/admin/vendor-commissions/${c.id}/settle`, { action: "keep" }, admin))).status).toBe(200)
+        }
+        const { result } = await runPayouts()
+        const daraCommission = held.find((c) => c.vendor_id === dara.id)!
+        expect(result.find((p) => p.vendor_id === dara.id)!.amount).toBeCloseTo(Number(daraCommission.payout_amount), 2)
+        expect((await call(api.post(`/admin/vendor-commissions/${daraCommission.id}/settle`, { action: "keep" }, dara.auth))).status).toBe(401)
       })
 
       it("a vendor sees its own payouts and what isn't paid out yet", async () => {
