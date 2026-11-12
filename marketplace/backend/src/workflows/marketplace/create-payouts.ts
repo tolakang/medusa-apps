@@ -11,6 +11,7 @@ import { acquireLockStep, releaseLockStep } from "@medusajs/medusa/core-flows"
 import { MARKETPLACE_MODULE } from "../../modules/marketplace"
 import type MarketplaceModuleService from "../../modules/marketplace/service"
 import { groupPayouts } from "../../lib/vendor-commission"
+import { childOrdersWithRefundedParent } from "./refund-review"
 
 const PAYOUTS_LOCK = "marketplace-vendor-payouts"
 
@@ -18,17 +19,33 @@ type CreatePayoutsInput = { cutoff: Date; period: string }
 type Created = { payout_ids: string[]; commission_ids: string[] }
 
 // Every pending commission recorded before the cutoff goes into one payout
-// per vendor and currency for the period (TASKS P6-06). A vendor that
+// per vendor and currency for the period (TASKS P6-06), except one held for
+// a refund to review (F-078). The flag isn't undone if a later step fails:
+// it records a refund that is there either way. A vendor that
 // already has that period's payout in that currency keeps its commissions
 // pending for the next one (the unique index would refuse a second payout).
 const createPayoutsStep = createStep(
   "create-vendor-payouts",
   async (input: CreatePayoutsInput, { container }) => {
     const marketplace = container.resolve<MarketplaceModuleService>(MARKETPLACE_MODULE)
-    const pending = await marketplace.listVendorCommissions(
+    const due = await marketplace.listVendorCommissions(
       { status: "pending", created_at: { $lt: input.cutoff } },
-      { select: ["id", "vendor_id", "currency_code", "payout_amount"] }
+      { select: ["id", "order_id", "vendor_id", "currency_code", "payout_amount", "refund_review"] }
     )
+    // F-078: hold a commission whose parent order has a refund, unless the
+    // admin has settled it; flag it for the payout report.
+    const refunded = await childOrdersWithRefundedParent(
+      container,
+      due.filter((c) => c.refund_review !== "settled").map((c) => c.order_id)
+    )
+    const held = due.filter((c) => c.refund_review !== "settled" && refunded.has(c.order_id))
+    const toFlag = held.filter((c) => c.refund_review !== "to_review")
+    if (toFlag.length) {
+      await marketplace.updateVendorCommissions(
+        toFlag.map((c) => ({ id: c.id, refund_review: "to_review" as const }))
+      )
+    }
+    const pending = due.filter((c) => !held.includes(c))
     const lines = groupPayouts(pending)
     const existing = await marketplace.listVendorPayouts({ period: input.period })
     const taken = new Set(existing.map((p) => `${p.vendor_id}:${p.currency_code}`))
