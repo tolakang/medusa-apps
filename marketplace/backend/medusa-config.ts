@@ -227,8 +227,11 @@ module.exports = defineConfig({
       // Customers confirm their email before they can sign in (TASKS P1-18;
       // docs "Email Verification", since v2.16). The email is sent by
       // src/subscribers/auth-email-verification.ts.
+      // Vendors too, so nobody can sign up as a vendor with someone else's
+      // email (review 2, A3); their link opens the vendor portal.
       authVerificationsPerActor: {
         customer: [{ entity_type: "email", auth_provider: "emailpass" }],
+        vendor: [{ entity_type: "email", auth_provider: "emailpass" }],
       },
     },
   },

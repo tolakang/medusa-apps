@@ -218,18 +218,33 @@ type MovedReservation = {
 type CreatedChildren = {
   orderIds: string[]
   moved: MovedReservation[]
+  // Put the parent's reservations back when undoing (review 2, S1).
+  restoreParent: boolean
 }
 
-// Removes the children and the reservations made for them. The parent's own
-// reservations are not put back: this only runs when the workflow fails, and
-// then completeCartWorkflow's compensation removes the parent order and its
-// reservations by their ids (re-creating them here left one behind, P6-05
-// test "a failure while making child orders").
+// Removes the children and the reservations made for them. When this run
+// also made the parent (complete-vendor on a cart that wasn't complete yet),
+// the parent's reservations are not put back: completeCartWorkflow's
+// compensation removes the parent order and its reservations by their ids
+// (re-creating them here left one behind, P6-05 test "a failure while making
+// child orders"). Otherwise the paid parent stays, so its reservations are
+// re-created from the moves; without them its units went back on sale and a
+// retried split gave the children none (review 2, S1).
 const undoChildOrders = async (container: MedusaContainer, created: CreatedChildren) => {
+  const inventory = container.resolve(Modules.INVENTORY)
   if (created.moved.length) {
-    await container
-      .resolve(Modules.INVENTORY)
-      .deleteReservationItemsByLineItem(created.moved.map((m) => m.to_line_item_id))
+    await inventory.deleteReservationItemsByLineItem(created.moved.map((m) => m.to_line_item_id))
+    if (created.restoreParent) {
+      await inventory.createReservationItems(
+        created.moved.map((m) => ({
+          line_item_id: m.from_line_item_id,
+          inventory_item_id: m.inventory_item_id,
+          location_id: m.location_id,
+          quantity: m.quantity,
+          allow_backorder: true,
+        }))
+      )
+    }
   }
   if (created.orderIds.length) {
     await container.resolve(Modules.ORDER).deleteOrders(created.orderIds)
@@ -247,13 +262,17 @@ const undoChildOrders = async (container: MedusaContainer, created: CreatedChild
 const createVendorOrdersStep = createStep(
   "create-vendor-orders",
   async (
-    { parent, groups }: { parent: ParentOrder; groups: Record<string, any[]> },
+    {
+      parent,
+      groups,
+      restoreParent,
+    }: { parent: ParentOrder; groups: Record<string, any[]>; restoreParent: boolean },
     { container }
   ) => {
     const orders = container.resolve(Modules.ORDER)
     const inventory = container.resolve(Modules.INVENTORY)
     const children: { vendor_id: string; order_id: string }[] = []
-    const created: CreatedChildren = { orderIds: [], moved: [] }
+    const created: CreatedChildren = { orderIds: [], moved: [], restoreParent }
     try {
       const entries = Object.entries(groups)
       const shares = vendorShippingShares(
@@ -375,9 +394,11 @@ const existingChildrenStep = createStep(
 // complete-vendor) and the order.placed subscriber (a cart completed any
 // other way, e.g. by PayWay's webhook before the customer comes back). The
 // lock and the parent's child_order_ids keep them from making two sets.
+// `parent_created_here`: complete-vendor made the parent in the same run, so
+// its own compensation removes the parent (see undoChildOrders).
 export const splitVendorOrderWorkflow = createWorkflow(
   "split-vendor-order",
-  function (input: { order_id: string }) {
+  function (input: { order_id: string; parent_created_here?: boolean }) {
     const key = transform(input, (i) => `vendor-split:${i.order_id}`)
     const ownerId = transform(input, () => `vendor-split:${randomUUID()}`)
     acquireLockStep({ key, ownerId, timeout: 10, ttl: 30 })
@@ -387,7 +408,8 @@ export const splitVendorOrderWorkflow = createWorkflow(
 
     const created = when("create-vendor-children", { existing }, ({ existing }) => !existing).then(() => {
       const groups = groupVendorItemsStep(parent)
-      const children = createVendorOrdersStep({ parent, groups })
+      const restoreParent = transform(input, (i) => !i.parent_created_here)
+      const children = createVendorOrdersStep({ parent, groups, restoreParent })
       const links = transform({ children }, ({ children }) =>
         children.map((c) => ({
           [MARKETPLACE_MODULE]: { vendor_id: c.vendor_id },
@@ -436,13 +458,23 @@ export const createVendorOrdersWorkflow = createWorkflow(
 
     acquireLockStep({ key: input.cart_id, timeout: 2, ttl: 10 })
 
+    // Already completed (e.g. by PayWay's webhook): completeCartWorkflow
+    // returns the existing order and won't undo it.
+    const { data: cartState } = useQueryGraphStep({
+      entity: "cart",
+      fields: ["id", "completed_at"],
+      filters: { id: input.cart_id },
+    }).config({ name: "vendor-orders-cart-state" })
+
     const { id: parentOrderId } = completeCartWorkflow.runAsStep({
       input: { id: input.cart_id },
     })
 
-    const split = splitVendorOrderWorkflow.runAsStep({
-      input: { order_id: parentOrderId },
-    })
+    const splitInput = transform({ cartState, parentOrderId }, ({ cartState, parentOrderId }) => ({
+      order_id: parentOrderId,
+      parent_created_here: !cartState?.[0]?.completed_at,
+    }))
+    const split = splitVendorOrderWorkflow.runAsStep({ input: splitInput })
 
     releaseLockStep({ key: input.cart_id })
 

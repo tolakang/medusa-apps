@@ -10,5 +10,6 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!login|logout|_next|favicon.ico).*)"],
+  // verify-account: the emailed link works without a session (review 2, A3).
+  matcher: ["/((?!login|logout|verify-account|_next|favicon.ico).*)"],
 }

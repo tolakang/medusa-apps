@@ -1,6 +1,12 @@
 import type { SubscriberArgs, SubscriberConfig } from "@medusajs/framework"
 import { AuthWorkflowEvents, ContainerRegistrationKeys } from "@medusajs/framework/utils"
-import { authEmailKey, storefrontLink, VERIFY_EMAIL_TEMPLATE } from "../lib/auth-email"
+import {
+  authEmailKey,
+  storefrontLink,
+  VENDOR_ACTOR_METADATA,
+  vendorPortalLink,
+  VERIFY_EMAIL_TEMPLATE,
+} from "../lib/auth-email"
 import { sendAuthEmailWorkflow } from "../workflows/send-auth-email"
 
 // Email verification for new customer accounts (TASKS P1-18), enabled with
@@ -8,7 +14,9 @@ import { sendAuthEmailWorkflow } from "../workflows/send-auth-email"
 // auth.verification_requested since v2.17 (docs "Email Verification", Event
 // Payload): entity_id (the email), entity_type, code, code_provider,
 // auth_identity_id, expires_at, metadata. The storefront's /verify-account page
-// confirms the code (POST /auth/verification/confirm).
+// confirms the code (POST /auth/verification/confirm). The vendor portal asks
+// with `metadata: { actor: "vendor" }`, so the link opens its own
+// /verify-account page instead (review 2, A3).
 type VerificationRequested = {
   entity_id: string
   entity_type: string
@@ -28,9 +36,17 @@ export default async function authEmailVerification({
   }
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
   const config = container.resolve(ContainerRegistrationKeys.CONFIG_MODULE)
-  const url = storefrontLink(config, "verify-account", { token: data.code, email: data.entity_id })
+  const params = { token: data.code, email: data.entity_id }
+  const forVendor = data.metadata?.actor === VENDOR_ACTOR_METADATA.actor
+  const url = forVendor
+    ? vendorPortalLink("verify-account", params)
+    : storefrontLink(config, "verify-account", params)
   if (!url) {
-    logger.warn("Email verification not sent: set STOREFRONT_URL (admin.storefrontUrl).")
+    logger.warn(
+      forVendor
+        ? "Vendor email verification not sent: set VENDOR_PORTAL_URL (or VENDOR_CORS)."
+        : "Email verification not sent: set STOREFRONT_URL (admin.storefrontUrl)."
+    )
     return
   }
   const minutes = Math.round((new Date(data.expires_at).getTime() - Date.now()) / 60000)

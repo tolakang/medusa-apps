@@ -1,6 +1,7 @@
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import {
+  cancelOrderWorkflow,
   createDefaultsWorkflow,
   createShippingProfilesWorkflow,
 } from "@medusajs/medusa/core-flows"
@@ -11,7 +12,9 @@ import type MarketplaceModuleService from "../../src/modules/marketplace/service
 import {
   CHILD_ORDERS_KEY,
   PARENT_ORDER_KEY,
+  splitVendorOrderWorkflow,
 } from "../../src/workflows/marketplace/create-vendor-orders"
+import { RESERVED_METADATA_MESSAGE } from "../../src/api/marketplace-guards"
 
 jest.setTimeout(240 * 1000)
 
@@ -391,6 +394,116 @@ medusaIntegrationTestRunner({
         expect(retried.data.vendor_orders).toHaveLength(2)
         const { data: after } = await query().graph({ entity: "order", fields: ["id"] })
         expect(after).toHaveLength(3)
+      })
+
+      it("a split that fails after Medusa completed the cart keeps the paid order's stock (review 2, S1)", async () => {
+        await vendorWith("dara", ["t-shirt"])
+        await vendorWith("sok", ["sweatshirt"])
+        const cartId = await readyCart([
+          { handle: "t-shirt", quantity: 1 },
+          { handle: "sweatshirt", quantity: 1 },
+        ])
+        const inventory = getContainer().resolve(Modules.INVENTORY)
+        // The second vendor's reservation move fails (moves are the calls
+        // with allow_backorder); putting the parent's back is the third.
+        const original = inventory.createReservationItems.bind(inventory)
+        let moves = 0
+        const spy = jest
+          .spyOn(inventory, "createReservationItems")
+          .mockImplementation(async (data: any, ...rest: any[]) => {
+            const rows = Array.isArray(data) ? data : [data]
+            if (rows.every((r) => r.allow_backorder)) {
+              moves += 1
+              if (moves === 2) {
+                throw new Error("reservation store down")
+              }
+            }
+            return (original as any)(data, ...rest)
+          })
+        // As PayWay's webhook: core completion, then the order.placed split.
+        const core = await api.post(`/store/carts/${cartId}/complete`, {}, store)
+        const parentId = core.data.order.id
+        for (let i = 0; i < 60 && moves < 3; i++) {
+          await new Promise((r) => setTimeout(r, 250))
+        }
+        spy.mockRestore()
+        expect(moves).toBe(3)
+
+        const {
+          data: [parent],
+        } = await query().graph({
+          entity: "order",
+          fields: ["id", "metadata", "items.id"],
+          filters: { id: parentId },
+        })
+        expect(parent.metadata?.[CHILD_ORDERS_KEY]).toBeUndefined()
+        const parentItemIds = parent.items!.map((i) => i!.id)
+        const kept = await inventory.listReservationItems({ line_item_id: parentItemIds })
+        expect(kept).toHaveLength(2)
+
+        // The retried split gives each child its stock.
+        const { result } = await splitVendorOrderWorkflow(getContainer()).run({
+          input: { order_id: parentId },
+        })
+        expect(result.child_orders).toHaveLength(2)
+        const { data: children } = await query().graph({
+          entity: "order",
+          fields: ["items.id"],
+          filters: { id: result.child_orders.map((c) => c.order_id) },
+        })
+        const childItemIds = children.flatMap((c) => c.items!.map((i) => i!.id))
+        expect(await inventory.listReservationItems({ line_item_id: childItemIds })).toHaveLength(2)
+        expect(await inventory.listReservationItems({ line_item_id: parentItemIds })).toHaveLength(0)
+      })
+
+      it("cancelling the customer's order cancels its vendor orders and frees their stock (review 2, S2)", async () => {
+        await vendorWith("dara", ["t-shirt"])
+        await vendorWith("sok", ["sweatshirt"])
+        const cartId = await readyCart([
+          { handle: "t-shirt", quantity: 1 },
+          { handle: "sweatshirt", quantity: 1 },
+        ])
+        const done = await api.post(`/store/carts/${cartId}/complete-vendor`, {}, store)
+        const parentId = done.data.order.id
+        const childIds = done.data.vendor_orders.map((v: { order_id: string }) => v.order_id)
+
+        await cancelOrderWorkflow(getContainer()).run({ input: { order_id: parentId } })
+
+        let statuses: string[] = []
+        for (let i = 0; i < 60; i++) {
+          const { data } = await query().graph({
+            entity: "order",
+            fields: ["status"],
+            filters: { id: childIds },
+          })
+          statuses = data.map((o) => o.status as string)
+          if (statuses.every((st) => st === "canceled")) break
+          await new Promise((r) => setTimeout(r, 250))
+        }
+        expect(statuses).toEqual(["canceled", "canceled"])
+        expect(await getContainer().resolve(Modules.INVENTORY).listReservationItems({})).toEqual([])
+        let commissions: { status: string }[] = []
+        for (let i = 0; i < 40; i++) {
+          commissions = await marketplace().listVendorCommissions({ order_id: childIds })
+          if (commissions.every((c) => c.status === "cancelled")) break
+          await new Promise((r) => setTimeout(r, 250))
+        }
+        expect(commissions.map((c) => c.status)).toEqual(["cancelled", "cancelled"])
+      })
+
+      it("a customer can't set the vendor split's metadata on a cart (review 2, M4)", async () => {
+        const cartId = await readyCart([{ handle: "t-shirt", quantity: 1 }])
+        for (const metadata of [{ [CHILD_ORDERS_KEY]: ["x"] }, { [PARENT_ORDER_KEY]: "x" }]) {
+          const res = await api
+            .post(`/store/carts/${cartId}`, { metadata }, store)
+            .catch((e) => e.response)
+          expect(res.status).toBe(400)
+          expect(res.data.message).toEqual(RESERVED_METADATA_MESSAGE)
+        }
+        const created = await api
+          .post("/store/carts", { region_id: regionId, metadata: { [CHILD_ORDERS_KEY]: [] } }, store)
+          .catch((e) => e.response)
+        expect(created.status).toBe(400)
       })
 
       it("a cart completed through Medusa's own route still gets its vendor orders (F-079)", async () => {
