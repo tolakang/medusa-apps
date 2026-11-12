@@ -8,6 +8,8 @@ Vendor portal for the marketplace business project (BUILD_PLAN §6.6, TASKS P6-0
 - **Orders** (`/orders`): the vendor's own orders (its child order of each checkout, P6-05) with items, delivery address, its payout per order, and **Mark fulfilled** (`POST /vendors/me/orders/:id/fulfillments`, which takes the reserved stock; P6-10).
 - **Payouts** (`/payouts`): monthly payouts and what's not paid out yet (`/vendors/me/payouts`, P6-06).
 
+**Email confirmation (review 2, A3):** a vendor confirms their sign-in email before they can sign in, and the marketplace can approve a shop only after that. Sign-up and sign-in ask the backend to email the link (`metadata: { actor: "vendor" }`, so it opens this portal's `/verify-account`, which needs no session). The backend builds the link from `VENDOR_PORTAL_URL` (or the first `VENDOR_CORS` origin).
+
 **Per-IP limits:** set `SHOPPER_IP_SECRET` to the backend's value, so the backend counts sign-in and sign-up attempts per vendor's own IP.
 
 **Security:** the backend token is sealed in an httpOnly cookie (`vendor_session`, AES-256-GCM under `COOKIE_SECRET`, 8 hours); pages and server actions call the backend from this app's server only, so the browser never holds the token and the backend needs no CORS entry for this app. A refused token (401) signs the vendor out; a backend outage shows the error page.

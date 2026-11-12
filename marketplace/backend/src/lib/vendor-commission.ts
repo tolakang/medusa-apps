@@ -98,3 +98,9 @@ export function groupPayouts(
     (a, b) => a.vendor_id.localeCompare(b.vendor_id) || a.currency_code.localeCompare(b.currency_code)
   )
 }
+
+// The lock a payout run holds. A commission cancel and a refund settlement
+// take it too, so neither can change a commission between the payout's read
+// and its write (review 2, S6; reseller does the same per order,
+// REVIEW_FIXES B10).
+export const PAYOUTS_LOCK = "marketplace-vendor-payouts"

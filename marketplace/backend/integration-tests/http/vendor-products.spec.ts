@@ -1,4 +1,6 @@
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
+import { confirmVendorEmail } from "../helpers/vendor-email"
+import { EXISTING_INVENTORY_MESSAGE } from "../../src/api/marketplace-guards"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import {
   createDefaultsWorkflow,
@@ -72,6 +74,7 @@ medusaIntegrationTestRunner({
           { headers: freshIp() }
         )
         const created = await api.post("/vendors", { name }, bearer(reg.data.token))
+        await confirmVendorEmail(getContainer(), email)
         if (approved) {
           await api.post(
             `/admin/vendors/${created.data.vendor.id}`,
@@ -183,6 +186,17 @@ medusaIntegrationTestRunner({
             process.env.MARKETPLACE_REQUIRE_PRODUCT_APPROVAL = before
           }
         }
+      })
+
+      it("refuses a variant linked to an existing inventory item (review 2, A1)", async () => {
+        const dara = await vendor("dara@crafts.test", "Dara Crafts")
+        const body = product("Borrowed stock")
+        ;(body.variants[0] as Record<string, unknown>).inventory_items = [
+          { inventory_item_id: "iitem_someone_else", required_quantity: 1 },
+        ]
+        const res = await call(api.post("/vendors/products", body, dara.auth))
+        expect(res.status).toBe(400)
+        expect(res.data.message).toEqual(EXISTING_INVENTORY_MESSAGE)
       })
 
       it("lists only the vendor's own products", async () => {

@@ -10,10 +10,9 @@ import { MedusaError } from "@medusajs/framework/utils"
 import { acquireLockStep, releaseLockStep } from "@medusajs/medusa/core-flows"
 import { MARKETPLACE_MODULE } from "../../modules/marketplace"
 import type MarketplaceModuleService from "../../modules/marketplace/service"
-import { groupPayouts } from "../../lib/vendor-commission"
+import { groupPayouts, PAYOUTS_LOCK } from "../../lib/vendor-commission"
 import { childOrdersWithRefundedParent } from "./refund-review"
 
-const PAYOUTS_LOCK = "marketplace-vendor-payouts"
 
 type CreatePayoutsInput = { cutoff: Date; period: string }
 type Created = { payout_ids: string[]; commission_ids: string[] }
