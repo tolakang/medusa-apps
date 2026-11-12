@@ -1,10 +1,14 @@
 # Build Plan — Medusa Apps
 
+> **Revision 11 (2026-11-12, owner: "Fix those", applied on "Yes").** Brings §6.2, §6.4, §6.5 and §7 in line with Wholesale P4-08 to P4-13 and the review fixes (TASKS F-066 to F-070, the first review's fix list, now done). Requirements, scope and build order are unchanged.
+>
+> **Revision 10 (2026-11-12, owner: "Update old places in build plan too").** Builder documents moved into `docs/`; §2 and every path in this plan follow (TASKS F-071). Nothing else changed.
+>
 > **Revision 9 (2026-11-11, owner).** A clean rewrite: the plan now describes the repo as it is, with each rule given once, and the revision notes moved to *Revision history* at the end. It takes in TASKS F-055 to F-065, V-06 and decisions D9 to D11. Requirements, scope and build order are unchanged.
 >
-> **Status (2026-11-11).** Phase 0 is done. Phase 1 (Ecommerce) is on staging, and production (P1-08) waits on the owner. Phases 2 (POS), 3 (Booking services) and 5 (Reseller) have their code done, with staging and the exit checklists (P2-14, P3-18, P5-11) waiting on the owner. Phase 4 (Wholesale) has its backend done (P4-01 to P4-07), and the storefront (P4-08) is next. Phase 6 (Marketplace) has not started. Progress, decisions and evidence are in `TASKS.md`.
+> **Status (2026-11-12).** Phase 0 is done. Phase 1 (Ecommerce) is on staging, and production (P1-08) waits on the owner. Phases 2 (POS), 3 (Booking services), 4 (Wholesale) and 5 (Reseller) have their code done, with staging and the exit checklists (P2-14, P3-18, P4-11, P5-11) waiting on the owner. Phase 6 (Marketplace) has not started. Progress, decisions and evidence are in `docs/TASKS.md`.
 
-**Versions in this repo (checked 2026-11-11)**
+**Versions in this repo (checked 2026-11-12)**
 
 | Package | Version | Since |
 |---|---|---|
@@ -12,7 +16,7 @@
 | `@medusajs/ui` | **4.2.13** (the version `@medusajs/dashboard@2.22.6` depends on) | 2026-11-10 |
 | Node | `>=22.23.4` | 2026-11-06 |
 | Next.js (every web client) | **16.4.5** | 2026-11-06 (V-04) |
-| pnpm | **12.17.0**; 12.18.0 from 2026-11-12, once it is a week old (V-07) | 2026-11-06 (V-03) |
+| pnpm | **12.18.0** (V-07) | 2026-11-12 |
 | Starters | `dtc-starter` (`6440e85`) and `b2b-starter` (`f352e3c`) on 2.22.6 | 2026-11-09 |
 
 Updates are separate tasks (§8). This table records what the code uses.
@@ -42,7 +46,7 @@ Revision history
 | R2 | Always compatible with Medusa updates; deploy an update at any time | Exact version pins, a lockfile per deployable, a scripted update per category, a CI gate before any deploy (build, typecheck, tests, migrate, health check), and Dokploy rollback (§3, §8). |
 | R3 | Dokploy-ready, **not a monorepo**: one folder per scenario, each with the backend **and** its clients, each with its own `Dockerfile` and env, each deployed independently | Six category folders. Each has one sub-folder per deployable, with its own `Dockerfile`, `.env.example`, `package.json` and lockfile. No root `package.json`, no workspace, no shared code. Each sub-folder is its own Docker context and Dokploy app (§2, §5). |
 | R4 | Each scenario has its own dependencies | Each deployable has its own `package.json`, `pnpm-lock.yaml` and `node_modules`. Nothing is shared between sub-folders or categories. |
-| R5 | Side-by-side comparison in the project root | `COMPARISON.md` |
+| R5 | Side-by-side comparison in the project root | `docs/COMPARISON.md` (moved from the root into `docs/` on the owner's request, 2026-11-12, F-071; linked from the root `README.md`) |
 | R6 | Pre-build plan with a recommended build order in the project root | This file, §7 |
 
 **Honest limit on R2.** The starters are templates that get copied, not packages, so their upstream changes are merged by hand (§8.1). No repo can promise that every future Medusa release is non-breaking: Medusa sometimes ships breaking changes in minor versions (listed in its release notes), and database migrations only go forward. This plan does guarantee three things:
@@ -57,14 +61,16 @@ Revision history
 ```
 medusa-apps/                        <- plain git repo, NOT a workspace
 ├── README.md                       <- overview and status
-├── COMPARISON.md                   <- side-by-side comparison (R5)
-├── BUILD_PLAN.md                   <- this file (R6), frozen (§3.4)
-├── MEDUSA_SKILL.md                 <- the only allowed Medusa reference, per version
-├── BACKEND_PATTERNS_SKILL.md       <- design patterns mapped to Medusa extension points
-├── DEV_FLOW.md                     <- the builder's cycle and gates
-├── TASKS.md                        <- tasks, decisions, findings, handoff
-├── PRE_DEPLOY_AUDIT.md             <- 10-check audit before staging or production (§8)
-├── docs/                           <- owner notes (PLAN_LOCK.md), handovers, plan proposals
+├── BUILD_PLAN.md                   <- this file (R6), frozen (§3.4); its lock names this path
+├── CLAUDE.md                       <- builder entry point (Claude Code reads it from the root)
+├── docs/                           <- every other document (owner, 2026-11-12, F-071):
+│   ├── COMPARISON.md               <- side-by-side comparison (R5)
+│   ├── MEDUSA_SKILL.md             <- the only allowed Medusa reference, per version
+│   ├── BACKEND_PATTERNS_SKILL.md   <- design patterns mapped to Medusa extension points
+│   ├── DEV_FLOW.md                 <- the builder's cycle and gates
+│   ├── TASKS.md                    <- tasks, decisions, findings, handoff
+│   ├── PRE_DEPLOY_AUDIT.md         <- 10-check audit before staging or production (§8)
+│   └── PLAN_LOCK.md, …             <- owner notes, handovers, plan proposals
 ├── .claude/                        <- builder settings and the plan lock hook (§3.4)
 ├── .github/                        <- CI matrix (one entry per deployable) and the weekly update check
 ├── scripts/                        <- plain shell scripts, no package.json
@@ -132,7 +138,7 @@ Names are lowercase kebab-case, because they become Dokploy build paths, image n
 - `pnpm install --frozen-lockfile` everywhere (CI, Docker, local checks). A build never resolves new versions on its own.
 - **Public imports only:** `@medusajs/framework/*`, `@medusajs/medusa/*`, `@medusajs/medusa/core-flows`, `@medusajs/admin-sdk`, `@medusajs/ui`. Never from `dist/` paths.
 - **Licensed Medusa features are not used.** Since 2.22 the RBAC module and the `auth-oidc` provider need a `MEDUSA_LICENSE_KEY` (F-042). Cashiers, sellers and vendors are custom actor types.
-- **Security fixes in dependencies** (`pnpm audit --prod`): first refresh the lockfile within the ranges Medusa and the starters already allow. A `pnpm.overrides` entry is a deviation that needs owner approval and a `TASKS.md` entry (E-A6).
+- **Security fixes in dependencies** (`pnpm audit --prod`): first refresh the lockfile within the ranges Medusa and the starters already allow. A `pnpm.overrides` entry is a deviation that needs owner approval and a `docs/TASKS.md` entry (E-A6).
 
 ### 3.3 Tests that protect updates
 
@@ -146,7 +152,7 @@ This file is frozen for the builder:
 - **The hook:** `.claude/hooks/protect-build-plan.sh`, wired in `.claude/settings.json`. It blocks Claude's file tools and shell writes on `BUILD_PLAN.md`, `.build-plan.sha256`, the hook and `.claude/settings.json`.
 - **The switch:** the hook lets the edits through only while the owner's git-ignored switch `.claude/plan-unlocked` exists in that checkout. Only the owner creates or removes it, from their own terminal (`docs/PLAN_LOCK.md`); Claude never does.
 - **The checks:** `scripts/test-plan-lock.sh` tests the lock and runs in `scripts/guard.sh`. CI fails until `.build-plan.sha256` matches, so every revision is recorded.
-- **Between revisions:** findings go to `TASKS.md`, and a proposed revision goes to `docs/`.
+- **Between revisions:** findings go to `docs/TASKS.md`, and a proposed revision goes to `docs/`.
 
 ---
 
@@ -372,7 +378,7 @@ Each scenario lists:
 - client apps and env
 - acceptance criteria
 
-**MVP** = first release; **Later** = after launch. "As built" notes record decisions taken while building (details and evidence in `TASKS.md`).
+**MVP** = first release; **Later** = after launch. "As built" notes record decisions taken while building (details and evidence in `docs/TASKS.md`).
 
 ### 6.1 Ecommerce — `ecommerce/`
 
@@ -435,7 +441,7 @@ Each scenario lists:
   - **`close-shift`:** computes the expected cash from cash payments and stores the variance.
   - **`pos-checkout`** (official POS recipe): creates the sale as a **draft order** in the POS sales channel, applies promotions, records the payment, converts it to an order and links the order to the shift.
 - **Cashiers:** a custom actor type **`cashier`** (`/auth/cashier/emailpass`, `authenticate("cashier", ["session", "bearer"])`), because Medusa's admin roles aren't usable (§3.2, R-g).
-  - **Invite-only:** an admin creates the cashier first, and the registered email must match an active invitation (F-036).
+  - **Invite-only:** an admin creates the cashier first (the answer carries an **invite code**); the cashier registers the invited email and accepts with that code (F-036, review fix B11).
   - **Shifts:** any active cashier can sell on and close any open shift. The shift records who opened and closed it, and each sale records its cashier (`pos_cashier_id`).
 - **Payments:**
   - **One provider:** everything goes through `pp_system_default`. Each POS payment session carries `metadata.pos_payment_method` = `cash`, `card` or `qr`, and close-shift counts only `cash` (F-037, F-038).
@@ -501,6 +507,7 @@ Each scenario lists:
   - **`invoice`** (new; see Invoices).
 - **Links:** employee ↔ customer (one ↔ one); company ↔ customer group (the price tier).
 - **Catalog scope:** a B2B **sales channel** with its own publishable key, so the B2B storefront sees only B2B products (`pnpm seed:b2b`).
+- **Who sees the catalog** (F-068, X4): with `WHOLESALE_REQUIRE_LOGIN` on (default), the Store API's product, variant and search routes answer only an employee of an **approved** company; the publishable key alone gets 401, anyone else signed in 403. The storefront's `NEXT_PUBLIC_REQUIRE_LOGIN` shows its pages to the same people and sends others to their account page, which says why.
 - **Pricing:** core **price lists** of type `sale` with a customer-group rule (`customer.groups.id`) per tier. A company gets a tier by joining a customer group. Quantity tiers use each price's `min_quantity` / `max_quantity`.
 - **Who may buy:** only a signed-in employee of an approved company; a guest may open an empty cart. The company of a cart or order always comes from the customer's employee record, never from cart metadata (F-059).
 - **Cart rules (workflow hooks):**
@@ -513,21 +520,25 @@ Each scenario lists:
 - **Quotes:** `request-quote` / `accept-quote` through draft orders. Accepting a quote runs the checkout rules (own quote, approved company, spending and credit limits on the quoted total).
 - **Payments:**
   - **Net-terms companies:** the built-in **system payment provider** (`pp_system_default`). The payment is captured in the admin when the invoice is paid, and the credit limit counts the order until then.
-  - **Prepaid companies:** **ABA PayWay** (KHQR and cards), the Ecommerce provider (D9, task P4-12).
+  - **Prepaid companies:** **ABA PayWay** (KHQR and cards), the Ecommerce provider (D9, task P4-12). With PayWay set up, prepaid companies must pay with it and net-terms companies by invoice: checked when a payment session starts and at cart completion. Without PayWay keys, everyone pays by invoice.
+  - **One order at a time per company:** cart completion and quote acceptance run inside a lock on the company, so two checkouts can't both use the last of the credit (B6). Every placed order is linked to its company, so it keeps counting against the credit after its buyer leaves (B4, B5).
 - **Invoices:**
   - **Module `invoice`:** numbers `INV-000001`, one per order, with a snapshot of the company, tax ID and terms, and a due date from the terms.
   - **PDF:** `pdfmake`, following the official invoice tutorial pattern. It is at `GET /admin/orders/:id/invoice` and `GET /store/orders/:id/invoice` (the buyer or their company admin only); `GET /store/invoices` lists what's due.
-  - **Language:** Khmer as well as English, with an embedded Khmer font (D10, task P4-13).
+  - **Language:** every label in English and Khmer, font Kantumruy Pro (SIL OFL; D10, P4-13, F-070). USD and KHR print their sign, other currencies their code.
+  - **Dates:** issued when the order is placed, or when a quote is accepted; a cancelled order is listed with nothing due (B2, B3).
   - **Seller details:** from `INVOICE_SELLER_*`.
 - **API routes:**
   - **Company:** `/store/companies/me` and `/store/companies/me/employees`. They take the company and role from the customer's employee record; the starter's `/store/companies/:id…` routes are removed (F-058).
   - **Quotes:** `/store/quotes`.
   - **Sign-up:** creates the company and its first admin together.
-- **Client app:** `wholesale/storefront` (from the `b2b-starter` storefront), a B2B buyer shop behind login (`NEXT_PUBLIC_REQUIRE_LOGIN`): bulk add by SKU or CSV, reorder, invoices, quotes, company users.
+  - **Colleagues join with consent** (B14): a company admin asks for a **join code** for an email (`POST /store/companies/me/employees` `{ email }`); the colleague, signed in with that email, joins with it (`POST /store/companies/join`). Nobody is added by id.
+- **Client app:** `wholesale/storefront` (from the `b2b-starter` storefront `f352e3c`, P4-08), a B2B buyer shop behind login (`NEXT_PUBLIC_REQUIRE_LOGIN`): quick order by SKU or CSV, reorder, invoices, quotes, company users and join codes. The starter's catalog for AI agents (UCP, `/buy`, `llms.txt`, sitemap) is off while login is required (F-068).
 - **Env:**
   - **Approval:** `WHOLESALE_REQUIRE_APPROVAL` (`true` = a company that signs up in the storefront starts `pending`; companies the admin creates start `approved`).
   - **Invoices:** `INVOICE_SELLER_NAME`, `INVOICE_SELLER_ADDRESS`, `INVOICE_SELLER_TAX_ID`, `INVOICE_SELLER_EMAIL`, `INVOICE_SELLER_PHONE`, `INVOICE_PAYMENT_NOTE`.
-  - **Payments:** the PayWay keys once P4-12 is done.
+  - **Catalog:** `WHOLESALE_REQUIRE_LOGIN` (default on; F-068).
+  - **Payments:** `PAYWAY_MERCHANT_ID`, `PAYWAY_API_KEY`, `PAYWAY_API_URL`, `PAYWAY_RETURN_URL` (P4-12), and `pp_payway_payway` enabled on the region.
 - **Optional:** ERP integration exactly as in the official ERP recipe.
 - **Acceptance:** a Gold company sees Gold prices; an employee over their limit can't complete checkout, and neither can a company over its credit limit.
 
@@ -545,15 +556,15 @@ Each scenario lists:
 - **Links:** seller ↔ sales channel (one ↔ one; the seller's storefront publishable key). Creating a seller (`createSellerWorkflow`) also creates their channel and key.
 - **Commissions:**
   - **Recording:** `record-seller-commission`, triggered by subscriber `order.placed`. It goes order → sales channel → seller → commission and ignores channels without an active seller. It writes one commission per order, guarded by a lock and the unique `order_id`, so a repeated event creates no second one.
-  - **Base:** the order's items after discounts, without tax and shipping (D11, task P5-12; the first build used the order total, F-063).
-  - **Cancels and refunds:** an order cancel cancels the commission. A refund recalculates it on what the shop kept (cancelled at 0). A paid commission isn't changed by either.
+  - **Base:** the order's items after discounts, without tax and shipping (`item_total − item_tax_total`; D11, P5-12; the first build used the order total, F-063). `order_total` stores this base.
+  - **Cancels and refunds:** an order cancel cancels the commission. A refund keeps the share of the order the shop kept, measured against the captured amount (an order's `total` goes down after a refund); cancelled at 0. A paid commission isn't changed by either, and payouts take the same per-order locks as refunds (B10).
 - **Payouts (manual, D11, F-064):**
   - **Payout day:** on `RESELLER_PAYOUT_DAY` (1–28, UTC), a job approves last month's pending commissions.
   - **What's due:** `GET /admin/seller-payouts` reports it.
   - **Paying:** the shop pays outside Medusa and records it with `POST /admin/sellers/:id/payouts` (approved → paid).
   - **Later:** a `seller_payout` record, once statements are needed.
 - **Seller auth:** a custom actor type **`seller`** (`/auth/seller/emailpass`; `/sellers/*` routes behind `authenticate("seller", ["session", "bearer"])`).
-  - **Invite-only, like POS cashiers:** the shop creates the seller (`POST /admin/sellers`), and the seller registers, accepts (`POST /sellers/accept`) and signs in.
+  - **Invite-only, like POS cashiers:** the shop creates the seller (`POST /admin/sellers`, which returns an **invite code**), and the seller registers, accepts with that code (`POST /sellers/accept` `{ invite_code }`) and signs in. The invited email alone can't take the account (B11).
   - **Suspended sellers** are locked out at once.
   - **CORS:** `/sellers/*` isn't covered by the built-in CORS settings, so a middleware reading `SELLER_CORS` covers it.
 - **API routes:**
@@ -624,14 +635,14 @@ Rules for the order:
   - one Medusa update done with `scripts/update-medusa.sh`
   - each app redeployed alone once, to prove independence
 - **Don't start two "L" phases at the same time.**
-- **Staging may wait (owner; F-034, F-044):** a phase's code can be finished and merged while its staging run and exit checklist wait for the owner. Those items stay open in `TASKS.md` and are done before that category goes live.
+- **Staging may wait (owner; F-034, F-044):** a phase's code can be finished and merged while its staging run and exit checklist wait for the owner. Those items stay open in `docs/TASKS.md` and are done before that category goes live.
 
-**Status 2026-11-11:**
+**Status 2026-11-12:**
 - Phase 0: done.
 - Phase 1: on staging; production waiting (P1-08, P1-09).
-- Phases 2, 3 and 5: code done; staging and exit waiting (P2-14, P3-18, P5-11).
-- Phase 4: backend done (P4-01 to P4-07); storefront next (P4-08); payment and invoice follow-ups P4-12 and P4-13.
+- Phases 2, 3, 4 and 5: code done; staging and exit waiting (P2-14, P3-18, P4-11, P5-11).
 - Phase 6: not started.
+- The first full review's 29 findings and four later ones are fixed (2026-11-12).
 
 ## 8. Update and release process
 
@@ -654,9 +665,9 @@ For each deployable, the script:
 
 **Release:**
 
-0. **Pre-deploy audit:** before a category's first staging or production deploy, run `PRE_DEPLOY_AUDIT.md` for it.
+0. **Pre-deploy audit:** before a category's first staging or production deploy, run `docs/PRE_DEPLOY_AUDIT.md` for it.
    - **What it checks:** 10 checks (authorization, reset tokens, input, CORS, rate limits, errors, indexes, logging, secrets, rollback), plus `pnpm audit --prod`.
-   - **Report:** goes in `<category>/AUDIT-<date>.md`, and every FIX becomes a `TASKS.md` task.
+   - **Report:** goes in `<category>/AUDIT-<date>.md`, and every FIX becomes a `docs/TASKS.md` task.
    - **Going live:** a category goes live only when every row is PASS, N/A or an owner-accepted RISK.
 1. **Release notes:** read them for every version skipped (breaking changes are called out there), and run any codemod they list.
 2. **Back up the database.** The official revert is `medusa db:rollback <module…>` for each module that migrated, then reinstalling the old versions; the backup is the fallback. The daily backups (§5) run regardless.
@@ -670,7 +681,7 @@ For each deployable, the script:
 - **Updating:** a human then runs `scripts/update-medusa.sh <category>` on a branch, and CI checks the PR.
 - **Deploying:** merging redeploys only the changed deployables (Dokploy watch paths).
 
-**Before every merge** (owner rule, DEV_FLOW §7.1): check the diff against `MEDUSA_SKILL.md` and update every related document. The required CI check is `ci-ok`, and PRs squash-merge.
+**Before every merge** (owner rule, DEV_FLOW §7.1): check the diff against `docs/MEDUSA_SKILL.md` and update every related document. The required CI check is `ci-ok`, and PRs squash-merge.
 
 ### 8.1 Starter updates
 
@@ -688,7 +699,7 @@ Medusa package updates for clients go through the update script.
 
 ## 9. Verified technical notes
 
-A throwaway prototype on Medusa 2.21.1 and pnpm 12.6.0 tested this plan before Phase 0. These findings still hold. `MEDUSA_SKILL.md` has the full, per-version reference.
+A throwaway prototype on Medusa 2.21.1 and pnpm 12.6.0 tested this plan before Phase 0. These findings still hold. `docs/MEDUSA_SKILL.md` has the full, per-version reference.
 
 | Topic | Finding |
 |---|---|
@@ -709,7 +720,7 @@ A throwaway prototype on Medusa 2.21.1 and pnpm 12.6.0 tested this plan before P
 
 ## 10. Decisions and risks
 
-**Decisions** (evidence in `TASKS.md` → *Decisions log*)
+**Decisions** (evidence in `docs/TASKS.md` → *Decisions log*)
 
 | # | Decision | Choice | Decided |
 |---|---|---|---|
@@ -743,7 +754,7 @@ Also decided for Ecommerce:
 | R-g | No usable admin roles → every admin user has full access, so cashiers, sellers and vendors never get admin users (custom actor types). RBAC is behind `MEDUSA_FF_RBAC`, enabling it isn't documented, and since 2.22 it needs a paid `MEDUSA_LICENSE_KEY` (F-001, F-035, F-042) | every phase |
 | R-h | Two server replicas migrating at once (only per-module advisory locks, F-004) → scale to 1 during deploys | every deploy |
 | R-i | Advisories inside `@medusajs/*` that Medusa's own ranges can't fix yet (after 2.22.6: only `zod` 4.2.0, pinned by the starter) → accepted as low risk and re-checked on every update (§3.2, E-A6) | every update |
-| R-j | Apps on different Medusa versions drift apart (all on 2.22.6 since 2026-11-10) → `MEDUSA_SKILL.md` records facts per version; older apps move forward with `update-medusa.sh` | ongoing |
+| R-j | Apps on different Medusa versions drift apart (all on 2.22.6 since 2026-11-10) → `docs/MEDUSA_SKILL.md` records facts per version; older apps move forward with `update-medusa.sh` | ongoing |
 | R-k | Flaky tests block unrelated PRs → tests control or wait for background work (§3.3, F-065) | ongoing |
 
 ---
@@ -752,6 +763,8 @@ Also decided for Ecommerce:
 
 | Rev | Date | What changed |
 |---|---|---|
+| 11 | 2026-11-12 | Wholesale as built after P4-08 to P4-13 and the review fixes: catalog for employees of approved companies (`WHOLESALE_REQUIRE_LOGIN`), join codes, PayWay for prepaid companies, one order at a time per company, bilingual invoices. Reseller: commission base and refund share, payout locks. POS and Reseller: invite codes. Status line, pnpm 12.18.0. TASKS F-066 to F-070, D9 to D11. |
+| 10 | 2026-11-12 | Builder documents moved into `docs/` (owner request, F-071): §2 tree, R5 and every path. `BUILD_PLAN.md` and `CLAUDE.md` stay at the root. |
 | 9 | 2026-11-11 | Clean rewrite: one current description per topic, history moved here. Versions 2.22.6 / `@medusajs/ui` 4.2.13. Wholesale (§6.4) and Reseller (§6.5) as built. Decisions D9–D11. pnpm release-age rule (§3.2) and flaky-test rule (§3.3, R-k). TASKS F-055 to F-065, V-06. |
 | 8 | 2026-11-06 | Versions 2.22.3; apps may sit on different Medusa versions (F-044); plan lock hook (F-054); local Podman stacks (F-043, F-050 to F-052); POS and Booking details (F-036 to F-049); pre-deploy audit, alerts, `pnpm audit` triage. |
 | 7 | 2026-10-15 | Re-check of Medusa 2.21.2 and the starters (F-034, F-035); RBAC still flag-only; Phase 2 started before the Ecommerce production deploy, POS copied from Ecommerce. |

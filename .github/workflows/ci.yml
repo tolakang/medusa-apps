@@ -1,4 +1,4 @@
-# CI gate (BUILD_PLAN.md §3.3, §8; DEV_FLOW.md §10). One verify job per
+# CI gate (BUILD_PLAN.md §3.3, §8; docs/DEV_FLOW.md §10). One verify job per
 # deployable; add a matrix entry when a new deployable gets app code.
 # Branch protection requires only `ci-ok` (bottom), which needs every job.
 name: ci

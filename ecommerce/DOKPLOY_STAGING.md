@@ -1,6 +1,6 @@
 # Runbook: `ecommerce-staging` on Dokploy (TASKS P0-18, P0-19, P1-09)
 
-A step-by-step setup and operations guide for the Ecommerce business project on Dokploy. Field names are Dokploy's own (docs.dokploy.com, checked 2026-09-25). The project layout is decision **D6** (`TASKS.md`). Everything here was verified on the live staging; the finding numbers (F-0xx) point to the evidence in `TASKS.md`.
+A step-by-step setup and operations guide for the Ecommerce business project on Dokploy. Field names are Dokploy's own (docs.dokploy.com, checked 2026-09-25). The project layout is decision **D6** (`docs/TASKS.md`). Everything here was verified on the live staging; the finding numbers (F-0xx) point to the evidence in `docs/TASKS.md`.
 
 **Section numbers are stable.** Other files cite them (e.g. "runbook §2.5", "§7.2", "§9"), so new material goes inside a section, never as a renumbering.
 
@@ -455,9 +455,9 @@ Dokploy's documented rollback without a registry is the Swarm health check.
 **Passed on staging 2026-09-27** (P0-19). The rollback took about 2.5 minutes (60 s start period + 3 failed checks). The Dokploy **Deployments tab still shows the rolled-back deploy as "Done"**, so after any deploy check `UpdateStatus` on the server, not the tab.
 
 ### 6.4 Report
-Tell me the result of each step. I tick P0-18 / P0-19 in `TASKS.md` with this evidence, then run the phase exit checklist (P0-20).
+Tell me the result of each step. I tick P0-18 / P0-19 in `docs/TASKS.md` with this evidence, then run the phase exit checklist (P0-20).
 
-**If anything fails:** send the deployment's log lines around the error. Don't retry with changed settings first (`DEV_FLOW.md` §6).
+**If anything fails:** send the deployment's log lines around the error. Don't retry with changed settings first (`docs/DEV_FLOW.md` §6).
 
 ---
 
@@ -681,7 +681,7 @@ When sharing a log, filter it first: `grep -v -i "secret\|access-key\|api_key"`.
    2. fulfil and ship it in the admin → staff and customer get "shipped".
 
 ### 9.4 Record
-For releases that matter (phase exit, production), record the result in `TASKS.md`: the date, the commit, and ✅ per line.
+For releases that matter (phase exit, production), record the result in `docs/TASKS.md`: the date, the commit, and ✅ per line.
 
 ### 9.5 Alerts (pre-deploy audit E-A3)
 Dokploy can message you when something goes wrong, so you hear about it before a customer does. Checked against Dokploy **v0.31.0** source (`handle-notifications.tsx`).
@@ -689,7 +689,7 @@ Dokploy can message you when something goes wrong, so you hear about it before a
 1. Dokploy → **Settings → Notifications** → add a **Telegram** notification. Use the staff group: bot token and chat ID as in `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID`, or a separate alerts bot. (Slack, Discord, email, Gotify, ntfy and Lark also work.)
 2. Turn on **App Build Error**, **App Deploy**, **Database Backup**, **Dokploy Restart** (and **Volume Backup** if you use volume backups).
 3. **Check:** the next deploy posts a message to the group, and so does the next database backup (02:00 Cambodia).
-4. **App down:** Dokploy has no "app is down" notification. A health check that fails during a deploy rolls back (`FailureAction: rollback`), but a container that dies later only restarts. For an alert, an outside uptime check must call `https://<api host>/health` and the shop every 1–5 minutes. That is a new service: the owner decides and it is recorded in `TASKS.md` (pre-deploy audit E-A3).
+4. **App down:** Dokploy has no "app is down" notification. A health check that fails during a deploy rolls back (`FailureAction: rollback`), but a container that dies later only restarts. For an alert, an outside uptime check must call `https://<api host>/health` and the shop every 1–5 minutes. That is a new service: the owner decides and it is recorded in `docs/TASKS.md` (pre-deploy audit E-A3).
 
 **Reply with** "alerts on" and which events you turned on.
 
@@ -729,7 +729,7 @@ Back up first, then update Dokploy to **v0.29.9 or newer**. Older versions print
 
 ### 10.4 Close out
 - [ ] Smoke test (§9).
-- [ ] Record the date in `TASKS.md`, and remove the "rotate" line from the operator notes.
+- [ ] Record the date in `docs/TASKS.md`, and remove the "rotate" line from the operator notes.
 - [ ] Production (P1-08) gets fresh values for every secret; never reuse a staging one.
 
 ---
@@ -768,7 +768,7 @@ Fresh for production; never copy a staging value.
 1. Follow §1–§4 in project `ecommerce`, with **Replicas = 1** on the backend server (plan R-h: two servers migrating at once is unsafe).
 2. Run the §8 go-live steps 1–9. For the backup (step 7), use its own prefix (`ecommerce`), and do the §7.3 restore test before taking real orders.
 3. Run the smoke test (§9) the **production** way: at checkout, press **Cancel** on the PayWay page. Pay for real only on purpose, then refund in the PayWay merchant portal.
-4. Record the date, commit and ✅ per line in `TASKS.md` under P1-08.
+4. Record the date, commit and ✅ per line in `docs/TASKS.md` under P1-08.
 
 ### 11.4 Every later release (plan §8)
 1. Deploy to staging first, and run the smoke test.

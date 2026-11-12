@@ -4,7 +4,7 @@
 >
 > **The one rule:** start from the **problem** you have, never from the pattern you'd like to use. A pattern that solves no current problem is complexity you pay for every day. ("You don't need to memorize the textbook definition … what matters is understanding the problem behind the pattern.")
 >
-> **In this repo**, `CLAUDE.md` and `MEDUSA_SKILL.md` win over this file. In Medusa code, use the framework's own mechanism for each pattern (§3). Never hand-roll a parallel one, and never write a Medusa API from memory: confirm it on the evidence ladder (`MEDUSA_SKILL.md` §0).
+> **In this repo**, `CLAUDE.md` and `docs/MEDUSA_SKILL.md` win over this file. In Medusa code, use the framework's own mechanism for each pattern (§3). Never hand-roll a parallel one, and never write a Medusa API from memory: confirm it on the evidence ladder (`docs/MEDUSA_SKILL.md` §0).
 
 ---
 
@@ -143,7 +143,7 @@ Each section covers the problem, the shape of the solution, a framework-neutral 
 
 ## 3. In this repo (Medusa v2): use the framework's mechanism
 
-Medusa already implements most of these patterns. **Use its extension point**, cite `MEDUSA_SKILL.md`, and never build a parallel layer (plan §3.1 "official extension points only").
+Medusa already implements most of these patterns. **Use its extension point**, cite `docs/MEDUSA_SKILL.md`, and never build a parallel layer (plan §3.1 "official extension points only").
 
 | Pattern | Medusa mechanism | Where it lives here | Don't |
 |---|---|---|---|
@@ -155,7 +155,7 @@ Medusa already implements most of these patterns. **Use its extension point**, c
 | Builder | **Workflows** composed from steps (`createWorkflow`, `createStep`, `transform`, `when`), with compensation for rollback | `pos/backend/src/workflows/pos-checkout.ts`, `pos-in-store.ts`; MEDUSA_SKILL §6 | business logic in route handlers; async functions as workflow constructors (`guard.sh` checks this) |
 | Decorator | **Middlewares** (`src/api/middlewares.ts`); validators with zod from `@medusajs/framework/zod` | `ecommerce/backend/src/api/middlewares.ts`, `upload-limits.ts`, `pos/backend/src/api/pos-auth.ts`, `pos/backend/src/api/pos/validators.ts`; MEDUSA_SKILL §7 | patch core routes; edit `node_modules` |
 | CQRS (light) | Writes through **workflows**, reads through **Query** (`query.graph`, `useQueryGraphStep`) | all `/pos/*` and `/admin/pos/*` routes | add a second database or a read model before a measured need |
-| Circuit breaker | **Nothing built in** (not in `MEDUSA_SKILL.md`). Today: timeouts only | PayWay `AbortSignal.timeout(10_000)` (`modules/payway/client.ts`), Telegram `REQUEST_TIMEOUT_MS` (`modules/telegram/service.ts`), storefront revalidate 5 s | add a breaker library without the evidence ladder and an owner decision; a fallback that marks a payment as succeeded |
+| Circuit breaker | **Nothing built in** (not in `docs/MEDUSA_SKILL.md`). Today: timeouts only | PayWay `AbortSignal.timeout(10_000)` (`modules/payway/client.ts`), Telegram `REQUEST_TIMEOUT_MS` (`modules/telegram/service.ts`), storefront revalidate 5 s | add a breaker library without the evidence ladder and an owner decision; a fallback that marks a payment as succeeded |
 
 **Repo-specific notes:**
 - A **workflow step** is the place for side effects that must roll back together (e.g. pos-checkout's reservation move and its compensation). A **subscriber** is the place for things that may fail on their own (emails, alerts, cache refresh).
@@ -186,5 +186,5 @@ Medusa already implements most of these patterns. **Use its extension point**, c
 
 ## 6. Sources
 - "10 Backend Design Patterns" (video, 2026; slides and transcript provided by the owner, 2026-10-27): the problems, examples and cautions in §1–§2.
-- This repo's code and `MEDUSA_SKILL.md` (verified Medusa reference: 2.22.6 in every app) for §3.
+- This repo's code and `docs/MEDUSA_SKILL.md` (verified Medusa reference: 2.22.6 in every app) for §3.
 - Library names (Resilience4j, Polly, opossum, Istio) are pointers only. Adopting one in this repo goes through the evidence ladder, exact pins and an owner decision.

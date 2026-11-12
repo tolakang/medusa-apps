@@ -5,7 +5,7 @@ import { getRegion } from "@lib/data/regions"
 import ProductTemplate from "@modules/products/templates"
 import { HttpTypes } from "@medusajs/types"
 
-// Render on every request (starter change 7, TASKS.md F-015). The data layer
+// Render on every request (starter change 7, docs/TASKS.md F-015). The data layer
 // reads cookies() inside try/catch (src/lib/data/cookies.ts), which swallows
 // the DynamicServerError Next.js uses to switch a static/ISR render to dynamic,
 // so runtime renders failed with digest DYNAMIC_SERVER_USAGE (HTTP 500).

@@ -50,4 +50,4 @@ ls .claude/plan-unlocked
   bash scripts/test-plan-lock.sh
   ```
 
-Details: `CLAUDE.md` (read-first list, item 1) and `TASKS.md` finding F-054.
+Details: `CLAUDE.md` (read-first list, item 1) and `docs/TASKS.md` finding F-054.

@@ -1,4 +1,4 @@
-# Weekly Medusa update check (BUILD_PLAN.md §8 automation; see TASKS.md
+# Weekly Medusa update check (BUILD_PLAN.md §8 automation; see docs/TASKS.md
 # finding F-008: Dependabot supports pnpm v7-v10 only, this repo pins pnpm 12).
 # Fails (visible red run) when any deployable pins an older Medusa than npm
 # `latest`. Fix with: scripts/update-medusa.sh <category> on a branch.

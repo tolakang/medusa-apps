@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verify gate: DEV_FLOW.md Gates 1, 3, 4 (+ Gate 2 via the test runner / image
+# Verify gate: docs/DEV_FLOW.md Gates 1, 3, 4 (+ Gate 2 via the test runner / image
 # smoke). Plain bash (macOS bash 3.2 compatible). Runs per deployable.
 #
 #   scripts/verify.sh <category | category/app | all> [--image]

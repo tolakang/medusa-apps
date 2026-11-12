@@ -3,7 +3,7 @@ import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { notifyOrderPlacedWorkflow } from "../../src/workflows/notify-order-placed"
 import orderPlacedHandler, { config } from "../../src/subscribers/order-placed"
 
-// Runner: MEDUSA_SKILL.md §10. No RESEND_API_KEY / TELEGRAM_BOT_TOKEN in tests,
+// Runner: docs/MEDUSA_SKILL.md §10. No RESEND_API_KEY / TELEGRAM_BOT_TOKEN in tests,
 // so medusa-config.ts routes "email" and "telegram" to notification-local,
 // which only logs (TASKS P1-04). The runner restores a DB snapshot before each
 // test after the first, so each test creates its own order.

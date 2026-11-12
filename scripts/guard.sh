@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Guardrails: DEV_FLOW.md Gate 5. Plain bash (macOS bash 3.2 compatible).
+# Guardrails: docs/DEV_FLOW.md Gate 5. Plain bash (macOS bash 3.2 compatible).
 #
 #   scripts/guard.sh [all | <category> | <category>/<app>]      (default: all)
 #
@@ -36,7 +36,7 @@ echo "== repo"
 if shasum -a 256 -c .build-plan.sha256 >/dev/null 2>&1; then
   pass "BUILD_PLAN.md matches .build-plan.sha256"
 else
-  fail "BUILD_PLAN.md changed (frozen; log deviations in TASKS.md instead)"
+  fail "BUILD_PLAN.md changed (frozen; log deviations in docs/TASKS.md instead)"
 fi
 
 # 1b. The plan and its lock don't change on a branch without the owner's
@@ -63,7 +63,7 @@ ENVFILES=$(git ls-files | grep -E '(^|/)\.env(\.[A-Za-z0-9_-]+)*$' | grep -v '\.
 [ -z "$ENVFILES" ] && pass "no .env files tracked" || fail "tracked env files: $ENVFILES"
 
 # 3. No leftover merge conflict markers in tracked files (owner, 2026-09-29,
-#    after PR #41 briefly pushed TASKS.md with markers). Git writes
+#    after PR #41 briefly pushed docs/TASKS.md with markers). Git writes
 #    "<<<<<<< <ref>", "=======", ">>>>>>> <ref>" (and "||||||| <ref>" with
 #    diff3); the "=======" line alone is not checked because Markdown can use it.
 MARKERS=$(git grep -nE '^(<<<<<<<|>>>>>>>|\|\|\|\|\|\|\|)( |$)' -- . 2>/dev/null || true)

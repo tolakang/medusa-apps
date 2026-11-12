@@ -4,12 +4,12 @@ Run this audit **before a category is promoted to staging or production** (BUILD
 
 **How to use it.** Give this file to the builder (Claude Code) with one target:
 
-> Run `PRE_DEPLOY_AUDIT.md` for `<category>` (for example `booking-services`). Report every check with evidence. Don't change code during the audit.
+> Run `docs/PRE_DEPLOY_AUDIT.md` for `<category>` (for example `booking-services`). Report every check with evidence. Don't change code during the audit.
 
 ## Rules for the audit
 
-1. **Report first, fix later.** The audit reads code and runs commands; it does not refactor. Each finding becomes a `TASKS.md` task (or a *Plan deviations & findings log* entry) and is fixed through DEV_FLOW: branch per task, Gates 1–5, PR, CI green. Scope or architecture changes wait for owner approval (CLAUDE.md).
-2. **Medusa first, no guessing.** Much of this list is already done by Medusa itself: the ORM, reset tokens, CORS options, the error handler. Cite the behaviour from `MEDUSA_SKILL.md` or its evidence ladder (§0) and verify it; don't rebuild it. A fix must use official extension points only (BUILD_PLAN §3.1): middlewares, workflows, hooks, modules, config. No core patches, no `node_modules` edits.
+1. **Report first, fix later.** The audit reads code and runs commands; it does not refactor. Each finding becomes a `docs/TASKS.md` task (or a *Plan deviations & findings log* entry) and is fixed through DEV_FLOW: branch per task, Gates 1–5, PR, CI green. Scope or architecture changes wait for owner approval (CLAUDE.md).
+2. **Medusa first, no guessing.** Much of this list is already done by Medusa itself: the ORM, reset tokens, CORS options, the error handler. Cite the behaviour from `docs/MEDUSA_SKILL.md` or its evidence ladder (§0) and verify it; don't rebuild it. A fix must use official extension points only (BUILD_PLAN §3.1): middlewares, workflows, hooks, modules, config. No core patches, no `node_modules` edits.
 3. **Evidence or it didn't happen.** Every status needs a file:line, a command with its output, or an HTTP response. "Looks fine" is not a status.
 4. **Scope.** Audit every deployable of the target category: `backend`, `storefront`, and any `*-portal` / `pos-app`. A deployable without code yet (on 2026-11-12: all of `marketplace/`) is reported as "n/a".
 5. **No secrets in the report.** Quote variable *names*, never values.
@@ -156,7 +156,7 @@ cd <category>/backend && pnpm audit --prod
 
 ## Report template
 
-Write the report as `<category>/AUDIT-<YYYY-MM-DD>.md` (or paste it in the PR), then copy each FIX into `TASKS.md`.
+Write the report as `<category>/AUDIT-<YYYY-MM-DD>.md` (or paste it in the PR), then copy each FIX into `docs/TASKS.md`.
 
 ```markdown
 # Pre-deploy audit: <category> @ <commit sha>, <date>
