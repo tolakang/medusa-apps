@@ -60,6 +60,17 @@ export type FreeSlot = {
   remaining: number
 }
 
+export type ConfirmedBookings = {
+  // Now confirmed (or already were).
+  confirmed: string[]
+  // What they were before this call, to undo it.
+  previous: { id: string; status: string; hold_expires_at: Date | null; customer_id: string | null }[]
+  // Paid for, but the hold had run out and the place was taken meanwhile.
+  lost: string[]
+  // Cancelled or otherwise not confirmable.
+  skipped: { id: string; status: string }[]
+}
+
 export type ExtendedHold = {
   id: string
   previous_hold_expires_at: Date | null
@@ -252,13 +263,94 @@ class BookingModuleService extends MedusaService({
     return extended
   }
 
+  // Confirms the bookings of a placed order (TASKS P3-07, review 2 S4). A
+  // pending hold, or one the release job already marked expired, is
+  // confirmed when its place is still free with the order's own cart
+  // ignored; the check runs under the same resource lock as createHold, so
+  // a new hold can't take the last place at the same moment. Holds that ran
+  // out and lost their place are returned as `lost` (paid, no time).
+  @InjectManager()
+  async confirmBookings(
+    input: { booking_ids: string[]; customer_id?: string | null; now?: Date },
+    @MedusaContext() sharedContext: Context<EntityManager> = {}
+  ): Promise<ConfirmedBookings> {
+    return await this.confirmBookings_(input, sharedContext)
+  }
+
+  @InjectTransactionManager()
+  protected async confirmBookings_(
+    input: { booking_ids: string[]; customer_id?: string | null; now?: Date },
+    @MedusaContext() sharedContext: Context<EntityManager> = {}
+  ): Promise<ConfirmedBookings> {
+    const now = input.now ?? new Date()
+    const result: ConfirmedBookings = { confirmed: [], previous: [], lost: [], skipped: [] }
+    if (!input.booking_ids.length) {
+      return result
+    }
+    const rows = await this.listBookings(
+      { id: input.booking_ids },
+      { order: { resource_id: "ASC", starts_at: "ASC" } },
+      sharedContext
+    )
+    for (const b of rows) {
+      if (b.status === "confirmed") {
+        result.confirmed.push(b.id)
+        continue
+      }
+      if (b.status !== "pending" && b.status !== "expired") {
+        result.skipped.push({ id: b.id, status: b.status })
+        continue
+      }
+      await sharedContext.transactionManager!.execute(
+        "SELECT id FROM booking_resource WHERE id = ? AND deleted_at IS NULL FOR UPDATE",
+        [b.resource_id]
+      )
+      const holdValid =
+        b.status === "pending" && !!b.hold_expires_at && new Date(b.hold_expires_at) > now
+      if (!holdValid) {
+        const check = await this.checkSlot_(
+          {
+            resource_id: b.resource_id,
+            starts_at: new Date(b.starts_at),
+            ends_at: new Date(b.ends_at),
+            ignore_cart_id: b.cart_id ?? undefined,
+            now,
+            allow_started: true,
+          },
+          sharedContext
+        )
+        if (!check.available) {
+          result.lost.push(b.id)
+          continue
+        }
+      }
+      await this.updateBookings(
+        {
+          id: b.id,
+          status: "confirmed",
+          hold_expires_at: null,
+          customer_id: b.customer_id ?? input.customer_id ?? null,
+        },
+        sharedContext
+      )
+      result.confirmed.push(b.id)
+      result.previous.push({
+        id: b.id,
+        status: b.status,
+        hold_expires_at: b.hold_expires_at ? new Date(b.hold_expires_at) : null,
+        customer_id: b.customer_id ?? null,
+      })
+    }
+    return result
+  }
+
   // Marks pending holds whose hold_expires_at has passed as `expired`
   // (TASKS P3-09, every minute). They already stopped blocking their slot
   // at that moment (P3-03); this tidies their status. At most `limit` per
   // run; returns the ids so the workflow can restore them on failure.
   @InjectManager()
   async releaseExpiredHolds(
-    input: { now?: Date; limit?: number } = {},
+    input: { now?: Date; limit?: number; skip_cart_ids?: string[] } = {},
     @MedusaContext() sharedContext: Context<EntityManager> = {}
   ): Promise<{ id: string; hold_expires_at: Date | null }[]> {
     return await this.releaseExpiredHolds_(input, sharedContext)
@@ -266,15 +358,24 @@ class BookingModuleService extends MedusaService({
 
   @InjectTransactionManager()
   protected async releaseExpiredHolds_(
-    input: { now?: Date; limit?: number },
+    input: { now?: Date; limit?: number; skip_cart_ids?: string[] },
     @MedusaContext() sharedContext: Context<EntityManager> = {}
   ): Promise<{ id: string; hold_expires_at: Date | null }[]> {
     const now = input.now ?? new Date()
-    const expired = await this.listBookings(
-      { status: "pending", hold_expires_at: { $lte: now } },
-      { select: ["id", "hold_expires_at"], take: input.limit ?? 500, order: { hold_expires_at: "ASC" } },
-      sharedContext
-    )
+    // Holds of carts that became orders are left for the order's
+    // confirmation (review 2, S4).
+    const skip = new Set(input.skip_cart_ids ?? [])
+    const expired = (
+      await this.listBookings(
+        { status: "pending", hold_expires_at: { $lte: now } },
+        {
+          select: ["id", "hold_expires_at", "cart_id"],
+          take: input.limit ?? 500,
+          order: { hold_expires_at: "ASC" },
+        },
+        sharedContext
+      )
+    ).filter((b) => !b.cart_id || !skip.has(b.cart_id))
     if (expired.length) {
       await this.updateBookings(
         expired.map((b) => ({ id: b.id, status: "expired" as const })),

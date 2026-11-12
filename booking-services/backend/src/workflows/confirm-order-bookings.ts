@@ -52,6 +52,9 @@ const loadOrderBookingsStep = createStep(
 
 type PreviousState = { id: string; status: string; hold_expires_at: string | null; customer_id: string | null }
 
+// Confirmed in the booking module under the resource lock (review 2, S4): a
+// hold that ran out is confirmed only if its place is still free, so a paid
+// order can't overbook; one whose place was taken is reported for staff.
 const confirmBookingsStep = createStep(
   "confirm-bookings",
   async (input: OrderBookings, { container }) => {
@@ -60,36 +63,27 @@ const confirmBookingsStep = createStep(
     }
     const booking = container.resolve<BookingModuleService>(BOOKING_MODULE)
     const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
-    const rows = await booking.listBookings({ id: input.booking_ids })
-
-    const pending = rows.filter((b) => b.status === "pending")
-    for (const b of rows) {
-      if (b.status !== "pending" && b.status !== "confirmed") {
-        // P3-05 refuses checkout for released bookings, so this means the
-        // order was placed some other way: report it, don't confirm it.
-        logger.warn(`Order ${input.order_id}: booking ${b.id} is ${b.status}, not confirmed.`)
-      }
+    const result = await booking.confirmBookings({
+      booking_ids: input.booking_ids,
+      customer_id: input.customer_id,
+    })
+    for (const s of result.skipped) {
+      // P3-05 refuses checkout for released bookings, so this means the
+      // order was placed some other way: report it, don't confirm it.
+      logger.warn(`Order ${input.order_id}: booking ${s.id} is ${s.status}, not confirmed.`)
     }
-    if (pending.length) {
-      await booking.updateBookings(
-        pending.map((b) => ({
-          id: b.id,
-          status: "confirmed" as const,
-          hold_expires_at: null,
-          customer_id: b.customer_id ?? input.customer_id,
-        }))
+    for (const id of result.lost) {
+      logger.error(
+        `Order ${input.order_id}: booking ${id} was paid after its hold ran out and its time was taken. Contact the customer to rebook or refund.`
       )
     }
-    const previous: PreviousState[] = pending.map((b) => ({
-      id: b.id,
-      status: b.status,
-      hold_expires_at: b.hold_expires_at ? new Date(b.hold_expires_at).toISOString() : null,
-      customer_id: b.customer_id ?? null,
+    const previous: PreviousState[] = result.previous.map((p) => ({
+      id: p.id,
+      status: p.status,
+      hold_expires_at: p.hold_expires_at ? new Date(p.hold_expires_at).toISOString() : null,
+      customer_id: p.customer_id,
     }))
-    return new StepResponse(
-      rows.filter((b) => b.status === "pending" || b.status === "confirmed").map((b) => b.id),
-      previous
-    )
+    return new StepResponse(result.confirmed, previous)
   },
   async (previous, { container }) => {
     if (!previous?.length) {
@@ -98,7 +92,7 @@ const confirmBookingsStep = createStep(
     await container.resolve<BookingModuleService>(BOOKING_MODULE).updateBookings(
       previous.map((p) => ({
         id: p.id,
-        status: p.status as "pending",
+        status: p.status as "pending" | "expired",
         hold_expires_at: p.hold_expires_at ? new Date(p.hold_expires_at) : null,
         customer_id: p.customer_id,
       }))
