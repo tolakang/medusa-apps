@@ -2,6 +2,7 @@ import { MedusaError } from "@medusajs/framework/utils"
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
 import { SELLER_MODULE } from "../../../modules/seller"
 import SellerModuleService from "../../../modules/seller/service"
+import { assertDomainFree } from "./update-seller"
 
 export const normalizeEmail = (email: string) => email.trim().toLowerCase()
 
@@ -29,6 +30,7 @@ export const createSellerStep = createStep(
         `A seller with the email ${email} already exists.`
       )
     }
+    await assertDomainFree(sellers, input.domain)
     const seller = await sellers.createSellers({ ...input, email })
     return new StepResponse(seller, seller.id)
   },

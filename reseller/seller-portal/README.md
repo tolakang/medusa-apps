@@ -2,7 +2,7 @@
 
 Seller portal for the reseller business project (BUILD_PLAN §6.5, TASKS P5-08): sellers choose which of your products appear in their shop and follow their sales and commissions. Plain Next.js app (web client standard, plan §4.2), built like `pos/pos-app` (same pins, Dockerfile pattern, sealed session cookie).
 
-- **Sign-in** (`/login`): invite-only, as the backend's seller flow (P5-03). The shop invites the email (`POST /admin/sellers`) and gets an **invite code** to give the seller; the first time, the seller sets a password here with that code (register + `POST /sellers/accept`), then signs in. The invited email alone can't take the account. A suspended seller is signed out on the next page.
+- **Sign-in** (`/login`): invite-only, as the backend's seller flow (P5-03). The shop invites the email (admin **Sellers** page, or `POST /admin/sellers`) and gets an **invite code** to give the seller; the first time, the seller sets a password here with that code (register + `POST /sellers/accept`), then signs in. The invited email alone can't take the account. A suspended seller is signed out on the next page.
 - **Overview** (`/`): commission totals (waiting, due, paid), the shop's domain and rate, the latest sales.
 - **Products** (`/products`): tick your published products to show in the seller's shop (`/sellers/me/products`).
 - **Sales** (`/sales`): orders in the seller's channel with the commission on each (`/sellers/me/orders`); no customer details.

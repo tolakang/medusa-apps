@@ -7,7 +7,7 @@ import { inviteCode } from "../../../lib/invite-code"
 import { createSellerWorkflow } from "../../../workflows/seller/create-seller"
 import type { PostAdminSellerType } from "./validators"
 
-const SELLER_FIELDS = [
+export const SELLER_FIELDS = [
   "id",
   "handle",
   "name",

@@ -21,7 +21,7 @@ import {
 } from './auth-guards'
 import { requireSeller, sellerCors } from './seller-auth'
 import { PostSellerAccept, PostSellerProducts } from './sellers/validators'
-import { PostAdminSeller, PostAdminSellerPayout } from './admin/sellers/validators'
+import { PostAdminSeller, PostAdminSellerPayout, PostAdminSellerUpdate } from './admin/sellers/validators'
 
 // The product index declares filterable `status` and `sales_channel_ids`, so
 // the route narrows it to published products in the key's sales channels.
@@ -126,6 +126,11 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/sellers/me/products',
       middlewares: [validateAndTransformBody(PostSellerProducts)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/sellers/:id',
+      middlewares: [validateAndTransformBody(PostAdminSellerUpdate)],
     },
     {
       method: ['POST'],
