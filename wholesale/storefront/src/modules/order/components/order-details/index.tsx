@@ -24,7 +24,7 @@ const OrderDetails = ({ order }: OrderDetailsProps) => {
           <Text>Order Date</Text>
           <Text>
             {" "}
-            {createdAt.getDate()}-{createdAt.getMonth()}-
+            {createdAt.getDate()}-{createdAt.getMonth() + 1}-
             {createdAt.getFullYear()}
           </Text>
         </div>

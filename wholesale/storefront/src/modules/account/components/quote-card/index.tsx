@@ -66,7 +66,7 @@ const QuoteCard = ({ quote }: QuoteCardProps) => {
 
         <div className="flex pr-2 text-small-regular items-center">
           <CalendarMini className="inline-block mr-1" />
-          {createdAt.getDate()}-{createdAt.getMonth()}-{createdAt.getFullYear()}
+          {createdAt.getDate()}-{createdAt.getMonth() + 1}-{createdAt.getFullYear()}
         </div>
 
         <div className="flex text-small-regular items-center">

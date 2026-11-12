@@ -41,6 +41,7 @@ Starter problems fixed (TASKS F-066):
 - `addToCartBulk` used a plain `fetch` and never read the response, so a refused item looked added. It now returns the backend's message (minimum order quantity, company not approved, cart waiting for approval), and the buyer sees it.
 - The order page put a table row straight into a `div` (hydration error): wrapped in a table.
 - A leftover `console.log` in the button component: removed.
+- Order and quote dates showed the month one too low (`getMonth()` counts from 0): fixed (TASKS F-084).
 
 Wholesale changes:
 
