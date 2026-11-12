@@ -28,6 +28,7 @@ export type ProductBody = {
   description?: string
   status: (typeof PRODUCT_STATUSES)[number]
   options: { title: string; values: string[] }[]
+  additional_data?: { stock_quantity: number }
   variants: {
     title: string
     sku?: string
@@ -48,6 +49,9 @@ export function productBody(form: {
   currency?: string
   sku?: string
   status?: string
+  // Stock (owner, F-080): tracked unless the product is made to order.
+  track_stock?: boolean
+  stock?: string
 }): ProductBody | string {
   const title = (form.title ?? "").trim()
   if (!title) {
@@ -63,6 +67,12 @@ export function productBody(form: {
   }
   const status = PRODUCT_STATUSES.find((s) => s === form.status) ?? "draft"
   const sku = (form.sku ?? "").trim()
+  const track = form.track_stock !== false
+  const stockText = (form.stock ?? "").trim()
+  const stock = stockText === "" ? 0 : Number(stockText)
+  if (track && (!Number.isInteger(stock) || stock < 0)) {
+    return "Enter how many you have in stock: a whole number, 0 or more."
+  }
   return {
     title,
     ...(form.description?.trim() ? { description: form.description.trim() } : {}),
@@ -72,13 +82,24 @@ export function productBody(form: {
       {
         title: "Default",
         ...(sku ? { sku } : {}),
-        // Stock isn't tracked in Medusa for vendor products yet (F-080).
-        manage_inventory: false,
+        // Tracked: Medusa refuses checkout when it's out of stock, and
+        // fulfilling takes it from the vendor's location (F-080).
+        manage_inventory: track,
         options: { Default: "Default" },
         prices: [{ amount: Math.round(price * 100) / 100, currency_code: currency }],
       },
     ],
+    ...(track ? { additional_data: { stock_quantity: stock } } : {}),
   }
+}
+
+/** The stock form's quantity, or the error to show. */
+export function stockQuantity(raw: string | undefined): number | string {
+  const text = (raw ?? "").trim()
+  const n = Number(text)
+  return text !== "" && Number.isInteger(n) && n >= 0
+    ? n
+    : "Enter how many you have in stock: a whole number, 0 or more."
 }
 
 /** Items still to fulfil in an order, from the backend's `remaining`. */

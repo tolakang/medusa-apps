@@ -34,6 +34,18 @@ export function ProductForm() {
           <input className="field w-40" name="sku" maxLength={80} />
         </label>
       </div>
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" name="track_stock" defaultChecked /> Track stock
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-sm font-medium">Quantity in stock</span>
+          <input className="field w-28" name="stock" inputMode="numeric" placeholder="0" />
+        </label>
+        <p className="text-xs text-ui-fg-subtle">
+          Untick for made-to-order products: customers can always order them.
+        </p>
+      </div>
       <fieldset className="flex flex-col gap-1 text-sm">
         <label className="flex items-center gap-2">
           <input type="radio" name="status" value="proposed" defaultChecked /> Send for review
