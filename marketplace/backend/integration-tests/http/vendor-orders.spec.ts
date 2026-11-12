@@ -139,6 +139,7 @@ medusaIntegrationTestRunner({
             "id",
             "metadata",
             "email",
+            "customer_id",
             "region_id",
             "sales_channel_id",
             "item_total",
@@ -167,6 +168,8 @@ medusaIntegrationTestRunner({
 
         const res = await api.post(`/store/carts/${cartId}/complete-vendor`, {}, store)
         expect(res.data.type).toBe("order")
+        // The storefront's redirect needs the country (P6-08).
+        expect(res.data.order.shipping_address.country_code).toBe("kh")
         const parentId = res.data.order.id
         expect(res.data.vendor_orders).toHaveLength(2)
         expect(await orderCount()).toBe(3)
@@ -190,6 +193,8 @@ medusaIntegrationTestRunner({
           expect(order.vendor?.id).toBe(child.vendor_id)
           expect(order.metadata?.[PARENT_ORDER_KEY]).toBe(parentId)
           expect(order.email).toBe(parent.email)
+          // Not in the customer's own order list (P6-08).
+          expect(order.customer_id ?? null).toBeNull()
           expect(order.region_id).toBe(parent.region_id)
           expect(order.sales_channel_id).toBe(parent.sales_channel_id)
           expect(order.shipping_address?.city).toBe("Khan Chamkar Mon")
@@ -386,6 +391,38 @@ medusaIntegrationTestRunner({
         expect(retried.data.vendor_orders).toHaveLength(2)
         const { data: after } = await query().graph({ entity: "order", fields: ["id"] })
         expect(after).toHaveLength(3)
+      })
+
+      it("a cart completed through Medusa's own route still gets its vendor orders (F-079)", async () => {
+        // As when PayWay's webhook completes the cart before the customer
+        // returns: the order.placed subscriber splits it.
+        await vendorWith("dara", ["t-shirt"])
+        await vendorWith("sok", ["sweatshirt"])
+        const cartId = await readyCart([
+          { handle: "t-shirt", quantity: 1 },
+          { handle: "sweatshirt", quantity: 1 },
+        ])
+        const core = await api.post(`/store/carts/${cartId}/complete`, {}, store)
+        expect(core.data.type).toBe("order")
+        const parentId = core.data.order.id
+
+        let children: string[] = []
+        for (let i = 0; i < 40 && children.length < 2; i++) {
+          await new Promise((r) => setTimeout(r, 250))
+          const {
+            data: [parent],
+          } = await query().graph({ entity: "order", fields: ["metadata"], filters: { id: parentId } })
+          children = (parent.metadata?.[CHILD_ORDERS_KEY] ?? []) as string[]
+        }
+        expect(children).toHaveLength(2)
+
+        // The storefront's complete-vendor afterwards finds them: no second set.
+        const later = await api.post(`/store/carts/${cartId}/complete-vendor`, {}, store)
+        expect(later.data.order.id).toBe(parentId)
+        expect(later.data.vendor_orders.map((c: { order_id: string }) => c.order_id).sort()).toEqual(
+          [...children].sort()
+        )
+        expect(await orderCount()).toBe(3)
       })
 
       it("answers 404 for an unknown cart", async () => {

@@ -6,7 +6,7 @@ Customer storefront for the marketplace business project (BUILD_PLAN §6.6). Sta
 - Package name `marketplace-storefront`; the Dockerfile, `.env.example` and comments name `marketplace/*`.
 - `.guard-baseline` is `159252e ecommerce/storefront`: the starter's type suppressions came with the copy, and `scripts/guard.sh` compares against that app at the starter import.
 
-Vendor names, shop pages and the `complete-vendor` checkout come in P6-08. The ecommerce notes below apply unchanged.
+**P6-08:** checkout completes through the backend's `POST /store/carts/:id/complete-vendor` (`placeOrder` in `src/lib/data/cart.ts`), which also makes one order per vendor; product pages say "Sold by" with a link to the vendor's shop page `/[countryCode]/vendors/[handle]` (`src/lib/data/vendors.ts`). The ecommerce notes below apply unchanged.
 
 ---
 

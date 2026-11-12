@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { listProducts } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
 import ProductTemplate from "@modules/products/templates"
+import { getProductVendors } from "@lib/data/vendors"
 import { HttpTypes } from "@medusajs/types"
 
 // Render on every request (starter change 7, docs/TASKS.md F-015). The data layer
@@ -85,6 +86,7 @@ export default async function ProductPage(props: Props) {
   }
 
   const images = getImagesForVariant(pricedProduct, selectedVariantId)
+  const vendors = await getProductVendors([pricedProduct.id])
 
   return (
     <ProductTemplate
@@ -92,6 +94,7 @@ export default async function ProductPage(props: Props) {
       region={region}
       countryCode={params.countryCode}
       images={images ?? []}
+      vendor={vendors[pricedProduct.id] ?? null}
     />
   )
 }
