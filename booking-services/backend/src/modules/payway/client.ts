@@ -1,4 +1,4 @@
-import { createHmac, randomInt } from "node:crypto"
+import { constants, createHmac, createPublicKey, publicEncrypt, randomInt } from "node:crypto"
 
 // ABA PayWay eCommerce Checkout (TASKS D1, P1-03). Everything below follows
 // PayWay's Developer Suite (developer.payway.com.kh, read 2026-10-01):
@@ -14,6 +14,14 @@ import { createHmac, randomInt } from "node:crypto"
 //   (JSON), hash over req_time + merchant_id + tran_id; status.code 00 success,
 //   5 not found. A closed transaction no longer accepts payment and sends no
 //   callback (developer.payway.com.kh, read 2026-10-05).
+// - Refund: POST {base}/api/merchant-portal/merchant-access/online-transaction/refund
+//   (JSON: request_time, merchant_id, merchant_auth, hash). merchant_auth =
+//   base64 of the JSON {mc_id, tran_id, refund_amount} encrypted with ABA's
+//   RSA public key in 117-byte chunks (PHP openssl_public_encrypt, PKCS#1
+//   v1.5); hash = base64(HMAC-SHA512(request_time + merchant_id +
+//   merchant_auth, API key)). Full or partial, within 30 days, completed
+//   transactions only; status.code 00 success, PTL37 more than paid, PTL168
+//   concurrent request (developer.payway.com.kh, read 2026-11-12).
 // - Callback (return_url): JSON POST; header X-PayWay-HMAC-SHA512 =
 //   base64(HMAC-SHA512(values sorted by key, arrays JSON-encoded, key)).
 // - Base URLs: sandbox https://checkout-sandbox.payway.com.kh/, production
@@ -24,6 +32,7 @@ export const PAYWAY_SANDBOX_URL = "https://checkout-sandbox.payway.com.kh"
 export const PURCHASE_PATH = "/api/payment-gateway/v1/payments/purchase"
 export const CHECK_TRANSACTION_PATH = "/api/payment-gateway/v1/payments/check-transaction-2"
 export const CLOSE_TRANSACTION_PATH = "/api/payment-gateway/v1/payments/close-transaction"
+export const REFUND_PATH = "/api/merchant-portal/merchant-access/online-transaction/refund"
 export const CALLBACK_SIGNATURE_HEADER = "x-payway-hmac-sha512"
 
 // Purchase fields in the order PayWay concatenates them for the hash.
@@ -170,4 +179,77 @@ export async function closeTransaction(
   })
   const body = (await response.json().catch(() => ({}))) as { status?: { code?: unknown } }
   return String(body.status?.code ?? response.status)
+}
+
+// ABA sends the RSA public key as text; env files often hold it on one line
+// with "\n" escapes or without the PEM header.
+export function rsaPublicKeyPem(key: string): string {
+  const text = key.replace(/\\n/g, "\n").trim()
+  if (text.includes("-----BEGIN")) return text
+  const body = text.replace(/\s+/g, "").match(/.{1,64}/g)?.join("\n") ?? ""
+  return `-----BEGIN PUBLIC KEY-----\n${body}\n-----END PUBLIC KEY-----`
+}
+
+// The JSON encrypted in chunks of (key bytes - 11): 117 for ABA's 1024-bit
+// key, as PayWay's PHP sample. Concatenated, then base64.
+export function merchantAuth(
+  payload: { mc_id: string; tran_id: string; refund_amount: number },
+  rsaPublicKey: string
+): string {
+  const key = createPublicKey(rsaPublicKeyPem(rsaPublicKey))
+  const bits = key.asymmetricKeyDetails?.modulusLength ?? 1024
+  const chunkSize = bits / 8 - 11
+  const data = Buffer.from(JSON.stringify(payload), "utf8")
+  const parts: Buffer[] = []
+  for (let i = 0; i < data.length; i += chunkSize) {
+    parts.push(
+      publicEncrypt({ key, padding: constants.RSA_PKCS1_PADDING }, data.subarray(i, i + chunkSize))
+    )
+  }
+  return Buffer.concat(parts).toString("base64")
+}
+
+export type RefundResult = {
+  code: string
+  message?: string
+  totalRefunded?: number
+  grandTotal?: number
+  currency?: string
+}
+
+export async function refundTransaction(
+  opts: { baseUrl: string; merchantId: string; apiKey: string; rsaPublicKey: string },
+  tranId: string,
+  amount: number,
+  fetchImpl: typeof fetch = fetch
+): Promise<RefundResult> {
+  const time = reqTime()
+  const auth = merchantAuth(
+    { mc_id: opts.merchantId, tran_id: tranId, refund_amount: amount },
+    opts.rsaPublicKey
+  )
+  const response = await fetchImpl(`${opts.baseUrl}${REFUND_PATH}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      request_time: time,
+      merchant_id: opts.merchantId,
+      merchant_auth: auth,
+      hash: hmac(`${time}${opts.merchantId}${auth}`, opts.apiKey),
+    }),
+    signal: AbortSignal.timeout(15_000),
+  })
+  const body = (await response.json().catch(() => ({}))) as {
+    grand_total?: unknown
+    total_refunded?: unknown
+    currency?: unknown
+    status?: { code?: unknown; message?: unknown }
+  }
+  return {
+    code: String(body.status?.code ?? response.status),
+    message: typeof body.status?.message === "string" ? body.status.message : undefined,
+    totalRefunded: body.total_refunded === undefined ? undefined : Number(body.total_refunded),
+    grandTotal: body.grand_total === undefined ? undefined : Number(body.grand_total),
+    currency: typeof body.currency === "string" ? body.currency : undefined,
+  }
 }

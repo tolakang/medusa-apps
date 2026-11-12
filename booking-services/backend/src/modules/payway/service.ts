@@ -37,6 +37,7 @@ import {
   newTranId,
   PAYWAY_SANDBOX_URL,
   PURCHASE_PATH,
+  refundTransaction,
   reqTime,
   signPurchase,
   type CheckTransactionResult,
@@ -65,9 +66,15 @@ export type PaywayOptions = {
   storefront_url: string
   // Minutes the customer has to pay (PayWay min 3; default 30).
   lifetime_minutes?: number
+  // ABA's RSA public key for the Refund API (PAYWAY_RSA_PUBLIC_KEY). Without
+  // it refunds, and so cancelling a paid order, must go through the portal.
+  rsa_public_key?: string
 }
 
 type InjectedDependencies = { logger: Logger }
+
+export const PAYWAY_NO_REFUND_KEY_MESSAGE =
+  "PayWay refunds need PAYWAY_RSA_PUBLIC_KEY (ABA's RSA public key). Set it, or refund this payment in the PayWay merchant portal."
 
 export const PAYWAY_ALREADY_PAID_MESSAGE =
   "This cart is already paid with ABA PayWay. Place the order instead of paying again."
@@ -93,6 +100,11 @@ class PaywayProviderService extends AbstractPaymentProvider<PaywayOptions> {
     super({ logger }, options)
     this.options_ = options
     this.logger_ = logger
+    if (!options.rsa_public_key) {
+      logger.warn(
+        "PayWay: PAYWAY_RSA_PUBLIC_KEY is not set, so refunds and cancelling paid orders fail until it is."
+      )
+    }
   }
 
   static validateOptions(options: Record<string, unknown>) {
@@ -179,8 +191,12 @@ class PaywayProviderService extends AbstractPaymentProvider<PaywayOptions> {
     return { id: payway.tran_id, data: { ...data, ...payway }, status: PaymentSessionStatus.PENDING }
   }
 
+  // A new signed form means a new tran_id, so the old one is retired exactly
+  // as in deletePayment: refused if already paid, closed otherwise. Without
+  // this, paying the old page left money without an order (review 2, M5).
   async updatePayment(input: UpdatePaymentInput): Promise<UpdatePaymentOutput> {
-    const data = (input.data ?? {}) as CustomerData & { session_id?: string }
+    const data = (input.data ?? {}) as CustomerData & { session_id?: string; tran_id?: string }
+    await this.retire(String(data.tran_id ?? ""))
     const payway = this.purchase(
       String(data.session_id ?? ""),
       Number(input.amount),
@@ -261,9 +277,13 @@ class PaywayProviderService extends AbstractPaymentProvider<PaywayOptions> {
   // money without an order), and an unpaid one is closed so it can no longer
   // be paid. Checked again after closing in case the payment landed meanwhile.
   async deletePayment(input: DeletePaymentInput): Promise<DeletePaymentOutput> {
-    const tranId = String(input.data?.tran_id ?? "")
+    await this.retire(String(input.data?.tran_id ?? ""))
+    return { data: input.data }
+  }
+
+  private async retire(tranId: string): Promise<void> {
     if (!tranId) {
-      return { data: input.data }
+      return
     }
     const isPaid = async () => {
       const result = await checkTransaction(this.credentials, tranId)
@@ -279,20 +299,46 @@ class PaywayProviderService extends AbstractPaymentProvider<PaywayOptions> {
     if (await isPaid()) {
       throw new MedusaError(MedusaError.Types.NOT_ALLOWED, PAYWAY_ALREADY_PAID_MESSAGE)
     }
-    return { data: input.data }
   }
 
   async retrievePayment(input: RetrievePaymentInput): Promise<RetrievePaymentOutput> {
     return { data: input.data }
   }
 
-  // PayWay's Refund API needs an RSA public key from ABA (not part of the
-  // sandbox credentials). Until then refunds are made in the PayWay portal.
-  async refundPayment(_input: RefundPaymentInput): Promise<RefundPaymentOutput> {
-    throw new MedusaError(
-      MedusaError.Types.NOT_ALLOWED,
-      "PayWay refunds are not automatic yet: refund this payment in the PayWay merchant portal."
-    )
+  // PayWay's Refund API (full or partial, within 30 days). Medusa records the
+  // refund only when this returns, so payment.refunded, refunded_amount and
+  // cancelling a paid order all work (review 2, M2). Without ABA's RSA key
+  // staff refund in the PayWay portal instead.
+  async refundPayment(input: RefundPaymentInput): Promise<RefundPaymentOutput> {
+    const rsaPublicKey = this.options_.rsa_public_key
+    if (!rsaPublicKey) {
+      throw new MedusaError(MedusaError.Types.NOT_ALLOWED, PAYWAY_NO_REFUND_KEY_MESSAGE)
+    }
+    const data = (input.data ?? {}) as Record<string, unknown>
+    const tranId = String(data.tran_id ?? "")
+    if (!tranId) {
+      throw new MedusaError(MedusaError.Types.INVALID_DATA, "PayWay payment has no transaction ID.")
+    }
+    const currency = String(data.currency ?? "USD")
+    const amount = Number(formatAmount(Number(new BigNumber(input.amount).numeric), currency))
+    if (!(amount > 0)) {
+      throw new MedusaError(MedusaError.Types.INVALID_DATA, "The refund amount must be above 0.")
+    }
+    const result = await refundTransaction({ ...this.credentials, rsaPublicKey }, tranId, amount)
+    if (result.code !== "00") {
+      this.logger_.warn(`PayWay refund ${tranId} answered ${result.code} ${result.message ?? ""}.`)
+      throw new MedusaError(
+        MedusaError.Types.NOT_ALLOWED,
+        `PayWay refused the refund (${result.code}${result.message ? `: ${result.message}` : ""}).`
+      )
+    }
+    return {
+      data: {
+        ...data,
+        payway_total_refunded: result.totalRefunded,
+        payway_status: "REFUNDED",
+      },
+    }
   }
 
   // PayWay's callback. The signature is checked, then the payment is

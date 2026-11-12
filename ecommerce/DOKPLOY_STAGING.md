@@ -169,6 +169,8 @@ Both paths are relative to the repo root (verified on staging 2026-09-25, F-011)
    PAYWAY_API_KEY=<the "Public Key" from ABA's email>
    PAYWAY_API_URL=
    PAYWAY_RETURN_URL=https://<api host>/hooks/payment/payway_payway
+   # ABA's RSA public key for automatic refunds (one line, "\n" for new lines)
+   PAYWAY_RSA_PUBLIC_KEY=<the RSA public key from ABA>
    # Storefront cache refresh (P1-10), PayWay's return to the shop, and the
    # links in verification / password reset emails (P1-18)
    STOREFRONT_URL=https://<shop host>
@@ -178,7 +180,7 @@ Both paths are relative to the repo root (verified on staging 2026-09-25, F-011)
 3. **PayWay notes** (P1-03, checked on staging 2026-10-03):
    - `PAYWAY_API_KEY` is the **Public Key** (40 characters), on one line with no quotes or spaces.
    - `PAYWAY_API_URL` is only the base (`https://checkout.payway.com.kh` for live), **never** the full purchase URL.
-   - The RSA keys are not used.
+   - `PAYWAY_RSA_PUBLIC_KEY` is ABA's **RSA public key**, used only for refunds (PayWay's Refund API). Without it, refunds and cancelling a paid order fail in the admin, and Marketplace and Reseller commissions on refunded orders are not held back. Put it on one line with `\n` for the line breaks, or just the key without the BEGIN/END lines.
    - Check the lengths from the backend terminal without printing the values:
      ```bash
      node -e 'for (const k of ["PAYWAY_MERCHANT_ID","PAYWAY_API_KEY","PAYWAY_API_URL","PAYWAY_RETURN_URL"]) console.log(k, (process.env[k]||"").length)'
@@ -586,7 +588,7 @@ Once per project; repeat for production. Do these after the backend, worker and 
    1. Ask ABA to **whitelist** the shop and API hosts and the Dokploy server's public IP (sandbox and live are separate). Without it PayWay answers `6: wrong domain`.
    2. Admin → **Settings** → **Regions** → **Cambodia** → **Payment providers**: add **payway** (`pp_payway_payway`) → save. Without this the checkout shows no ABA PayWay option.
    3. **Test:** pay one order with the sandbox success card (PayWay Resources page). **Check:** the order shows as **Paid** (captured), and the backend logs a `POST /hooks/payment/payway_payway` with 200. Never scan the sandbox KHQR with a real banking app.
-   4. Refunds are not automatic yet: refund in the PayWay merchant portal, then record it in the admin.
+   4. **Refund test:** on that order, admin → **Refund** part of the amount. **Check:** the refund shows in the admin and in the PayWay merchant portal. If the admin says PayWay refused it, the message has PayWay's code (for example `PTL63` "Merchant have no security config file"); ask ABA to check the refund setup. Refunds must also be switched on for the outlet (PayWay Refund API docs).
 3. **Customer Telegram bot webhook.** Once, and again after a host change. In the **backend** terminal (it already has the bot token and secret):
    ```bash
    docker-entrypoint.sh medusa exec ./src/scripts/telegram-set-webhook.js https://<api host>/telegram/webhook
@@ -675,7 +677,7 @@ When sharing a log, filter it first: `grep -v -i "secret\|access-key\|api_key"`.
 2. **Shop** `https://<shop host>/kh`: the home page and one product page show images and prices; search finds a product (e.g. "shirt").
 3. **Checkout** with a Cambodian address and phone, up to **Pay with ABA PayWay**. PayWay's own checkout page must open: not raw JSON, not "wrong domain". That proves the keys, signing and whitelisting.
    - **Staging:** pay with the sandbox success card. ✅ The confirmation page shows the order, the admin shows it as **Captured**, and the staff Telegram group gets the new-order alert (plus the email, if one was given).
-   - **Production:** press **Cancel** on the PayWay page instead; you return to checkout and no order is placed. Pay for real only when you mean to: a test purchase must be refunded in the PayWay merchant portal (refunds aren't automatic yet).
+   - **Production:** press **Cancel** on the PayWay page instead; you return to checkout and no order is placed. Pay for real only when you mean to: refund a test purchase from the admin (**Refund**, or **Cancel** the order).
 4. **Only after a backend deploy that touched notifications, Telegram or PayWay:**
    1. on that staging order, tap **Get order updates on Telegram** → the bot confirms;
    2. fulfil and ship it in the admin → staff and customer get "shipped".
@@ -753,7 +755,7 @@ Fresh for production; never copy a staging value.
 - [ ] **Domains:** `<api host>` and `<shop host>`, with DNS pointing at the Dokploy server.
 - [ ] **Secrets:** new `JWT_SECRET`, `COOKIE_SECRET`, `AUTH_MFA_ENCRYPTION_KEY`, `REVALIDATE_SECRET` and `SHOPPER_IP_SECRET`, generated as in §0.3. The last two must match on backend and storefront.
 - [ ] **Live ABA PayWay:**
-  - `PAYWAY_MERCHANT_ID`, `PAYWAY_API_KEY`;
+  - `PAYWAY_MERCHANT_ID`, `PAYWAY_API_KEY`, `PAYWAY_RSA_PUBLIC_KEY` (the live one);
   - `PAYWAY_API_URL=https://checkout.payway.com.kh`;
   - `PAYWAY_RETURN_URL` on the production API host;
   - ABA has whitelisted both production hosts and the server's public IP (§8 step 2).
@@ -767,7 +769,7 @@ Fresh for production; never copy a staging value.
 ### 11.3 Deploy
 1. Follow §1–§4 in project `ecommerce`, with **Replicas = 1** on the backend server (plan R-h: two servers migrating at once is unsafe).
 2. Run the §8 go-live steps 1–9. For the backup (step 7), use its own prefix (`ecommerce`), and do the §7.3 restore test before taking real orders.
-3. Run the smoke test (§9) the **production** way: at checkout, press **Cancel** on the PayWay page. Pay for real only on purpose, then refund in the PayWay merchant portal.
+3. Run the smoke test (§9) the **production** way: at checkout, press **Cancel** on the PayWay page. Pay for real only on purpose, then refund it from the admin.
 4. Record the date, commit and ✅ per line in `docs/TASKS.md` under P1-08.
 
 ### 11.4 Every later release (plan §8)

@@ -149,6 +149,8 @@ PAYWAY_MERCHANT_ID=<merchant id>
 PAYWAY_API_KEY=<the "Public Key" from ABA's email>
 PAYWAY_API_URL=
 PAYWAY_RETURN_URL=https://<api host>/hooks/payment/payway_payway
+# ABA's RSA public key for automatic refunds (one line, "\n" for new lines)
+PAYWAY_RSA_PUBLIC_KEY=<the RSA public key from ABA>
 ```
 
 ### C. Domain and Swarm settings

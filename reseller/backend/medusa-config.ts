@@ -195,6 +195,8 @@ const paymentModules =
                   api_url: process.env.PAYWAY_API_URL || undefined,
                   return_url: process.env.PAYWAY_RETURN_URL,
                   storefront_url: process.env.STOREFRONT_URL,
+                  // ABA's RSA public key for automatic refunds (review 2, M2).
+                  rsa_public_key: process.env.PAYWAY_RSA_PUBLIC_KEY || undefined,
                 },
               },
             ],

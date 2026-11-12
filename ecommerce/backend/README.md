@@ -27,6 +27,7 @@ pnpm medusa user -e admin@example.com -p <password>
 # Env TELEGRAM_CUSTOMER_*, webhook POST /telegram/webhook, setup: src/scripts/telegram-set-webhook.ts.
 # Payments (TASKS P1-03): ABA PayWay provider pp_payway_payway (src/modules/payway) when PAYWAY_MERCHANT_ID
 # and PAYWAY_API_KEY are set; callback /hooks/payment/payway_payway; add it to the region in the admin.
+# Refunds (and cancelling a paid order) go through PayWay's Refund API with PAYWAY_RSA_PUBLIC_KEY.
 pnpm seed                                   # real shop: Cambodia region (USD + KHR), tax region, Phnom Penh delivery (TASKS P1-02)
 pnpm seed:initial                           # optional demo data (EU regions, demo products, publishable key)
 ```

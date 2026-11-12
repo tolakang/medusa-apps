@@ -177,6 +177,10 @@ const notificationModule = {
 // merchant ID and API key are set; the built-in manual provider
 // (pp_system_default) is always there too (@medusajs/payment providers loader).
 // Webhook: https://<api host>/hooks/payment/payway_payway.
+// Minutes a pending booking holds its slot (default 15, as the booking
+// module's DEFAULT_HOLD_MINUTES, P3-03).
+const holdEnv = Number(process.env.BOOKING_HOLD_MINUTES)
+const BOOKING_HOLD_MINUTES = Number.isInteger(holdEnv) && holdEnv > 0 ? holdEnv : 15
 const PAYWAY_MERCHANT_ID = process.env.PAYWAY_MERCHANT_ID
 const PAYWAY_API_KEY = process.env.PAYWAY_API_KEY
 const paymentModules =
@@ -195,6 +199,11 @@ const paymentModules =
                   api_url: process.env.PAYWAY_API_URL || undefined,
                   return_url: process.env.PAYWAY_RETURN_URL,
                   storefront_url: process.env.STOREFRONT_URL,
+                  // ABA's RSA public key for automatic refunds (review 2, M2).
+                  rsa_public_key: process.env.PAYWAY_RSA_PUBLIC_KEY || undefined,
+                  // The PayWay page closes a minute before the booking hold ends, so a
+                  // payment can't land after the slot was released (review 2, M1).
+                  lifetime_minutes: Math.max(3, BOOKING_HOLD_MINUTES - 1),
                 },
               },
             ],
@@ -256,7 +265,7 @@ module.exports = defineConfig({
       resolve: "./src/modules/booking",
       // BOOKING_CANCEL_HOURS: refund window for cancellations (default 24, P3-08).
       options: {
-        holdMinutes: Number(process.env.BOOKING_HOLD_MINUTES) || undefined,
+        holdMinutes: BOOKING_HOLD_MINUTES,
         cancelHours:
           process.env.BOOKING_CANCEL_HOURS === undefined || process.env.BOOKING_CANCEL_HOURS === ""
             ? undefined
