@@ -146,6 +146,7 @@ medusaIntegrationTestRunner({
             "items.product_id",
             "items.quantity",
             "items.unit_price",
+            "shipping_methods.amount",
             "vendor.id",
           ],
           filters: { id: ids },
@@ -206,6 +207,21 @@ medusaIntegrationTestRunner({
         )
         expect(childItems).toBeCloseTo(Number(parent.item_total), 2)
 
+        // Shipping is split by item value (owner: "Split across vendors",
+        // F-076) and the children's shares add up to what the customer paid.
+        const value = (o: any) =>
+          o.items.reduce((s: number, i: any) => s + Number(i.unit_price) * Number(i.quantity), 0)
+        const parentShipping = Number(parent.shipping_methods![0]!.amount)
+        expect(parentShipping).toBeGreaterThan(0)
+        let shippingSum = 0
+        for (const child of children) {
+          const order = orders.get(child.order_id)!
+          const share = Number(order.shipping_methods![0]!.amount)
+          shippingSum += share
+          expect(share).toBeCloseTo((parentShipping * value(order)) / value(parent), 1)
+        }
+        expect(shippingSum).toBeCloseTo(parentShipping, 10)
+
         // Each vendor sees only its own order (vendor ↔ order link).
         const {
           data: [withOrders],
@@ -230,8 +246,21 @@ medusaIntegrationTestRunner({
           expect.objectContaining({ vendor_id: dara.id }),
         ])
         const orders = await orderDetails([res.data.order.id, res.data.vendor_orders[0].order_id])
-        expect(orders.get(res.data.order.id)!.items).toHaveLength(2)
-        expect(orders.get(res.data.vendor_orders[0].order_id)!.items).toHaveLength(1)
+        const parent = orders.get(res.data.order.id)!
+        const child = orders.get(res.data.vendor_orders[0].order_id)!
+        expect(parent.items).toHaveLength(2)
+        expect(child.items).toHaveLength(1)
+        // The vendor's shipping share follows its share of the items; the
+        // marketplace's own item keeps the rest on the parent.
+        const value = (o: any) =>
+          o.items.reduce((s: number, i: any) => s + Number(i.unit_price) * Number(i.quantity), 0)
+        expect(Number(child.shipping_methods![0]!.amount)).toBeCloseTo(
+          (Number(parent.shipping_methods![0]!.amount) * value(child)) / value(parent),
+          2
+        )
+        expect(Number(child.shipping_methods![0]!.amount)).toBeLessThan(
+          Number(parent.shipping_methods![0]!.amount)
+        )
       })
 
       it("a cart without vendor products makes no child orders", async () => {

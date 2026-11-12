@@ -20,6 +20,7 @@ import {
   useQueryGraphStep,
 } from "@medusajs/medusa/core-flows"
 import { MARKETPLACE_MODULE } from "../../modules/marketplace"
+import { itemsValue, splitShipping } from "../../lib/shipping-split"
 
 // Where a child order points at its parent, and the parent at its children
 // (order metadata; the official Vendors example uses `parent_order_id`).
@@ -123,10 +124,35 @@ const copyAdjustments = (adjustments: any[] = []) =>
     provider_id: a.provider_id,
   }))
 
+// A child's share of each parent shipping method: the amount and each
+// adjustment, in order (F-076, src/lib/shipping-split.ts).
+export type ShippingShare = { amount: number; adjustments: number[] }
+
+// Every vendor's shipping shares, in the order of `vendorItems`.
+export function vendorShippingShares(parent: ParentOrder, vendorItems: any[][]): ShippingShare[][] {
+  const orderValue = itemsValue(parent.items ?? [])
+  const values = vendorItems.map((items) => itemsValue(items))
+  const perMethod = (parent.shipping_methods ?? []).map((m: any) => ({
+    amount: splitShipping(m.amount, values, orderValue),
+    adjustments: (m.adjustments ?? []).map((a: any) => splitShipping(a.amount, values, orderValue)),
+  }))
+  return vendorItems.map((_, v) =>
+    perMethod.map((m: { amount: number[]; adjustments: number[][] }) => ({
+      amount: m.amount[v],
+      adjustments: m.adjustments.map((a) => a[v]),
+    }))
+  )
+}
+
 // One child order's data: a copy of the vendor's parent items (prices, taxes,
-// discounts, product snapshot), and the parent's region, customer, channel,
-// addresses and shipping methods.
-export function childOrderData(parent: ParentOrder, items: any[]): CreateOrderDTO {
+// discounts, product snapshot), the parent's region, customer, channel and
+// addresses, and the parent's shipping methods with the vendor's share of
+// their amounts (owner: "Split across vendors", F-076).
+export function childOrderData(
+  parent: ParentOrder,
+  items: any[],
+  shipping: ShippingShare[]
+): CreateOrderDTO {
   return {
     region_id: parent.region_id,
     customer_id: parent.customer_id,
@@ -162,14 +188,17 @@ export function childOrderData(parent: ParentOrder, items: any[]): CreateOrderDT
       tax_lines: copyTaxLines(item.tax_lines),
       adjustments: copyAdjustments(item.adjustments),
     })),
-    shipping_methods: (parent.shipping_methods ?? []).map((m: any) => ({
+    shipping_methods: (parent.shipping_methods ?? []).map((m: any, i: number) => ({
       name: m.name,
-      amount: m.amount,
+      amount: shipping[i].amount,
       is_tax_inclusive: m.is_tax_inclusive,
       shipping_option_id: m.shipping_option_id,
       data: m.data,
       tax_lines: copyTaxLines(m.tax_lines),
-      adjustments: copyAdjustments(m.adjustments),
+      adjustments: copyAdjustments(m.adjustments).map((a, j) => ({
+        ...a,
+        amount: shipping[i].adjustments[j],
+      })),
     })),
   } as CreateOrderDTO
 }
@@ -222,8 +251,15 @@ const createVendorOrdersStep = createStep(
     const children: { vendor_id: string; order_id: string }[] = []
     const created: CreatedChildren = { orderIds: [], moved: [] }
     try {
-      for (const [vendorId, items] of Object.entries(groups)) {
-        const [order] = await orders.createOrders([childOrderData(parent, items)])
+      const entries = Object.entries(groups)
+      const shares = vendorShippingShares(
+        parent,
+        entries.map(([, items]) => items)
+      )
+      for (const [index, [vendorId, items]] of entries.entries()) {
+        const [order] = await orders.createOrders([
+          childOrderData(parent, items, shares[index]),
+        ])
         created.orderIds.push(order.id)
         children.push({ vendor_id: vendorId, order_id: order.id })
 
