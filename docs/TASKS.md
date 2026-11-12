@@ -323,9 +323,9 @@
 
 **Done 2026-11-12** (owner: "Fix those"). All 29 verified findings and four found later (X1–X4) were fixed in PRs #152 to #158; the list (`docs/REVIEW_FIXES.md`) was deleted when every row was ticked, as the owner asked. It is in git history (`git show c0e62c49:docs/REVIEW_FIXES.md` for the first version). A later full review starts a new list.
 
-## Review fixes · `docs/REVIEW_FIXES.md` (review 2, 2026-11-12)
+## Review fixes (second review, risky areas, 2026-11-12)
 
-Multi-agent review of the risky areas before staging (owner: "add multi-agent to review on the risky areas"): money, access, stock and orders. 16 findings confirmed by challenger agents, to be **fixed later in one go** in the file's five batches, one PR each; delete the file (and this section) when every row is ticked. Highest: M2 (PayWay refunds never reach Medusa, so commissions on refunded orders are paid and captured PayWay orders can't be cancelled) and S3 (accepted wholesale quotes reserve no stock).
+**Done 2026-11-13** (owner: "Fix all"). All 16 findings (money, access, stock and orders; 2 high, 9 medium, 5 low) were fixed in PRs #179 to #183, one per batch; the list (`docs/REVIEW_FIXES.md`) was deleted in #183 when every row was ticked. It is in git history (`git show 122a55ac:docs/REVIEW_FIXES.md`). Owner follow-ups: set `PAYWAY_RSA_PUBLIC_KEY` (refunds) in every PayWay app and `VENDOR_PORTAL_URL` in marketplace. A later review starts a new list.
 
 ---
 
