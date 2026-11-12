@@ -1,6 +1,8 @@
+import { generateKeyPairSync } from "node:crypto"
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import {
+  cancelOrderWorkflow,
   createDefaultsWorkflow,
   createShippingProfilesWorkflow,
   updateRegionsWorkflow,
@@ -17,6 +19,10 @@ process.env.PAYWAY_MERCHANT_ID = "ec000002"
 process.env.PAYWAY_API_KEY = "test-api-key"
 process.env.PAYWAY_RETURN_URL = "https://api.example.com/hooks/payment/payway_payway"
 process.env.STOREFRONT_URL = "https://shop.example.com"
+// A throwaway key standing in for ABA's RSA public key (Refund API).
+process.env.PAYWAY_RSA_PUBLIC_KEY = generateKeyPairSync("rsa", { modulusLength: 1024 })
+  .publicKey.export({ type: "spki", format: "pem" })
+  .toString()
 jest.setTimeout(180 * 1000)
 
 const PAYWAY = "https://checkout-sandbox.payway.com.kh"
@@ -31,6 +37,8 @@ beforeAll(() => {
     paywayCalls.push({ url, body: JSON.parse(String(init?.body ?? "{}")) })
     const body = url.endsWith("/close-transaction")
       ? { status: { code: "00", message: "Success!" } }
+      : url.endsWith("/online-transaction/refund")
+        ? { transaction_status: "REFUNDED", status: { code: "00", message: "Success!" } }
       : paywayStatus.code === "00"
         ? {
             data: {
@@ -184,6 +192,28 @@ medusaIntegrationTestRunner({
         const payment = order.payment_collections?.[0]?.payments?.[0]
         expect(payment?.provider_id).toEqual("pp_payway_payway")
         expect(payment?.captured_at).toBeTruthy()
+      })
+
+      it("refunds through PayWay when staff cancel a paid order (review 2, M2)", async () => {
+        const { session, cartId, store, query } = await setup()
+        paywayStatus = { code: "00", status: 0, total: Number(session.data.amount) }
+        const placed = await api.post(`/store/carts/${cartId}/complete`, {}, store)
+        const orderId = placed.data.order.id
+
+        await cancelOrderWorkflow(getContainer()).run({ input: { order_id: orderId } })
+
+        expect(paywayCalls.some((c) => c.url.endsWith("/online-transaction/refund"))).toBe(true)
+        const {
+          data: [order],
+        } = await query.graph({
+          entity: "order",
+          fields: ["status", "payment_collections.refunded_amount", "payment_collections.amount"],
+          filters: { id: orderId },
+        })
+        expect(order.status).toEqual("canceled")
+        expect(Number(order.payment_collections?.[0]?.refunded_amount)).toEqual(
+          Number(order.payment_collections?.[0]?.amount)
+        )
       })
 
       it("places the order from PayWay's signed callback, even if the customer never comes back", async () => {

@@ -1,7 +1,11 @@
+import { constants, generateKeyPairSync, privateDecrypt } from "node:crypto"
 import type { Logger } from "@medusajs/framework/types"
 import {
   callbackSignature,
   formatAmount,
+  hmac,
+  merchantAuth,
+  rsaPublicKeyPem,
   newTranId,
   reqTime,
   signPurchase,
@@ -245,9 +249,135 @@ describe("PayWay provider", () => {
     })
   })
 
-  it("points refunds to the PayWay portal", async () => {
-    await expect(service().refundPayment({ amount: 5, data: {} })).rejects.toThrow(
-      "PayWay merchant portal"
-    )
+  describe("a new form for the same session (updatePayment)", () => {
+    const replies = (...bodies: object[]) => {
+      for (const body of bodies) {
+        fetchMock.mockResolvedValueOnce({ ok: true, status: 200, json: async () => body })
+      }
+    }
+
+    it("closes the old transaction before signing a new one", async () => {
+      replies({ status: { code: "6" } }, { status: { code: "00" } }, { status: { code: "6" } })
+      const out = await service().updatePayment({
+        amount: 10,
+        currency_code: "usd",
+        data: { tran_id: "old", session_id: "payses_1" },
+      })
+      expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+        expect.stringContaining("/check-transaction-2"),
+        expect.stringContaining("/close-transaction"),
+        expect.stringContaining("/check-transaction-2"),
+      ])
+      expect(out.data?.tran_id).not.toEqual("old")
+    })
+
+    it("refuses when the old transaction is already paid", async () => {
+      replies(approved(10))
+      await expect(
+        service().updatePayment({ amount: 10, currency_code: "usd", data: { tran_id: "old" } })
+      ).rejects.toThrow("already paid")
+    })
+  })
+
+  describe("refunds (Refund API)", () => {
+    const { publicKey, privateKey } = generateKeyPairSync("rsa", { modulusLength: 1024 })
+    const pem = publicKey.export({ type: "spki", format: "pem" }).toString()
+    // Node refuses PKCS#1 v1.5 private decryption, so strip the padding by
+    // hand: 0x00 0x02 <non-zero random> 0x00 <message>.
+    const decrypt = (b64: string) => {
+      const all = Buffer.from(b64, "base64")
+      const out: Buffer[] = []
+      for (let i = 0; i < all.length; i += 128) {
+        const block = privateDecrypt(
+          { key: privateKey, padding: constants.RSA_NO_PADDING },
+          all.subarray(i, i + 128)
+        )
+        out.push(block.subarray(block.indexOf(0, 2) + 1))
+      }
+      return Buffer.concat(out).toString("utf8")
+    }
+    const withKey = () =>
+      new PaywayProviderService({ logger }, { ...options, rsa_public_key: pem })
+
+    it("encrypts the JSON in 117-byte chunks that ABA's key can read", () => {
+      const payload = {
+        mc_id: "ec000002",
+        tran_id: "17630000000001234567",
+        refund_amount: 12.5,
+        // long enough to need two chunks
+        note: "x".repeat(150),
+      } as unknown as { mc_id: string; tran_id: string; refund_amount: number }
+      const auth = merchantAuth(payload, pem)
+      expect(Buffer.from(auth, "base64")).toHaveLength(256)
+      expect(JSON.parse(decrypt(auth))).toEqual(payload)
+    })
+
+    it("accepts the key on one line, without the PEM header", () => {
+      const bare = pem.replace(/-----[A-Z ]+-----/g, "").replace(/\s+/g, "")
+      expect(rsaPublicKeyPem(bare)).toEqual(pem.trim())
+      expect(rsaPublicKeyPem(pem.trim().replace(/\n/g, "\\n"))).toEqual(pem.trim())
+    })
+
+    it("refunds the amount through PayWay and records the total refunded", async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          grand_total: 20,
+          total_refunded: 7.5,
+          currency: "USD",
+          transaction_status: "REFUNDED",
+          status: { code: "00", message: "Success!" },
+        }),
+      })
+      const out = await withKey().refundPayment({
+        amount: 7.5,
+        data: { tran_id: "123", currency: "USD" },
+      })
+      expect(out.data).toMatchObject({ tran_id: "123", payway_total_refunded: 7.5 })
+      const [url, init] = fetchMock.mock.calls[0]
+      expect(String(url)).toContain("/online-transaction/refund")
+      const body = JSON.parse(init.body)
+      expect(body.merchant_id).toEqual("ec000002")
+      expect(body.hash).toEqual(
+        hmac(`${body.request_time}${body.merchant_id}${body.merchant_auth}`, API_KEY)
+      )
+      expect(JSON.parse(decrypt(body.merchant_auth))).toEqual({
+        mc_id: "ec000002",
+        tran_id: "123",
+        refund_amount: 7.5,
+      })
+    })
+
+    it("sends KHR refunds as whole riel", async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ status: { code: "00" } }),
+      })
+      await withKey().refundPayment({ amount: 4100.4, data: { tran_id: "9", currency: "KHR" } })
+      const body = JSON.parse(fetchMock.mock.calls[0][1].body)
+      expect(JSON.parse(decrypt(body.merchant_auth)).refund_amount).toEqual(4100)
+    })
+
+    it("fails the refund when PayWay refuses it, so Medusa records nothing", async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          status: { code: "PTL37", message: "Refund amount cannot exceed the original purchase amount." },
+        }),
+      })
+      await expect(
+        withKey().refundPayment({ amount: 99, data: { tran_id: "1", currency: "USD" } })
+      ).rejects.toThrow("PTL37")
+    })
+
+    it("without ABA's key, points staff to the portal and calls nothing", async () => {
+      await expect(service().refundPayment({ amount: 5, data: { tran_id: "1" } })).rejects.toThrow(
+        "PayWay merchant portal"
+      )
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
   })
 })
