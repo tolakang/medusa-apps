@@ -1,12 +1,14 @@
 # Build Plan — Medusa Apps
 
+> **Revision 12 (2026-11-12, owner: "approve to record").** Brings §6.6 and §7 in line with the Marketplace as built (P6-01 to P6-15, TASKS F-072 to F-080): a full copy of Ecommerce, child orders made by the Order Module, the split run per order, shipping split across vendors, commissions held on refunds, and vendor stock. Requirements, scope and build order are unchanged.
+>
 > **Revision 11 (2026-11-12, owner: "Fix those", applied on "Yes").** Brings §6.2, §6.4, §6.5 and §7 in line with Wholesale P4-08 to P4-13 and the review fixes (TASKS F-066 to F-070, the first review's fix list, now done). Requirements, scope and build order are unchanged.
 >
 > **Revision 10 (2026-11-12, owner: "Update old places in build plan too").** Builder documents moved into `docs/`; §2 and every path in this plan follow (TASKS F-071). Nothing else changed.
 >
 > **Revision 9 (2026-11-11, owner).** A clean rewrite: the plan now describes the repo as it is, with each rule given once, and the revision notes moved to *Revision history* at the end. It takes in TASKS F-055 to F-065, V-06 and decisions D9 to D11. Requirements, scope and build order are unchanged.
 >
-> **Status (2026-11-12).** Phase 0 is done. Phase 1 (Ecommerce) is on staging, and production (P1-08) waits on the owner. Phases 2 (POS), 3 (Booking services), 4 (Wholesale) and 5 (Reseller) have their code done, with staging and the exit checklists (P2-14, P3-18, P4-11, P5-11) waiting on the owner. Phase 6 (Marketplace) has not started. Progress, decisions and evidence are in `docs/TASKS.md`.
+> **Status (2026-11-12).** Phase 0 is done. Phase 1 (Ecommerce) is on staging, and production (P1-08) waits on the owner. Phases 2 (POS), 3 (Booking services), 4 (Wholesale), 5 (Reseller) and 6 (Marketplace) have their code done, with staging and the exit checklists (P2-14, P3-18, P4-11, P5-11, P6-13) waiting on the owner. Progress, decisions and evidence are in `docs/TASKS.md`.
 
 **Versions in this repo (checked 2026-11-12)**
 
@@ -584,30 +586,36 @@ Each scenario lists:
 
 ### 6.6 Marketplace — `marketplace/`
 
+- **Starting point:** `marketplace/backend` and `marketplace/storefront` are a full copy of Ecommerce (owner, F-072), like POS, Booking and Reseller. `marketplace/vendor-portal` is a copy of the Reseller seller portal.
 - **Custom module `marketplace`:**
-  - `vendor`: handle, name, email, logo, status, commission_rate
-  - `vendor_admin`: email, names
-  - `vendor_payout`: amount, currency, status, period, paid_at, reference
+  - `vendor`: handle, name, email, logo, status (pending / active / suspended; the admin's approval makes it active), commission_rate (null = `MARKETPLACE_DEFAULT_COMMISSION_RATE`)
+  - `vendor_admin`: email (unique across vendors, stored lowercased), names
+  - `vendor_payout`: amount, currency, status (pending / paid / cancelled), period (calendar month `YYYY-MM`, UTC; one payout per vendor, period and currency), paid_at, reference
+  - `vendor_commission`: one per child order; order total, base (items after discounts, without tax and shipping, as Reseller D11), rate, amount, what the vendor is owed (order total − amount), status (pending / approved / paid / cancelled), and `refund_review` (none / to_review / settled) (F-078)
 - **Links:** vendor → products, vendor → orders (child orders), vendor → stock locations.
 - **Vendor auth:** a custom actor type `vendor`, as in the official Vendors example:
-  - **Sign-up:** `/auth/vendor/emailpass/register` → `create-vendor` workflow with `setAuthAppMetadataStep` → `authenticate("vendor", ["session", "bearer"])`, then admin approval.
+  - **Sign-up:** `/auth/vendor/emailpass/register` → `create-vendor` workflow with `setAuthAppMetadataStep` → `authenticate("vendor", ["session", "bearer"])`, then admin approval. Vendors sign up themselves; nothing works until the admin approves.
+  - **The vendor admin's email** comes from the auth identity, never from the request body (F-074). Emailpass matches the email exactly as registered, case included.
   - **Vendor routes** live under `/vendors/*`, and every query is filtered by the signed-in vendor.
   - **CORS:** a middleware reading `VENDOR_CORS` covers `/vendors/*`.
 - **Workflows:**
-  - **`create-vendor`.**
-  - **`create-vendor-product`:** links the product to the vendor; it stays a draft until approved.
-  - **`create-vendor-orders`,** exactly as in the official Vendors example:
-    - **Route:** a custom `POST /store/carts/:id/complete-vendor`, which the storefront calls instead of the core complete-cart route.
-    - **What it does:** calls `completeCartWorkflow` (the parent order), groups the items by vendor, creates one child order per vendor with `createOrderWorkflow`, and links them; compensation deletes the child orders.
-    - **Locking:** wrap it in `acquireLockStep` / `releaseLockStep` on the cart id, and check for existing links first, as the `completeCartWorkflow` reference requires for wrappers.
-  - **`record-vendor-commission`.**
-  - **`create-payouts`** (scheduled).
-- **Parent vs. child orders:** payment lives on the parent order, and vendors fulfil child orders only. The admin order list gets a filter or widget, and reports count child orders only.
-- **Payouts:** start with manual payouts from a report, as Reseller does. Automate only if the payment provider supports split payments.
-- **Admin:** vendor approval queue, product moderation, payout report.
+  - **`create-vendor`.** Approving a vendor also gives it its own stock location in the store's default sales channel (F-080).
+  - **`create-vendor-product`:** links the product to the vendor and gives it the default shipping profile. A vendor may send `draft` (default) or `proposed`; `published` only when `MARKETPLACE_REQUIRE_PRODUCT_APPROVAL=false`; never `rejected` (F-075). The admin approves by publishing it.
+  - **`create-vendor-orders`:**
+    - **Route:** a custom `POST /store/carts/:id/complete-vendor`, which the storefront calls instead of the core complete-cart route. It calls `completeCartWorkflow` (the parent order) inside `acquireLockStep` / `releaseLockStep` on the cart id, then runs the split.
+    - **The split (`split-vendor-order`)** runs per order, locked on the order id and idempotent (it checks for existing links first). It runs from `complete-vendor` and from an `order.placed` subscriber, so an order Medusa completes itself (the PayWay webhook) still gets its vendor orders (F-079).
+    - **Child orders:** one per vendor, even when the cart has a single vendor, so the parent is never a vendor's order (F-076). They are made with the Order Module's `createOrders` as copies of the parent's items (prices, tax lines, discounts), and the parent's stock reservations move to the child items; `createOrderWorkflow` is not used, because it fails when an order takes a variant's last units (F-077). Child orders keep the email and addresses but no customer id, so they don't show in the customer's account. Compensation deletes the child orders.
+    - **Shipping is split across vendors** (owner, F-076): each child gets the parent's shipping amounts and shipping discounts times its share of the items' value, rounded to cents; the last child takes the rounding rest, so the children add up to the parent.
+  - **`record-vendor-commission`:** one commission per child order, at the vendor's rate. A cancelled child order cancels its commission before payout.
+  - **`create-payouts`** (a daily job that pays on `MARKETPLACE_PAYOUT_DAY` for the month before).
+- **Parent vs. child orders:** payment lives on the parent order, and vendors fulfil child orders only. The admin order page shows the split (a widget), there is a vendor orders list, and reports count child orders only.
+- **Payouts:** manual payouts from a report, as Reseller does. Automate only if the payment provider supports split payments.
+- **Refunds (owner: "hold and flag now, automate later", F-078):** refunds are taken on the parent order, which holds the payment. A pending commission whose parent order has a refund is held out of payouts and flagged `to_review` (a `payment.refunded` subscriber, and the payout job checks again). The admin settles it in the payout report's *Refunds to review* section: keep, reduce what the vendor gets, or cancel; the next payout includes a kept or reduced one. A refund after a payout is settled by hand. **Later**, if refunds become common: split each refund across the vendors by share, as Reseller does.
+- **Vendor stock (owner: "track it", F-080):** a vendor's product starts with the quantity the vendor gives, at the vendor's own stock location; the portal shows and edits "quantity in stock". Checkout refuses what is out of stock; the reservation is made at the vendor's location and fulfilment takes it from there. "Track stock" off (`manage_inventory: false`) is a per-product setting for made-to-order items.
+- **Admin:** vendor approval queue, product moderation, payout report with *Refunds to review*, vendor orders list, order split widget.
 - **Client apps:**
-  - `marketplace/storefront`: shows vendor names and shop pages.
-  - `marketplace/vendor-portal`: products, orders, fulfilments, payouts. It calls the backend from its own server, like the seller portal.
+  - `marketplace/storefront`: shows "Sold by" and vendor shop pages, and places orders through `complete-vendor`.
+  - `marketplace/vendor-portal`: products (with stock), orders, fulfilments, payouts. It calls the backend from its own server, like the seller portal.
 - **Env:** `MARKETPLACE_DEFAULT_COMMISSION_RATE`, `MARKETPLACE_REQUIRE_PRODUCT_APPROVAL`, `MARKETPLACE_PAYOUT_DAY`, `VENDOR_CORS`.
 - **Acceptance:** a cart with items from two vendors produces two child orders that each vendor sees and fulfils separately; payouts equal order totals minus commission.
 
@@ -640,8 +648,7 @@ Rules for the order:
 **Status 2026-11-12:**
 - Phase 0: done.
 - Phase 1: on staging; production waiting (P1-08, P1-09).
-- Phases 2, 3, 4 and 5: code done; staging and exit waiting (P2-14, P3-18, P4-11, P5-11).
-- Phase 6: not started.
+- Phases 2, 3, 4, 5 and 6: code done; staging and exit waiting (P2-14, P3-18, P4-11, P5-11, P6-13).
 - The first full review's 29 findings and four later ones are fixed (2026-11-12).
 
 ## 8. Update and release process
@@ -763,6 +770,7 @@ Also decided for Ecommerce:
 
 | Rev | Date | What changed |
 |---|---|---|
+| 12 | 2026-11-12 | Marketplace as built (P6-01 to P6-15): full Ecommerce copy, `vendor_commission`, statuses and uniqueness, vendor email from the auth identity, product statuses, child orders via the Order Module with moved reservations, split per order (also from `order.placed`), shipping split across vendors, refunds held and flagged, vendor stock locations. Status line. TASKS F-072 to F-080. |
 | 11 | 2026-11-12 | Wholesale as built after P4-08 to P4-13 and the review fixes: catalog for employees of approved companies (`WHOLESALE_REQUIRE_LOGIN`), join codes, PayWay for prepaid companies, one order at a time per company, bilingual invoices. Reseller: commission base and refund share, payout locks. POS and Reseller: invite codes. Status line, pnpm 12.18.0. TASKS F-066 to F-070, D9 to D11. |
 | 10 | 2026-11-12 | Builder documents moved into `docs/` (owner request, F-071): §2 tree, R5 and every path. `BUILD_PLAN.md` and `CLAUDE.md` stay at the root. |
 | 9 | 2026-11-11 | Clean rewrite: one current description per topic, history moved here. Versions 2.22.6 / `@medusajs/ui` 4.2.13. Wholesale (§6.4) and Reseller (§6.5) as built. Decisions D9–D11. pnpm release-age rule (§3.2) and flaky-test rule (§3.3, R-k). TASKS F-055 to F-065, V-06. |

@@ -40,4 +40,4 @@ At the root: this README, [`BUILD_PLAN.md`](./BUILD_PLAN.md) and [`CLAUDE.md`](.
 3. **Not a monorepo.** Every deployable (backend, storefront, portal, app) is independent: own `package.json`, lockfile, `Dockerfile`, `.env.example`. Nothing is shared; clients reach their backend only over HTTP.
 4. **One business = one app.** Combine scenarios by adding modules to one app, never by syncing two apps.
 
-Versions (2026-11-12): Medusa 2.22.6 in every app (npm `latest`, a security release, as the starters), Node `>=22.23.4`, Next.js 16.4.5, pnpm 12.18.0. Details and update plan: `BUILD_PLAN.md` Revision 9 (2026-11-11). Starters: `medusajs/dtc-starter`, `medusajs/b2b-starter`.
+Versions (2026-11-12): Medusa 2.22.6 in every app (npm `latest`, a security release, as the starters), Node `>=22.23.4`, Next.js 16.4.5, pnpm 12.18.0. Details and update plan: `BUILD_PLAN.md` (Revision 12, 2026-11-12). Starters: `medusajs/dtc-starter`, `medusajs/b2b-starter`.
