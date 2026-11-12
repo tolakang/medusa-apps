@@ -30,6 +30,7 @@ At the root: this README, [`BUILD_PLAN.md`](./BUILD_PLAN.md) and [`CLAUDE.md`](.
 - [`docs/DEV_FLOW.md`](./docs/DEV_FLOW.md) — build → verify → test → evidence-based fix cycle → commit → push.
 - [`docs/BACKEND_PATTERNS_SKILL.md`](./docs/BACKEND_PATTERNS_SKILL.md) — backend design patterns mapped to Medusa's own mechanisms (skill `backend-patterns`).
 - [`docs/PRE_DEPLOY_AUDIT.md`](./docs/PRE_DEPLOY_AUDIT.md) — the security and readiness audit to run per category before it goes live.
+- [`docs/REVIEW_FIXES.md`](./docs/REVIEW_FIXES.md) — issues found by full repo reviews, kept to fix in one go later; deleted once all are fixed.
 - [`docs/PLAN_LOCK.md`](./docs/PLAN_LOCK.md) — owner's note: the commands to unlock and lock `BUILD_PLAN.md` for Claude.
 - [`docs/HANDOVER-2026-11-10.md`](./docs/HANDOVER-2026-11-10.md) — handover note of 2026-11-10.
 

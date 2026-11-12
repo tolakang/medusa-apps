@@ -323,6 +323,10 @@
 
 **Done 2026-11-12** (owner: "Fix those"). All 29 verified findings and four found later (X1–X4) were fixed in PRs #152 to #158; the list (`docs/REVIEW_FIXES.md`) was deleted when every row was ticked, as the owner asked. It is in git history (`git show c0e62c49:docs/REVIEW_FIXES.md` for the first version). A later full review starts a new list.
 
+## Review fixes · `docs/REVIEW_FIXES.md` (review 2, 2026-11-12)
+
+Multi-agent review of the risky areas before staging (owner: "add multi-agent to review on the risky areas"): money, access, stock and orders. 16 findings confirmed by challenger agents, to be **fixed later in one go** in the file's five batches, one PR each; delete the file (and this section) when every row is ticked. Highest: M2 (PayWay refunds never reach Medusa, so commissions on refunded orders are paid and captured PayWay orders can't be cancelled) and S3 (accepted wholesale quotes reserve no stock).
+
 ---
 
 ## Pre-deploy audit fixes · `docs/PRE_DEPLOY_AUDIT.md`
