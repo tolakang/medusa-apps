@@ -5,30 +5,36 @@ import {
 } from "@/types"
 import { HttpTypes } from "@medusajs/types"
 
+// Same window as the backend's utils/check-spending-limit.ts: UTC, and `now`
+// is never changed. The starter's `now.setHours(0, 0, 0, 0)` also moved the
+// end to midnight, so a daily limit counted none of the day's orders and the
+// pay button showed for a cart the backend then refused (review 2, M3).
 // TODO: Fix type as part of moving all types to a dedicated workspace package
-export function getSpendWindow(company: any): {
+export function getSpendWindow(
+  company: any,
+  now: Date = new Date()
+): {
   start: Date
   end: Date
 } {
-  const now = new Date()
-  const resetFrequency = company.spending_limit_reset_frequency
+  const end = new Date(now)
+  const year = end.getUTCFullYear()
+  const month = end.getUTCMonth()
+  const day = end.getUTCDate()
 
-  switch (resetFrequency) {
-    case ModuleCompanySpendingLimitResetFrequency.NEVER:
-      return { start: new Date(0), end: now } // Never resets
+  switch (company?.spending_limit_reset_frequency) {
     case ModuleCompanySpendingLimitResetFrequency.DAILY:
-      return { start: new Date(now.setHours(0, 0, 0, 0)), end: now } // Window is the current day up to now
+      return { start: new Date(Date.UTC(year, month, day)), end }
     case ModuleCompanySpendingLimitResetFrequency.WEEKLY:
-      const startOfWeek = new Date(now)
-      startOfWeek.setDate(now.getDate() - now.getDay())
-      startOfWeek.setHours(0, 0, 0, 0)
-      return { start: startOfWeek, end: now } // Window is the current week up to now, starting on Sunday
+      // The week starts on Sunday.
+      return { start: new Date(Date.UTC(year, month, day - end.getUTCDay())), end }
     case ModuleCompanySpendingLimitResetFrequency.MONTHLY:
-      return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: now } // Window is the current month up to now
+      return { start: new Date(Date.UTC(year, month, 1)), end }
     case ModuleCompanySpendingLimitResetFrequency.YEARLY:
-      return { start: new Date(now.getFullYear(), 0, 1), end: now } // Window is the current year up to now
+      return { start: new Date(Date.UTC(year, 0, 1)), end }
     default:
-      return { start: new Date(0), end: now } // Default to never resetting
+      // "never", or no company: every order counts.
+      return { start: new Date(0), end }
   }
 }
 

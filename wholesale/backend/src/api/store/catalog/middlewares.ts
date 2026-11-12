@@ -12,8 +12,12 @@ import { loadBuyer } from "../../../utils/load-b2b-buyer";
 // WHOLESALE_REQUIRE_LOGIN on (the default; "false" turns it off), the Store
 // API's product, variant and search routes need a signed-in customer, so the
 // publishable key alone (it is in the storefront's page source) no longer
-// reads products or prices. Regions, categories and collections stay open:
-// the sign-in page needs them and they carry no prices.
+// reads products or prices. Regions, categories and collections stay open
+// (the sign-in page needs them), except collections when `fields` asks for
+// their products: core lets collections return `products.variants.prices`,
+// which are every price and price-list (tier) price (review 2, A2).
+// Categories only allow product titles, images and options (no prices), and
+// the storefront's menu reads them with `*products`, so they stay open.
 export const catalogLoginRequired = () =>
   process.env.WHOLESALE_REQUIRE_LOGIN !== "false";
 
@@ -49,12 +53,34 @@ const approvedCompaniesOnly = async (
   next();
 };
 
+// Collections: the buyer checks only when `fields` reaches into products (`*products`, `products.variants.prices`, ...).
+const asksForProducts = (req: MedusaRequest) =>
+  /products/.test(String(req.query?.fields ?? ""));
+
+const buyersOnlyForProducts = (
+  req: MedusaRequest,
+  res: MedusaResponse,
+  next: MedusaNextFunction
+) => {
+  if (!asksForProducts(req)) {
+    return next();
+  }
+  signedInBuyersOnly(req, res, (error?: unknown) =>
+    error ? next(error) : approvedCompaniesOnly(req, res, next)
+  );
+};
+
 export const storeCatalogMiddlewares: MiddlewareRoute[] = [
-  "/store/products*",
-  "/store/product-variants*",
-  "/store/search*",
-].map((matcher) => ({
-  method: "ALL" as const,
-  matcher,
-  middlewares: [signedInBuyersOnly, approvedCompaniesOnly],
-}));
+  ...["/store/products*", "/store/product-variants*", "/store/search*"].map(
+    (matcher) => ({
+      method: "ALL" as const,
+      matcher,
+      middlewares: [signedInBuyersOnly, approvedCompaniesOnly],
+    })
+  ),
+  {
+    method: "ALL" as const,
+    matcher: "/store/collections*",
+    middlewares: [buyersOnlyForProducts],
+  },
+];

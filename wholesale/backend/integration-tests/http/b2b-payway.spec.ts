@@ -73,6 +73,19 @@ medusaIntegrationTestRunner({
         expect(res.data.message).toEqual(PREPAID_PAY_ONLINE_MESSAGE);
       });
 
+      it("a PayWay payment can't start for a cart checkout would refuse (review 2, M3)", async () => {
+        const company = await b2b.company({ payment_terms: "prepaid" });
+        // Any cart is over this employee's limit.
+        const buyer = await b2b.employee(company.id, { spending_limit: 1 });
+        const { res } = await startPayment(buyer.token, "pp_payway_payway");
+        expect(res.status).toEqual(400);
+        expect(res.data.message).toContain("exceeds spending limit");
+
+        // Within the limit, PayWay starts as before.
+        const ok = await b2b.employee(company.id);
+        expect((await startPayment(ok.token, "pp_payway_payway")).res.status).toEqual(200);
+      });
+
       it("a net-terms company can't be sent to PayWay, and buys on invoice", async () => {
         const company = await b2b.company({ payment_terms: "net_30" });
         const buyer = await b2b.employee(company.id);
