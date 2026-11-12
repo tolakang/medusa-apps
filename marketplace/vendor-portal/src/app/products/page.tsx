@@ -2,6 +2,7 @@ import { Shell } from "@/components/shell"
 import { day, money } from "@/lib/format"
 import { requireVendor, vendorGet } from "@/lib/server/vendor"
 import { ProductForm } from "./product-form"
+import { StockForm } from "./stock-form"
 
 type Product = {
   id: string
@@ -9,6 +10,7 @@ type Product = {
   status: "draft" | "proposed" | "published" | "rejected"
   created_at: string
   variants: { sku: string | null; prices: { amount: number; currency_code: string }[] }[]
+  stock: { tracked: boolean; quantity: number | null; available: number | null }
 }
 
 const STATUS_TEXT: Record<Product["status"], string> = {
@@ -38,6 +40,7 @@ export default async function ProductsPage() {
                 <th className="py-1">Name</th>
                 <th>Price</th>
                 <th>Status</th>
+                <th>In stock</th>
                 <th>Added</th>
               </tr>
             </thead>
@@ -49,6 +52,13 @@ export default async function ProductsPage() {
                     <td className="py-1">{p.title}</td>
                     <td>{price ? money(price.amount, price.currency_code) : "—"}</td>
                     <td>{STATUS_TEXT[p.status] ?? p.status}</td>
+                    <td>
+                      {p.stock.tracked ? (
+                        <StockForm productId={p.id} quantity={p.stock.quantity ?? 0} />
+                      ) : (
+                        <span className="text-ui-fg-subtle">Made to order</span>
+                      )}
+                    </td>
                     <td>{day(p.created_at)}</td>
                   </tr>
                 )

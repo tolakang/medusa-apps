@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert"
 import { describe, it } from "node:test"
-import { day, money, productBody, toFulfil } from "../format.ts"
+import { day, money, productBody, stockQuantity, toFulfil } from "../format.ts"
 import { seal, unseal } from "../session-seal.ts"
 
 // TASKS P6-09: portal helpers and the sealed session cookie.
@@ -27,6 +27,27 @@ describe("format (TASKS P6-09)", () => {
     // A vendor can't publish (the marketplace does), so anything else is a draft.
     const draft = productBody({ title: "Mat", price: "5", status: "published" })
     assert.ok(typeof draft !== "string" && draft.status === "draft")
+  })
+
+  it("tracks stock unless the product is made to order (F-080)", () => {
+    const tracked = productBody({ title: "Basket", price: "20", stock: "3" })
+    assert.ok(typeof tracked !== "string")
+    assert.equal(tracked.variants[0].manage_inventory, true)
+    assert.deepEqual(tracked.additional_data, { stock_quantity: 3 })
+    const empty = productBody({ title: "Basket", price: "20" })
+    assert.ok(typeof empty !== "string" && empty.additional_data?.stock_quantity === 0)
+    const toOrder = productBody({ title: "Portrait", price: "50", track_stock: false, stock: "x" })
+    assert.ok(typeof toOrder !== "string")
+    assert.equal(toOrder.variants[0].manage_inventory, false)
+    assert.equal(toOrder.additional_data, undefined)
+    for (const bad of ["-1", "1.5", "lots"]) {
+      assert.match(String(productBody({ title: "B", price: "1", stock: bad })), /whole number/)
+    }
+    assert.equal(stockQuantity("4"), 4)
+    assert.equal(stockQuantity("0"), 0)
+    for (const bad of ["", "-1", "2.5", "x", undefined]) {
+      assert.match(String(stockQuantity(bad)), /whole number/)
+    }
   })
 
   it("refuses a product form without a name or a price", () => {

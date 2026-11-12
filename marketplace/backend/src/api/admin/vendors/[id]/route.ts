@@ -7,6 +7,7 @@ import { MARKETPLACE_MODULE } from "../../../../modules/marketplace"
 import type MarketplaceModuleService from "../../../../modules/marketplace/service"
 import { ADMIN_VENDOR_FIELDS } from "../route"
 import type { PostAdminVendorType } from "../validators"
+import { ensureVendorStockLocation } from "../../../../lib/vendor-stock"
 
 const vendorById = async (req: AuthenticatedMedusaRequest, id: string) => {
   const {
@@ -33,5 +34,9 @@ export const POST = async (
   await req.scope
     .resolve<MarketplaceModuleService>(MARKETPLACE_MODULE)
     .updateVendors({ id: vendor.id, ...req.validatedBody })
+  // An approved vendor gets its own stock location (F-080, P6-15).
+  if (req.validatedBody.status === "active") {
+    await ensureVendorStockLocation(req.scope, vendor.id)
+  }
   res.json({ vendor: await vendorById(req, vendor.id) })
 }

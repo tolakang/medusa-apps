@@ -21,6 +21,7 @@ import {
 } from './auth-guards'
 import { requireVendor, vendorCors } from './vendor-auth'
 import { PostVendorCreate } from './vendors/validators'
+import { PostVendorProductStock } from './vendors/products/[id]/stock/route'
 import { AdminCreateProduct } from '@medusajs/medusa/api/admin/products/validators'
 import { PostAdminVendor } from './admin/vendors/validators'
 import { PostAdminVendorPayoutPay } from './admin/vendor-payouts/validators'
@@ -45,6 +46,12 @@ export default defineMiddlewares({
         limitPerIp('vendor_create', AUTH_LIMITS.signup, 60),
         validateAndTransformBody(PostVendorCreate),
       ],
+    },
+    {
+      // A vendor sets a product's stock (F-080, P6-15).
+      method: ['POST'],
+      matcher: '/vendors/products/:id/stock',
+      middlewares: [validateAndTransformBody(PostVendorProductStock)],
     },
     {
       // A vendor adds a product (TASKS P6-04): the admin's product body, as
