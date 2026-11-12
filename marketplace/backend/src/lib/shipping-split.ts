@@ -1,3 +1,4 @@
+import type { BigNumberInput } from "@medusajs/framework/types"
 import { MathBN } from "@medusajs/framework/utils"
 
 // How the parent order's shipping is shared between vendors (owner
@@ -7,11 +8,11 @@ import { MathBN } from "@medusajs/framework/utils"
 // vendor, the last vendor gets what rounding left, so the children add up to
 // the parent exactly; otherwise the marketplace's own items keep their share
 // on the parent.
-export type ItemValue = { unit_price: unknown; quantity: unknown }
+export type ItemValue = { unit_price: BigNumberInput; quantity: BigNumberInput }
 
 export const itemsValue = (items: ItemValue[]) =>
   items.reduce(
-    (sum, i) => MathBN.add(sum, MathBN.mult(i.unit_price as any, i.quantity as any)),
+    (sum, i) => MathBN.add(sum, MathBN.mult(i.unit_price, i.quantity)),
     MathBN.convert(0)
   )
 
@@ -21,12 +22,12 @@ const round = (value: ReturnType<typeof MathBN.convert>, decimals: number) =>
 // `amount` split by `vendorValues` out of `orderValue`, in the currency's
 // main unit rounded to `decimals`.
 export function splitShipping(
-  amount: unknown,
+  amount: BigNumberInput,
   vendorValues: ReturnType<typeof MathBN.convert>[],
   orderValue: ReturnType<typeof MathBN.convert>,
   decimals = 2
 ): number[] {
-  const total = MathBN.convert(amount as any)
+  const total = MathBN.convert(amount)
   if (MathBN.lte(orderValue, 0) || MathBN.lte(total, 0)) {
     return vendorValues.map(() => 0)
   }
