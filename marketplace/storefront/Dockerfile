@@ -2,17 +2,17 @@
 # marketplace / storefront — Next.js (customer storefront)
 #
 # Dokploy: Build Type = Dockerfile, Build Path = /,
-#   Docker File = marketplace/storefront/Dockerfile, Docker Context Path = marketplace/storefront,
-#   Watch Paths = marketplace/storefront/**   (BUILD_PLAN.md §5; F-011)
+#   Docker File = marketplace/storefront/Dockerfile,
+#   Docker Context Path = marketplace/storefront,
+#   Watch Paths = marketplace/storefront/**
 #   Environment -> Build-time Arguments: the ARG values below
 #   Environment -> Runtime variables   : see .env.example
 #   Domain -> port 8000
+#   Full steps: marketplace/README.md (Dokploy).
 #
 # NEXT_PUBLIC_* values are baked into the JS bundle at build time, so
 # changing one requires a rebuild (Dokploy: Rebuild).
-#
-# STATUS: ready template. Builds once the app code is added
-# (BUILD_PLAN.md §4.2). Requires `output: "standalone"` in next.config.
+# Requires `output: "standalone"` in next.config.
 # =====================================================================
 ARG NODE_VERSION=22
 
@@ -32,11 +32,17 @@ ENV NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=${NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY}
 ARG NEXT_PUBLIC_BASE_URL=""
 ENV NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}
 # Fallback country code (ISO-2 lowercase)
-ARG NEXT_PUBLIC_DEFAULT_REGION="us"
+ARG NEXT_PUBLIC_DEFAULT_REGION="kh"
 ENV NEXT_PUBLIC_DEFAULT_REGION=${NEXT_PUBLIC_DEFAULT_REGION}
 # Stripe publishable key (empty if not using Stripe)
 ARG NEXT_PUBLIC_STRIPE_KEY=""
 ENV NEXT_PUBLIC_STRIPE_KEY=${NEXT_PUBLIC_STRIPE_KEY}
+# CAPTCHA on sign-in / sign-up / forgot password (TASKS P1-21): must match
+# the backend's CAPTCHA_PROVIDER. Empty = no CAPTCHA widget.
+ARG NEXT_PUBLIC_CAPTCHA_PROVIDER=""
+ENV NEXT_PUBLIC_CAPTCHA_PROVIDER=${NEXT_PUBLIC_CAPTCHA_PROVIDER}
+ARG NEXT_PUBLIC_CAPTCHA_SITE_KEY=""
+ENV NEXT_PUBLIC_CAPTCHA_SITE_KEY=${NEXT_PUBLIC_CAPTCHA_SITE_KEY}
 # Hostname of product images (your S3/R2 bucket) for next/image
 ARG S3_IMAGE_HOSTNAME=""
 ENV S3_IMAGE_HOSTNAME=${S3_IMAGE_HOSTNAME}
