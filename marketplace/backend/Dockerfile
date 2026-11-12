@@ -8,8 +8,7 @@
 #   worker app : MEDUSA_WORKER_MODE=worker, DISABLE_MEDUSA_ADMIN=true,
 #                RUN_MIGRATIONS=false        (no domain)
 #
-# STATUS: ready template. Builds once the Medusa app code is added
-# (BUILD_PLAN.md §4.1). Base images are fully qualified for Podman/Buildah.
+# Base images are fully qualified for Podman/Buildah (BUILD_PLAN.md §4.1).
 # =====================================================================
 ARG NODE_VERSION=22
 
@@ -21,6 +20,11 @@ WORKDIR /app
 # Leave empty when the admin is served by this same app (recommended).
 ARG MEDUSA_BACKEND_URL=""
 ENV MEDUSA_BACKEND_URL=${MEDUSA_BACKEND_URL}
+# Optional: upload ceiling in MB baked into the admin's own file-size check
+# (admin.maxUploadFileSize is build-time). Empty = 5. Keep it equal to the
+# runtime UPLOAD_MAX_FILE_SIZE_CEILING_MB (TASKS P1-12, F-027).
+ARG UPLOAD_MAX_FILE_SIZE_CEILING_MB=""
+ENV UPLOAD_MAX_FILE_SIZE_CEILING_MB=${UPLOAD_MAX_FILE_SIZE_CEILING_MB}
 
 # Exact pnpm version from package.json "packageManager"
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./

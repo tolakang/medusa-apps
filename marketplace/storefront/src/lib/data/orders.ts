@@ -1,0 +1,121 @@
+"use server"
+
+import { sdk } from "@lib/config"
+import medusaError from "@lib/util/medusa-error"
+import { getAuthHeaders } from "./cookies"
+import { HttpTypes } from "@medusajs/types"
+
+export const retrieveOrder = async (id: string) => {
+  const headers = {
+    ...(await getAuthHeaders()),
+  }
+
+  // Read fresh (TASKS F-052): staff capture and refund in the admin, and
+  // nothing revalidates a cached order, so a cached copy showed e.g.
+  // "Authorized" after a refund. Order pages are per customer and rare.
+  return sdk.client
+    .fetch<HttpTypes.StoreOrderResponse>(`/store/orders/${id}`, {
+      method: "GET",
+      query: {
+        fields:
+          "*payment_collections.payments,*items,*items.metadata,*items.variant,*items.product",
+      },
+      headers,
+      cache: "no-store",
+    })
+    .then(({ order }) => order)
+    .catch((err) => medusaError(err))
+}
+
+// Deep link to the shop's Telegram bot for order updates (TASKS P1-17), or null
+// when the bot is not set up (the backend answers 404) or anything fails.
+export const retrieveOrderTelegramLink = async (
+  id: string
+): Promise<string | null> => {
+  return sdk.client
+    .fetch<{ url: string }>(`/store/orders/${id}/telegram-link`, {
+      method: "GET",
+      headers: { ...(await getAuthHeaders()) },
+      cache: "no-store",
+    })
+    .then(({ url }) => url)
+    .catch(() => null)
+}
+
+export const listOrders = async (
+  limit: number = 10,
+  offset: number = 0,
+  filters?: Record<string, unknown>
+) => {
+  const headers = {
+    ...(await getAuthHeaders()),
+  }
+
+  // Fresh, like retrieveOrder (F-052).
+  return sdk.client
+    .fetch<HttpTypes.StoreOrderListResponse>(`/store/orders`, {
+      method: "GET",
+      query: {
+        limit,
+        offset,
+        order: "-created_at",
+        fields: "*items,+items.metadata,*items.variant,*items.product",
+        ...filters,
+      },
+      headers,
+      cache: "no-store",
+    })
+    .then(({ orders }) => orders)
+    .catch((err) => medusaError(err))
+}
+
+export const createTransferRequest = async (
+  state: {
+    success: boolean
+    error: string | null
+    order: HttpTypes.StoreOrder | null
+  },
+  formData: FormData
+): Promise<{
+  success: boolean
+  error: string | null
+  order: HttpTypes.StoreOrder | null
+}> => {
+  const id = formData.get("order_id") as string
+
+  if (!id) {
+    return { success: false, error: "Order ID is required", order: null }
+  }
+
+  const headers = await getAuthHeaders()
+
+  return await sdk.store.order
+    .requestTransfer(
+      id,
+      {},
+      {
+        fields: "id, email",
+      },
+      headers
+    )
+    .then(({ order }) => ({ success: true, error: null, order }))
+    .catch((err) => ({ success: false, error: err.message, order: null }))
+}
+
+export const acceptTransferRequest = async (id: string, token: string) => {
+  const headers = await getAuthHeaders()
+
+  return await sdk.store.order
+    .acceptTransfer(id, { token }, {}, headers)
+    .then(({ order }) => ({ success: true, error: null, order }))
+    .catch((err) => ({ success: false, error: err.message, order: null }))
+}
+
+export const declineTransferRequest = async (id: string, token: string) => {
+  const headers = await getAuthHeaders()
+
+  return await sdk.store.order
+    .declineTransfer(id, { token }, {}, headers)
+    .then(({ order }) => ({ success: true, error: null, order }))
+    .catch((err) => ({ success: false, error: err.message, order: null }))
+}

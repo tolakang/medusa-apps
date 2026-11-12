@@ -13,11 +13,11 @@ Each folder is **one business project** (one Dokploy project). Inside it, every 
 | [`booking-services/`](./booking-services) | Appointments, classes, tickets, rentals | `/booking-services/backend`, `/booking-services/storefront` | Built — Phase 3 (copy of Ecommerce; exit P3-18 pending) |
 | [`wholesale/`](./wholesale) | Sellers buy your products in bulk | `/wholesale/backend`, `/wholesale/storefront` | Built — Phase 4 (exit P4-11 waits for the owner) |
 | [`reseller/`](./reseller) | Sellers sell your products, you ship | `/reseller/backend`, `/reseller/storefront`, `/reseller/seller-portal` | Built — Phase 5 (exit P5-11 waits for the owner) |
-| [`marketplace/`](./marketplace) | Vendors sell their own products | `/marketplace/backend`, `/marketplace/storefront`, `/marketplace/vendor-portal` | Planned — Phase 6 |
+| [`marketplace/`](./marketplace) | Vendors sell their own products | `/marketplace/backend`, `/marketplace/storefront`, `/marketplace/vendor-portal` | In progress — Phase 6 (backend and storefront copied from Ecommerce; vendor features next) |
 
 Each category's `README.md` is its Dokploy guide: services, build paths, ports, env and first-deploy order.
 
-Deployables without code yet (all of `marketplace/`) hold **ready templates** (`Dockerfile`, `.env.example`); a Dokploy build of them fails at `COPY package.json` until their phase adds the code.
+Deployables without code yet (`marketplace/vendor-portal`) hold **ready templates** (`Dockerfile`, `.env.example`); a Dokploy build of them fails at `COPY package.json` until their phase adds the code.
 
 ## Documents
 

@@ -1,14 +1,15 @@
 # Marketplace — `marketplace/`
 
-> **Vendors sell their own products.** Planned — Phase 6. Scope: [BUILD_PLAN.md §6.6](../BUILD_PLAN.md).
+> **Vendors sell their own products.** In progress — Phase 6. Scope: [BUILD_PLAN.md §6.6](../BUILD_PLAN.md).
 >
-> The `Dockerfile` and `.env.example` files here are **ready templates**. Application code is added in the build phase; until then a Dokploy build of these folders will fail at `COPY package.json`.
+> `backend/` and `storefront/` are a **full copy of Ecommerce** (owner 2026-11-12, TASKS F-072); the vendor features are added task by task (P6-01 onwards). `vendor-portal/` is still a **ready template** (`Dockerfile`, `.env.example`) until P6-09; a Dokploy build of it fails at `COPY package.json` until then. Local stack: `docker-compose.local.yml` (backend, worker, storefront).
 
 This folder is **one complete business project**. Copy the whole folder's setup into one Dokploy project and every piece deploys on its own.
 
 ```
 marketplace/
 ├── README.md                <- this guide
+├── docker-compose.local.yml <- local stack (Podman or Docker)
 ├── backend/                 Medusa server + worker
 │   ├── Dockerfile
 │   ├── docker-entrypoint.sh
