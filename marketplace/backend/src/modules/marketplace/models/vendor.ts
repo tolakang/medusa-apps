@@ -1,5 +1,6 @@
 import { model } from "@medusajs/framework/utils"
 import { VendorAdmin } from "./vendor-admin"
+import { VendorCommission } from "./vendor-commission"
 import { VendorPayout } from "./vendor-payout"
 
 // A vendor: sells their own products on the marketplace (BUILD_PLAN §6.6,
@@ -26,6 +27,7 @@ export const Vendor = model
     commission_rate: model.float().nullable(),
     admins: model.hasMany(() => VendorAdmin, { mappedBy: "vendor" }),
     payouts: model.hasMany(() => VendorPayout, { mappedBy: "vendor" }),
+    commissions: model.hasMany(() => VendorCommission, { mappedBy: "vendor" }),
   })
   .indexes([{ on: ["handle"], unique: true }])
   .checks([

@@ -2,16 +2,17 @@ import { moduleIntegrationTestRunner } from "@medusajs/test-utils"
 import { MARKETPLACE_MODULE } from ".."
 import { Vendor } from "../models/vendor"
 import { VendorAdmin } from "../models/vendor-admin"
+import { VendorCommission } from "../models/vendor-commission"
 import { VendorPayout } from "../models/vendor-payout"
 import MarketplaceModuleService from "../service"
 
 jest.setTimeout(60 * 1000)
 
 // TASKS P6-01: module `marketplace` with vendor, vendor_admin and
-// vendor_payout (BUILD_PLAN §6.6).
+// vendor_payout (BUILD_PLAN §6.6); P6-06 adds vendor_commission (F-078).
 moduleIntegrationTestRunner<MarketplaceModuleService>({
   moduleName: MARKETPLACE_MODULE,
-  moduleModels: [Vendor, VendorAdmin, VendorPayout],
+  moduleModels: [Vendor, VendorAdmin, VendorPayout, VendorCommission],
   resolve: "./src/modules/marketplace",
   testSuite: ({ service }) => {
     const vendor = (overrides: Record<string, unknown> = {}) =>
@@ -226,6 +227,73 @@ moduleIntegrationTestRunner<MarketplaceModuleService>({
       it("refuses an unknown status", async () => {
         const owner = await vendor()
         await expect(payout(owner.id, { status: "approved" })).rejects.toThrow()
+      })
+    })
+    describe("vendor_commission (TASKS P6-06)", () => {
+      const commission = (vendorId: string, overrides: Record<string, unknown> = {}) =>
+        service.createVendorCommissions({
+          vendor_id: vendorId,
+          order_id: "order_child_1",
+          order_total: 115,
+          base: 100,
+          rate: 10,
+          amount: 10,
+          payout_amount: 105,
+          currency_code: "usd",
+          ...overrides,
+        })
+
+      it("stores a pending commission for one child order", async () => {
+        const owner = await vendor()
+        const created = await commission(owner.id)
+        expect(created.id).toMatch(/^vcom_/)
+        expect(created).toEqual(
+          expect.objectContaining({
+            order_id: "order_child_1",
+            rate: 10,
+            amount: 10,
+            payout_amount: 105,
+            status: "pending",
+            payout_id: null,
+          })
+        )
+        const [withCommissions] = await service.listVendors(
+          { id: owner.id },
+          { relations: ["commissions"] }
+        )
+        expect(withCommissions.commissions.map((c) => c.id)).toEqual([created.id])
+      })
+
+      it("allows one commission per order", async () => {
+        const owner = await vendor()
+        const other = await vendor({ handle: "other", email: "o@vendor.test" })
+        await commission(owner.id)
+        await expect(commission(owner.id)).rejects.toThrow()
+        await expect(commission(other.id)).rejects.toThrow()
+      })
+
+      it("refuses a rate above 100 or a negative amount", async () => {
+        const owner = await vendor()
+        await expect(commission(owner.id, { rate: 101 })).rejects.toThrow(
+          /vendor_commission_rate_percent/
+        )
+        await expect(
+          commission(owner.id, { order_id: "o2", payout_amount: -1 })
+        ).rejects.toThrow(/vendor_commission_amounts_not_negative/)
+      })
+
+      it("moves to approved with a payout, then paid", async () => {
+        const owner = await vendor()
+        const created = await commission(owner.id)
+        const approved = await service.updateVendorCommissions({
+          id: created.id,
+          status: "approved",
+          payout_id: "vpay_1",
+        })
+        expect(approved).toEqual(expect.objectContaining({ status: "approved", payout_id: "vpay_1" }))
+        await expect(
+          service.updateVendorCommissions({ id: created.id, status: "settled" as never })
+        ).rejects.toThrow()
       })
     })
   },

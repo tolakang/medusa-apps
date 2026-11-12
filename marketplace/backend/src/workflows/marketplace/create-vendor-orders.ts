@@ -21,6 +21,7 @@ import {
 } from "@medusajs/medusa/core-flows"
 import { MARKETPLACE_MODULE } from "../../modules/marketplace"
 import { itemsValue, splitShipping } from "../../lib/shipping-split"
+import { recordVendorCommissionsWorkflow } from "./record-vendor-commission"
 
 // Where a child order points at its parent, and the parent at its children
 // (order metadata; the official Vendors example uses `parent_order_id`).
@@ -401,6 +402,11 @@ export const createVendorOrdersWorkflow = createWorkflow(
       )
       createRemoteLinkStep(links)
       markParentStep({ parent, children })
+      // record-vendor-commission for the children (TASKS P6-06).
+      const orderIds = transform({ children }, ({ children }) =>
+        children.map((c) => c.order_id)
+      )
+      recordVendorCommissionsWorkflow.runAsStep({ input: { order_ids: orderIds } })
       return children
     })
 
