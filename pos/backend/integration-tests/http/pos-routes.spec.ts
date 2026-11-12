@@ -166,16 +166,22 @@ medusaIntegrationTestRunner({
             )
           ).status
         ).toEqual(400)
-        const { data: sale } = await api.post(
-          "/pos/checkout",
-          {
-            shift_id: shift.id,
-            items: [{ variant_id: variant.id, quantity: 2 }],
-            payment_method: "cash",
-            customer_id: newCustomer.customer.id,
-          },
-          cashier
-        )
+        const saleBody = {
+          shift_id: shift.id,
+          items: [{ variant_id: variant.id, quantity: 2 }],
+          payment_method: "cash",
+          customer_id: newCustomer.customer.id,
+          client_ref: "6b0f3c1e-2d4a-4f5b-9c8d-7e6f5a4b3c2d",
+        }
+        const first = await api.post("/pos/checkout", saleBody, cashier)
+        expect(first.status).toEqual(201)
+        const sale = first.data
+        // The answer was lost and the cashier pressed again: the same sale
+        // comes back, recorded once (review 2, S7; the close below counts
+        // its cash once).
+        const repeated = await api.post("/pos/checkout", saleBody, cashier)
+        expect(repeated.status).toEqual(200)
+        expect(repeated.data.order.id).toEqual(sale.order.id)
         expect(sale.payment_method).toEqual("cash")
         expect(sale.order).toEqual(expect.objectContaining({ customer_id: newCustomer.customer.id, currency_code: "usd" }))
         expect(sale.order.items).toEqual([expect.objectContaining({ variant_sku: "SHIRT-L-BLACK" })])

@@ -435,6 +435,8 @@ Checked 2026-11-06. Each item is its own branch and PR, through `scripts/update-
 
 The newest note is first. Older notes stay below as history; where they differ, the newer one wins.
 
+**2026-11-12 (review 2 fixes, batch 5):** POS and shared jobs (S7, S8) done: a POS sale retried with the same `client_ref` returns the recorded sale; the unverified-account cleanup pages through identities (ecommerce, pos, booking-services, reseller, marketplace). POS HTTP 22 suites 77/77, unit 136, pos-app 11; `anti-abuse.spec.ts` 5/5 in each app.
+
 **2026-11-12 (review 2 fixes, batch 2):** Wholesale (S3, A2, M3) done: accepted quotes reserve stock, collections no longer show products and tier prices to guests, PayWay payments start only for carts that checkout would accept; storefront spending window fixed (UTC, B1 port). Tests: `b2b-quote-stock.spec.ts` (new), `b2b-payway.spec.ts` and `catalog-login.spec.ts` extended; wholesale HTTP 53/53.
 
 **2026-11-12 (review 2 fixes, batch 1):** Owner: "Fix all". Batch 1 of `docs/REVIEW_FIXES.md` (PayWay money: M2, M1, M5) done; see P1-03. Owner: set `PAYWAY_RSA_PUBLIC_KEY`. Next: batches 2 to 5.

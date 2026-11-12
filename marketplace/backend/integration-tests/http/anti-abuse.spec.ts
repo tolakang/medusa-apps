@@ -143,6 +143,29 @@ medusaIntegrationTestRunner({
           expect(await exists(kept)).toBe(true)
         }
       })
+
+      it("still finds abandoned sign-ups behind many older kept accounts (review 2, S8)", async () => {
+        const container = getContainer()
+        const auth = container.resolve(Modules.AUTH)
+        const register = async (email: string, ip: string) => {
+          await post("/auth/customer/emailpass/register", { email, password: PASSWORD }, ip)
+          const [login] = await auth.listProviderIdentities({ entity_id: email, provider: "emailpass" })
+          return login.auth_identity_id!
+        }
+        // Three kept accounts first (oldest), then the abandoned one.
+        for (const n of [1, 2, 3]) {
+          const id = await register(`kept${n}@example.com`, `198.51.100.${10 + n}`)
+          await auth.updateAuthIdentities({ id, app_metadata: { customer_id: `cus_${n}` } })
+        }
+        const abandoned = await register("late@example.com", "198.51.100.20")
+
+        // Pages of 2: the first page holds only kept accounts.
+        const run = await cleanupUnverifiedAccountsWorkflow(container).run({
+          input: { before: new Date(Date.now() + 60_000).toISOString(), page_size: 2 },
+        })
+        expect(run.result.deleted).toEqual(1)
+        expect(await auth.listAuthIdentities({ id: [abandoned] })).toHaveLength(0)
+      })
     })
   },
 })
