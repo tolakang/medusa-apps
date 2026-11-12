@@ -21,6 +21,7 @@ import {
 } from './auth-guards'
 import { requireVendor, vendorCors } from './vendor-auth'
 import { PostVendorCreate } from './vendors/validators'
+import { AdminCreateProduct } from '@medusajs/medusa/api/admin/products/validators'
 import { PostAdminVendor } from './admin/vendors/validators'
 
 // The product index declares filterable `status` and `sales_channel_ids`, so
@@ -41,6 +42,13 @@ export default defineMiddlewares({
         limitPerIp('vendor_create', AUTH_LIMITS.signup, 60),
         validateAndTransformBody(PostVendorCreate),
       ],
+    },
+    {
+      // A vendor adds a product (TASKS P6-04): the admin's product body, as
+      // in the official Vendors example.
+      method: ['POST'],
+      matcher: '/vendors/products',
+      middlewares: [validateAndTransformBody(AdminCreateProduct)],
     },
     {
       // Vendor sign-up and sign-in: the same per-IP limits and password rule
