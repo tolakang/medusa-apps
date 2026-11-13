@@ -5,7 +5,8 @@ import {
   formatAmount,
   hmac,
   merchantAuth,
-  rsaPublicKeyPem,
+  readRsaPublicKey,
+  RSA_KEY_UNREADABLE_MESSAGE,
   newTranId,
   reqTime,
   signPurchase,
@@ -312,10 +313,29 @@ describe("PayWay provider", () => {
       expect(JSON.parse(decrypt(auth))).toEqual(payload)
     })
 
-    it("accepts the key on one line, without the PEM header", () => {
-      const bare = pem.replace(/-----[A-Z ]+-----/g, "").replace(/\s+/g, "")
-      expect(rsaPublicKeyPem(bare)).toEqual(pem.trim())
-      expect(rsaPublicKeyPem(pem.trim().replace(/\n/g, "\\n"))).toEqual(pem.trim())
+    it("reads the key however the env file holds it", () => {
+      const body = pem.replace(/-----[A-Z ]+-----/g, "").replace(/\s+/g, "")
+      const pkcs1 = publicKey.export({ type: "pkcs1", format: "pem" }).toString()
+      for (const text of [
+        pem,
+        body,
+        `"${pem.trim()}"`,
+        pem.trim().replace(/\n/g, "\\n"),
+        pkcs1,
+        pkcs1.replace(/-----[A-Z ]+-----/g, "").replace(/\s+/g, ""),
+      ]) {
+        expect(readRsaPublicKey(text).asymmetricKeyDetails?.modulusLength).toEqual(1024)
+      }
+      // A multi-line paste cut to its first line (staging 2026-11-13).
+      expect(() => readRsaPublicKey("-----BEGIN PUBLIC KEY-----")).toThrow(RSA_KEY_UNREADABLE_MESSAGE)
+    })
+
+    it("explains an unreadable key instead of failing with an unknown error", async () => {
+      const broken = new PaywayProviderService({ logger }, { ...options, rsa_public_key: "-----BEGIN PUBLIC KEY-----" })
+      await expect(
+        broken.refundPayment({ amount: 1, data: { tran_id: "1", currency: "USD" } })
+      ).rejects.toThrow("PAYWAY_RSA_PUBLIC_KEY can't be read")
+      expect(fetchMock).not.toHaveBeenCalled()
     })
 
     it("refunds the amount through PayWay and records the total refunded", async () => {

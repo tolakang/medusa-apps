@@ -37,8 +37,10 @@ import {
   newTranId,
   PAYWAY_SANDBOX_URL,
   PURCHASE_PATH,
+  readRsaPublicKey,
   refundTransaction,
   reqTime,
+  RSA_KEY_UNREADABLE_MESSAGE,
   signPurchase,
   type CheckTransactionResult,
 } from "./client"
@@ -104,6 +106,12 @@ class PaywayProviderService extends AbstractPaymentProvider<PaywayOptions> {
       logger.warn(
         "PayWay: PAYWAY_RSA_PUBLIC_KEY is not set, so refunds and cancelling paid orders fail until it is."
       )
+    } else {
+      try {
+        readRsaPublicKey(options.rsa_public_key)
+      } catch {
+        logger.warn(`PayWay: ${RSA_KEY_UNREADABLE_MESSAGE}`)
+      }
     }
   }
 
@@ -323,6 +331,11 @@ class PaywayProviderService extends AbstractPaymentProvider<PaywayOptions> {
     const amount = Number(formatAmount(Number(new BigNumber(input.amount).numeric), currency))
     if (!(amount > 0)) {
       throw new MedusaError(MedusaError.Types.INVALID_DATA, "The refund amount must be above 0.")
+    }
+    try {
+      readRsaPublicKey(rsaPublicKey)
+    } catch {
+      throw new MedusaError(MedusaError.Types.NOT_ALLOWED, RSA_KEY_UNREADABLE_MESSAGE)
     }
     const result = await refundTransaction({ ...this.credentials, rsaPublicKey }, tranId, amount)
     if (result.code !== "00") {
