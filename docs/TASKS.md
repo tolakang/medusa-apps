@@ -435,6 +435,8 @@ Checked 2026-11-06. Each item is its own branch and PR, through `scripts/update-
 
 The newest note is first. Older notes stay below as history; where they differ, the newer one wins.
 
+**2026-11-13 (staging: PayWay refund key):** Ecommerce staging refund on order #13 failed with `DECODER routines::unsupported`: the RSA key in the env couldn't be parsed (likely a multi-line paste kept to its first line). PayWay was never called. The provider now reads the key from its base64 body (quotes, `\n`, SPKI or PKCS#1 all accepted), logs `PAYWAY_RSA_PUBLIC_KEY can't be read` at start-up when it isn't a key, and the admin shows that message instead of "An unknown error occurred" (all six apps).
+
 **2026-11-12 (review 2 fixes, batch 3):** Marketplace (A1, S1, S2, S6, M4, A3) done: vendor products can't borrow another vendor's inventory item; store carts refuse the split's metadata keys; a failed split keeps the paid order's stock; cancelling an order cancels its vendor orders; payout runs lock out commission cancels and settlements; vendors confirm their email before sign-in and approval (portal `/verify-account`, `VENDOR_PORTAL_URL`). Not covered: a real owner whose email was squatted before the squatter confirmed it still can't register (the unconfirmed vendor stays pending and can't be approved or used; the admin can suspend it). Marketplace HTTP 24 suites 97/97, unit 130, portal build + tests.
 
 **2026-11-12 (review 2 fixes, batch 4):** Booking (S4, S5) done: order bookings confirmed under the resource lock with a slot re-check (expired-but-free kept, taken → error log), release job skips completed carts, cancelled orders free their times. Booking unit 160, modules 70, HTTP 26 suites 99/99.

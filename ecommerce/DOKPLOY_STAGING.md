@@ -180,7 +180,7 @@ Both paths are relative to the repo root (verified on staging 2026-09-25, F-011)
 3. **PayWay notes** (P1-03, checked on staging 2026-10-03):
    - `PAYWAY_API_KEY` is the **Public Key** (40 characters), on one line with no quotes or spaces.
    - `PAYWAY_API_URL` is only the base (`https://checkout.payway.com.kh` for live), **never** the full purchase URL.
-   - `PAYWAY_RSA_PUBLIC_KEY` is ABA's **RSA public key**, used only for refunds (PayWay's Refund API). Without it, refunds and cancelling a paid order fail in the admin, and Marketplace and Reseller commissions on refunded orders are not held back. Put it on one line with `\n` for the line breaks, or just the key without the BEGIN/END lines.
+   - `PAYWAY_RSA_PUBLIC_KEY` is ABA's **RSA public key**, used only for refunds (PayWay's Refund API). Without it, refunds and cancelling a paid order fail in the admin, and Marketplace and Reseller commissions on refunded orders are not held back. Put it on **one line**: just the key text without the BEGIN/END lines (simplest), or the whole key with `\n` for the line breaks. A multi-line paste keeps only its first line, and the backend then logs `PAYWAY_RSA_PUBLIC_KEY can't be read` at start-up.
    - Check the lengths from the backend terminal without printing the values:
      ```bash
      node -e 'for (const k of ["PAYWAY_MERCHANT_ID","PAYWAY_API_KEY","PAYWAY_API_URL","PAYWAY_RETURN_URL"]) console.log(k, (process.env[k]||"").length)'

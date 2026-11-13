@@ -1,4 +1,4 @@
-import { constants, createHmac, createPublicKey, publicEncrypt, randomInt } from "node:crypto"
+import { constants, createHmac, createPublicKey, type KeyObject, publicEncrypt, randomInt } from "node:crypto"
 
 // ABA PayWay eCommerce Checkout (TASKS D1, P1-03). Everything below follows
 // PayWay's Developer Suite (developer.payway.com.kh, read 2026-10-01):
@@ -181,13 +181,35 @@ export async function closeTransaction(
   return String(body.status?.code ?? response.status)
 }
 
-// ABA sends the RSA public key as text; env files often hold it on one line
-// with "\n" escapes or without the PEM header.
-export function rsaPublicKeyPem(key: string): string {
-  const text = key.replace(/\\n/g, "\n").trim()
-  if (text.includes("-----BEGIN")) return text
-  const body = text.replace(/\s+/g, "").match(/.{1,64}/g)?.join("\n") ?? ""
-  return `-----BEGIN PUBLIC KEY-----\n${body}\n-----END PUBLIC KEY-----`
+export const RSA_KEY_UNREADABLE_MESSAGE =
+  "PAYWAY_RSA_PUBLIC_KEY can't be read. Put ABA's RSA public key on one line: either only the key text (without the BEGIN/END lines), or the whole key with \\n where the line breaks were. No quotes."
+
+// ABA sends the RSA public key as text, and env files mangle it: quotes
+// around it, "\n" escapes, a multi-line paste cut to its first line. Only
+// the base64 body matters, read as SPKI ("BEGIN PUBLIC KEY") or PKCS#1
+// ("BEGIN RSA PUBLIC KEY"). Throws RSA_KEY_UNREADABLE_MESSAGE otherwise
+// (staging 2026-11-13: "DECODER routines::unsupported").
+export function readRsaPublicKey(key: string): KeyObject {
+  const body = key
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .replace(/\\n/g, "\n")
+    .replace(/-----(BEGIN|END)[^-]*-----/g, "")
+    .replace(/\s+/g, "")
+  if (body && /^[A-Za-z0-9+/]+=*$/.test(body)) {
+    const der = Buffer.from(body, "base64")
+    for (const type of ["spki", "pkcs1"] as const) {
+      try {
+        const parsed = createPublicKey({ key: der, format: "der", type })
+        if (parsed.asymmetricKeyType === "rsa") {
+          return parsed
+        }
+      } catch {
+        // try the other format
+      }
+    }
+  }
+  throw new Error(RSA_KEY_UNREADABLE_MESSAGE)
 }
 
 // The JSON encrypted in chunks of (key bytes - 11): 117 for ABA's 1024-bit
@@ -196,7 +218,7 @@ export function merchantAuth(
   payload: { mc_id: string; tran_id: string; refund_amount: number },
   rsaPublicKey: string
 ): string {
-  const key = createPublicKey(rsaPublicKeyPem(rsaPublicKey))
+  const key = readRsaPublicKey(rsaPublicKey)
   const bits = key.asymmetricKeyDetails?.modulusLength ?? 1024
   const chunkSize = bits / 8 - 11
   const data = Buffer.from(JSON.stringify(payload), "utf8")
