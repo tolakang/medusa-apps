@@ -1,5 +1,7 @@
 # Build Plan — Medusa Apps
 
+> **Revision 13 (2026-11-13, owner: "update build plan").** §6.2 adds the POS admin pages Cashiers and Registers, so staging needs no `curl` (TASKS F-085). Requirements, scope and build order are unchanged.
+>
 > **Revision 12 (2026-11-12, owner: "approve to record").** Brings §6.6 and §7 in line with the Marketplace as built (P6-01 to P6-15, TASKS F-072 to F-080): a full copy of Ecommerce, child orders made by the Order Module, the split run per order, shipping split across vendors, commissions held on refunds, and vendor stock. Requirements, scope and build order are unchanged.
 >
 > **Revision 11 (2026-11-12, owner: "Fix those", applied on "Yes").** Brings §6.2, §6.4, §6.5 and §7 in line with Wholesale P4-08 to P4-13 and the review fixes (TASKS F-066 to F-070, the first review's fix list, now done). Requirements, scope and build order are unchanged.
@@ -453,7 +455,10 @@ Each scenario lists:
   - **Fulfilment:** Medusa takes stock only on fulfilment, which needs a shipping option, so each register location gets a hidden "In store (POS)" option. Stock is reserved at the register's location only.
   - **Reservations:** never moved by changing their `location_id` (upstream `@medusajs/inventory` bug, still in 2.22). Delete the reservation and create it again (F-041).
 - **API routes:** `/pos/registers`, `/pos/shifts/open|close`, `/pos/checkout`, `/pos/customers` (cashier), `/admin/pos/*` (reports, register setup), and barcode lookup (an exact match on the variant's `barcode` / `ean` / `upc` / `sku`, F-039).
-- **Admin:** a shift report (per register, per cashier, per day).
+- **Admin:**
+  - a shift report (per register, per cashier, per day);
+  - **Cashiers:** invite (the invite code shows on the page; no email is sent), rename, activate or deactivate (F-085);
+  - **Registers:** add with a stock location and a sales channel, activate or deactivate (F-085).
 - **Client apps:**
   - `pos/storefront`: the online shop on the same stock.
   - `pos/pos-app`: a Next.js PWA for tablets with login, barcode scan, cart, customer lookup, payment (cash / card / QR) and receipt. It calls the backend from its own server only (§4.2, F-040).
@@ -770,6 +775,7 @@ Also decided for Ecommerce:
 
 | Rev | Date | What changed |
 |---|---|---|
+| 13 | 2026-11-13 | POS admin pages Cashiers and Registers (§6.2), so staging Step 7.B needs no `curl`. TASKS F-085. |
 | 12 | 2026-11-12 | Marketplace as built (P6-01 to P6-15): full Ecommerce copy, `vendor_commission`, statuses and uniqueness, vendor email from the auth identity, product statuses, child orders via the Order Module with moved reservations, split per order (also from `order.placed`), shipping split across vendors, refunds held and flagged, vendor stock locations. Status line. TASKS F-072 to F-080. |
 | 11 | 2026-11-12 | Wholesale as built after P4-08 to P4-13 and the review fixes: catalog for employees of approved companies (`WHOLESALE_REQUIRE_LOGIN`), join codes, PayWay for prepaid companies, one order at a time per company, bilingual invoices. Reseller: commission base and refund share, payout locks. POS and Reseller: invite codes. Status line, pnpm 12.18.0. TASKS F-066 to F-070, D9 to D11. |
 | 10 | 2026-11-12 | Builder documents moved into `docs/` (owner request, F-071): §2 tree, R5 and every path. `BUILD_PLAN.md` and `CLAUDE.md` stay at the root. |
