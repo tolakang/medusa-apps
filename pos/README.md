@@ -68,17 +68,17 @@ After the first deploy, every service can be redeployed, rebuilt or rolled back 
 
 Cashiers are **not** admin users: they are the custom actor type `cashier` and can only use `/pos/*` (TASKS P2-03). Sign-up is invite-only:
 
-1. An admin invites the cashier: `POST /admin/pos/cashiers` `{ "name", "email" }` (list: `GET /admin/pos/cashiers`). The answer carries an **`invite_code`**; give it to the cashier.
+1. An admin invites the cashier on the admin page **Cashiers** (`/app/pos-cashiers`, TASKS F-085), or with `POST /admin/pos/cashiers` `{ "name", "email" }` (list: `GET /admin/pos/cashiers`). The answer carries an **`invite_code`**; give it to the cashier.
 2. The cashier registers that email: `POST /auth/cashier/emailpass/register` `{ "email", "password" }` (at least 8 characters) → registration token.
 3. The cashier accepts with that token and the code: `POST /pos/cashiers/accept` `{ "invite_code" }` (`Authorization: Bearer <token>`). An email without an active invitation is refused, and so is a wrong code: knowing the invited email isn't enough to take the account.
 4. From then on: `POST /auth/cashier/emailpass` → token for `/pos/*` (e.g. `GET /pos/cashiers/me`).
 
-Setting a cashier's `is_active` to false (`POST /admin/pos/cashiers/:id` `{ "is_active": false }`) locks them out at once, including tokens already issued. Sign-up, sign-in, accepting and password reset have per-IP limits like customers; the till app passes each cashier's own IP (`SHOPPER_IP_SECRET` in the backend and the till app).
+Deactivating a cashier (**Cashiers** page, or `POST /admin/pos/cashiers/:id` `{ "is_active": false }`) locks them out at once, including tokens already issued. Sign-up, sign-in, accepting and password reset have per-IP limits like customers; the till app passes each cashier's own IP (`SHOPPER_IP_SECRET` in the backend and the till app).
 
 ## Shop setup and selling (API, TASKS P2-06)
 
 Admin (admin token):
-- `POST /admin/pos/registers` `{ name, code, stock_location_id, sales_channel_id }` sets up a till; each register sells from one stock location in one sales channel. List: `GET /admin/pos/registers`. Change: `POST /admin/pos/registers/:id` (name, `is_active`, location, channel).
+- **Registers** in the admin sidebar (`/app/pos-registers`, TASKS F-085) adds a till with its stock location and sales channel, and activates or deactivates it. API: `POST /admin/pos/registers` `{ name, code, stock_location_id, sales_channel_id }` sets up a till; each register sells from one stock location in one sales channel. List: `GET /admin/pos/registers`. Change: `POST /admin/pos/registers/:id` (name, `is_active`, location, channel).
 - **Shift report** in the admin sidebar (`/app/pos-shifts`, TASKS P2-07): shifts per day, register or cashier, with expected cash, counted cash and the variance (red when cash is short). It filters by register, cashier, status and dates, and reads `GET /admin/pos/shifts?register_id=&cashier_id=&status=&from=&to=`.
 
 Cashier: the **POS app** (`pos-app/`, P2-10) does all of this on screen: sign in (first time: *Set your password*), pick a register, open the shift, scan, customer, pay, print, close. The routes underneath (cashier token):

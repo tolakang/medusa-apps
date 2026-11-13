@@ -393,8 +393,14 @@ CLIENT_IP_HEADER=
 
 **Check:** Phnom Penh shows 10 in stock for `SHIRT-L-BLACK`.
 
-### B. Register and cashier (admin API, from your computer)
-There is no admin page for these yet, so use `curl` in a terminal on your own computer. Do this **before** you turn on 2FA for this admin; with 2FA, sign-in needs the extra code step.
+### B. Register and cashier (admin pages)
+1. Admin → **Registers** (sidebar) → fill in **Name** `Front till`, **Code** `PP-1`, **Stock location** `Phnom Penh`, **Sales channel** `Default Sales Channel` → **Add register**. This also creates the hidden "In store (POS)" shipping option.
+   **Check:** a toast says "Register Front till added" and the row shows **Active**.
+2. Admin → **Cashiers** (sidebar) → fill in **Name** and **Email** (any email you can type at the till; no email is sent) → **Invite**.
+   **Check:** a toast shows the invite code (`XXXXX-XXXXX`), and the cashier's row shows it too. The cashier needs it once, at first sign-in.
+
+#### Alternative: the admin API with `curl`
+Use this only if the admin pages aren't available. Run it in a terminal on your own computer, **before** you turn on 2FA for this admin; with 2FA, sign-in needs the extra code step.
 
 1. Get an admin token. Replace the email and password; the token stays in your terminal only:
    ```bash
