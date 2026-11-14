@@ -1,5 +1,7 @@
 # Build Plan — Medusa Apps
 
+> **Revision 14 (2026-11-14, owner: "include all features, update to build plan").** §6.3 turns Booking services into a booking-only shop with eight booking kinds (A–H) and shared booking features, built as tasks P3-19 to P3-30 before the Booking staging run (TASKS F-087, D12). The other phases don't change.
+>
 > **Revision 13 (2026-11-13, owner: "update build plan").** §6.2 adds the POS admin pages Cashiers and Registers, so staging needs no `curl` (TASKS F-085). Requirements, scope and build order are unchanged.
 >
 > **Revision 12 (2026-11-12, owner: "approve to record").** Brings §6.6 and §7 in line with the Marketplace as built (P6-01 to P6-15, TASKS F-072 to F-080): a full copy of Ecommerce, child orders made by the Order Module, the split run per order, shipping split across vendors, commissions held on refunds, and vendor stock. Requirements, scope and build order are unchanged.
@@ -497,6 +499,31 @@ Each scenario lists:
 - **Tickets / fixed-capacity events** (no staff calendar): follow the official Ticket Booking recipe instead (seat capacity as inventory items per show date and section).
 - **Env:** `BOOKING_HOLD_MINUTES` (default 15), `BOOKING_DEFAULT_TIMEZONE`, `BOOKING_CANCEL_HOURS`.
 - **Acceptance:** two customers can't hold the same slot; an abandoned checkout frees the slot automatically; a cancellation inside the policy refunds.
+- **Booking-only shop (Revision 14, owner 2026-11-14, F-087).** The storefront and the demo data are booking-only: no demo goods, no Europe region or warehouse, booking wording, and a home page by booking kind. The backend stays a full copy of Ecommerce, so goods can still be sold if the shop adds them. In the admin, every bookable thing is a Medusa product (core menus stay); the **Bookings** page is the work view.
+- **Booking kinds.** Each kind is one booking pattern that many businesses reuse:
+
+  | Kind | The customer picks | Examples |
+  |---|---|---|
+  | **A. Appointment** (built) | a time with a person, room or court | salon, spa, clinic, tutor, photographer, car wash, sports court, karaoke room |
+  | **B. Visit at your place** | a time, their address, the problem | repairs (AC, plumbing, electrical, motorbike), cleaning, pest control, installation, laundry pickup |
+  | **C. Trip A → B** | pickup and drop-off address, date and time, vehicle size, extras | moving truck with helpers, airport transfer, driver or van for the day, large-item delivery |
+  | **D. Scheduled departure** | a departure and a number of seats | bus, van and boat routes; city and temple tours |
+  | **E. Rental by dates** | start and end date (and size or variant) | car, motorbike, equipment; wedding tents and chairs; costumes and outfits by size; guesthouse room per night |
+  | **F. Event ticket** | an event date, ticket type and quantity | concerts, shows, workshops; follows Medusa's official Ticket Booking recipe (seats as inventory per date and section) |
+  | **G. Table reservation** | a time and a party size, free or with a deposit | restaurant, bar, event hall |
+  | **H. Event package** | one event date (or days) and many pieces booked together | weddings (venue, costumes, makeup, photographer, tents, car), parties, company events, ceremonies, tour packages |
+
+- **Shared booking features:**
+  - **Extras** on a booking (helpers, packing boxes, an extra hour, rental insurance).
+  - **Deposit and balance:** pay part now and the rest later, with reminders; H can split into several payments.
+  - **Quote first:** the customer asks, the shop prices it, the customer pays to confirm (moving, repairs, catering).
+  - **Staff, vehicle or item assignment:** the admin assigns a driver, truck or technician; the assignee gets the job on Telegram.
+  - **Reschedule** instead of cancel and rebook.
+  - **Recurring bookings** (weekly cleaning), **passes** (10 classes), **waitlist** and **reviews**.
+- **Trip pricing (C, D12):** three modes per service: **vehicle size + hours**, **zones** (a price table between areas), and **distance** through a maps provider. Distance needs the owner's maps account and key; without it, the other two modes work.
+- **How each is built is decided in its task's research step** (DEV_FLOW §1, evidence ladder in `docs/MEDUSA_SKILL.md` §0), with Medusa's own mechanisms first: products and variants for what is sold, the Ticket Booking recipe for F, draft orders for quotes, order payment collections for balances, module links to the `booking` module, workflows and hooks. A new model or column belongs to the `booking` module (or a new custom module), never to a core table (§3.1).
+- **Build order inside the revision:** shop and data (A and G) → B → C → E → D → F → shared features → H, which needs B, C, E and the shared features. Each task is one PR; the Booking staging run (P3-18) resumes after the first task, on a fresh database.
+- **Acceptance (added):** each kind can be booked, paid and cancelled from the shop on staging; no two bookings take the same person, vehicle, item, seat or date beyond its capacity; a package confirms all its pieces or none.
 
 ### 6.4 Wholesale — `wholesale/`
 
@@ -633,7 +660,7 @@ Each scenario lists:
 | **0. Foundation** | Backend and web client standards (§4) proven in `ecommerce/`: backend and storefront deployed to Dokploy (server, worker, storefront); `update-medusa.sh`, `verify.sh`, `guard.sh`; CI matrix; local stack | M | — | Proves R1–R4 and independent deploys before business logic exists. |
 | **1. Ecommerce** | `ecommerce/backend` and `storefront`, production MVP | S | 0 | The core every other scenario builds on; fastest path to a live, earning project. |
 | **2. POS** | `pos/backend`, `storefront`, `pos-app` | M | 1 | Reuses Ecommerce; adds registers, shifts and the first non-storefront client. |
-| **3. Booking services** | `booking-services/backend` and `storefront` | M–L | 1 | First scenario that hooks into core cart flows; hold and expiry logic must be solid. |
+| **3. Booking services** | `booking-services/backend` and `storefront`; Revision 14 adds the booking-only shop and kinds B–H (P3-19 to P3-30) | L | 1 | First scenario that hooks into core cart flows; hold and expiry logic must be solid. |
 | **4. Wholesale** | `wholesale/backend` and `storefront` | M | 1 | Mostly core price lists, the starter's modules and checkout validation hooks. |
 | **5. Reseller** | `reseller/backend`, `storefront` (multi-tenant), `seller-portal` | M–L | 1 | First partner portal and money owed to partners; reuses the cashier actor pattern. |
 | **6. Marketplace** | `marketplace/backend`, `storefront`, `vendor-portal` | L | 1, 5 | Hardest: vendor actor, order splitting, payouts, moderation. Built last, so the actor, portal and commission patterns are proven in 5. |
@@ -650,10 +677,12 @@ Rules for the order:
 - **Don't start two "L" phases at the same time.**
 - **Staging may wait (owner; F-034, F-044):** a phase's code can be finished and merged while its staging run and exit checklist wait for the owner. Those items stay open in `docs/TASKS.md` and are done before that category goes live.
 
-**Status 2026-11-12:**
+**Status 2026-11-14:**
 - Phase 0: done.
 - Phase 1: on staging; production waiting (P1-08, P1-09).
-- Phases 2, 3, 4, 5 and 6: code done; staging and exit waiting (P2-14, P3-18, P4-11, P5-11, P6-13).
+- Phase 2: on staging, exit P2-14 passed (2026-11-14).
+- Phase 3: Revision 14 (booking kinds) being built, P3-19 to P3-30; staging and exit P3-18 after P3-19.
+- Phases 4, 5 and 6: code done; staging and exit waiting (P4-11, P5-11, P6-13).
 - The first full review's 29 findings and four later ones are fixed (2026-11-12).
 
 ## 8. Update and release process
@@ -746,6 +775,7 @@ A throwaway prototype on Medusa 2.21.1 and pnpm 12.6.0 tested this plan before P
 | D8 | "App down" alerts | **Open, needed before production:** which uptime monitor runs outside the Dokploy server (recommended: a hosted monitor alerting the staff Telegram) | — |
 | D9 | Wholesale payment for prepaid companies | **ABA PayWay** (KHQR, cards); net terms stay on `pp_system_default` (P4-12) | 2026-11-11 |
 | D10 | Wholesale invoice language | **Khmer and English**, with an embedded Khmer font (P4-13) | 2026-11-11 |
+| D12 | Booking trip pricing (kind C) | **All three modes:** vehicle size + hours, zones, and distance through a maps provider (the owner's account and key; optional) | 2026-11-14 |
 | D11 | Reseller commission base and payouts | **Items only** (after discounts, no tax or shipping; P5-12); **payouts stay manual** | 2026-11-11 |
 
 Also decided for Ecommerce:
@@ -775,6 +805,7 @@ Also decided for Ecommerce:
 
 | Rev | Date | What changed |
 |---|---|---|
+| 14 | 2026-11-14 | Booking services become a booking-only shop with kinds A–H (appointment, visit at your place, trip A → B incl. moving, scheduled departure, rental by dates incl. costumes, event ticket, table reservation, event package incl. weddings) and shared features (extras, deposit, quote first, assignment, reschedule, recurring, passes, waitlist, reviews), §6.3; build order and status §7; D12 trip pricing. TASKS F-087, P3-19 to P3-30. |
 | 13 | 2026-11-13 | POS admin pages Cashiers and Registers (§6.2), so staging Step 7.B needs no `curl`. TASKS F-085. |
 | 12 | 2026-11-12 | Marketplace as built (P6-01 to P6-15): full Ecommerce copy, `vendor_commission`, statuses and uniqueness, vendor email from the auth identity, product statuses, child orders via the Order Module with moved reservations, split per order (also from `order.placed`), shipping split across vendors, refunds held and flagged, vendor stock locations. Status line. TASKS F-072 to F-080. |
 | 11 | 2026-11-12 | Wholesale as built after P4-08 to P4-13 and the review fixes: catalog for employees of approved companies (`WHOLESALE_REQUIRE_LOGIN`), join codes, PayWay for prepaid companies, one order at a time per company, bilingual invoices. Reseller: commission base and refund share, payout locks. POS and Reseller: invite codes. Status line, pnpm 12.18.0. TASKS F-066 to F-070, D9 to D11. |
