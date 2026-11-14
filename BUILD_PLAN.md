@@ -1,5 +1,7 @@
 # Build Plan — Medusa Apps
 
+> **Revision 15 (2026-11-14, owner: "I want staff logins and open marketplace").** §6.3 adds providers to Booking services: staff logins (invited) and an open marketplace (outside providers sign up, are approved, run their own page and listings, and are paid out after a commission), through a new deployable `booking-services/provider-portal`. Built right after P3-19, so every later kind is provider-ready (TASKS F-088, D13). §2 and §5 gain the new app.
+>
 > **Revision 14 (2026-11-14, owner: "include all features, update to build plan").** §6.3 turns Booking services into a booking-only shop with eight booking kinds (A–H) and shared booking features, built as tasks P3-19 to P3-30 before the Booking staging run (TASKS F-087, D12). The other phases don't change.
 >
 > **Revision 13 (2026-11-13, owner: "update build plan").** §6.2 adds the POS admin pages Cashiers and Registers, so staging needs no `curl` (TASKS F-085). Requirements, scope and build order are unchanged.
@@ -93,7 +95,7 @@ medusa-apps/                        <- plain git repo, NOT a workspace
 │   ├── backend/                    <- Medusa (server + worker)
 │   └── storefront/                 <- Next.js shop
 ├── pos/                            <- backend, storefront, pos-app (Next.js PWA for the counter)
-├── booking-services/               <- backend, storefront (shop + booking pages)
+├── booking-services/               <- backend, storefront (shop + booking pages), provider-portal
 ├── wholesale/                      <- backend, storefront (B2B shop, login required)
 ├── reseller/                       <- backend, storefront (one site for every seller domain), seller-portal
 └── marketplace/                    <- backend, storefront, vendor-portal
@@ -494,11 +496,23 @@ Each scenario lists:
   - **Changes:** `POST /store/booking/cart` (puts a chosen slot in the cart through `add-booking-to-cart`, F-047) and `POST /store/booking/cancel`.
   - **Account:** `GET /store/customers/me/bookings` (F-049).
 - **Admin:** day/week calendar per resource; walk-in booking.
-- **Client app:** `booking-services/storefront`, the starter plus service pages, a slot picker, and booking management in the customer account.
+- **Client apps:** `booking-services/storefront`, the starter plus service pages, a slot picker, and booking management in the customer account; `booking-services/provider-portal` for staff and providers (Revision 15).
 - **Services are products with no shipping** (variants per duration or staff level, as in the Ticket Booking recipe). Contact for service-only carts is an email or a phone (§6.1).
 - **Tickets / fixed-capacity events** (no staff calendar): follow the official Ticket Booking recipe instead (seat capacity as inventory items per show date and section).
 - **Env:** `BOOKING_HOLD_MINUTES` (default 15), `BOOKING_DEFAULT_TIMEZONE`, `BOOKING_CANCEL_HOURS`.
 - **Acceptance:** two customers can't hold the same slot; an abandoned checkout frees the slot automatically; a cancellation inside the policy refunds.
+- **Providers: staff logins and an open marketplace (Revision 15, owner 2026-11-14, F-088, D13).** Both, in this app (one business = one app; Marketplace stays a separate business and is not changed):
+  - **Actor `provider`**, a custom actor type like Marketplace's `vendor` (§6.6): its own sign-in, `authenticate("provider", …)` on `/providers/*`, a `provider` record in the `booking` module (or a new custom module) with a `role`:
+    - **staff:** invite-only, as POS cashiers (invite code, F-036); manages only their own calendar and bookings; no commission.
+    - **partner (open marketplace):** signs up, confirms the email, and the admin approves before anything is public (status pending / active / suspended, as `vendor`).
+  - **Ownership:** resources, services, listings, events and packages are linked to their provider (module links, no columns on core tables). A provider sees and changes only their own.
+  - **Public provider page** in the storefront (e.g. `/providers/<handle>`): photo, bio, address or area, their services and listings, booking.
+  - **Partner self-service per kind:** hours and days off (A, B, G), areas and vehicles with pricing (C, D), listings with photos, rules and blocked dates (E), events and seats (F), packages from their own pieces (H).
+  - **Money:** the customer pays the shop; a commission per booking at the partner's rate (default from env), with refunds held and flagged and manual payouts, as Marketplace's `vendor_commission` and `vendor_payout` (§6.6). Staff bookings earn no commission.
+  - **Admin:** approve, suspend and set commission rates for partners; invite staff; payout report.
+  - **`booking-services/provider-portal`:** a Next.js app deployed on its own (copy of `marketplace/vendor-portal`), calling the backend from its own server; one portal, two roles. Env as the other portals (§4.2): `MEDUSA_BACKEND_URL`, `NEXT_PUBLIC_MEDUSA_BACKEND_URL`, `NEXT_PUBLIC_BASE_URL`, `COOKIE_SECRET`; the backend gets `PROVIDER_CORS` (and `AUTH_CORS`) with the portal host, and a default commission rate.
+  - **Order:** right after P3-19, so each later kind is built with its provider side (TASKS P3-31 to P3-33).
+  - **Acceptance (added):** a partner can't see or change another provider's data or bookings; an unapproved partner shows nothing in the shop; a staff member can't see money; commissions match the bookings, and a refund holds the commission.
 - **Booking-only shop (Revision 14, owner 2026-11-14, F-087).** The storefront and the demo data are booking-only: no demo goods, no Europe region or warehouse, booking wording, and a home page by booking kind. The backend stays a full copy of Ecommerce, so goods can still be sold if the shop adds them. In the admin, every bookable thing is a Medusa product (core menus stay); the **Bookings** page is the work view.
 - **Booking kinds.** Each kind is one booking pattern that many businesses reuse:
 
@@ -660,7 +674,7 @@ Each scenario lists:
 | **0. Foundation** | Backend and web client standards (§4) proven in `ecommerce/`: backend and storefront deployed to Dokploy (server, worker, storefront); `update-medusa.sh`, `verify.sh`, `guard.sh`; CI matrix; local stack | M | — | Proves R1–R4 and independent deploys before business logic exists. |
 | **1. Ecommerce** | `ecommerce/backend` and `storefront`, production MVP | S | 0 | The core every other scenario builds on; fastest path to a live, earning project. |
 | **2. POS** | `pos/backend`, `storefront`, `pos-app` | M | 1 | Reuses Ecommerce; adds registers, shifts and the first non-storefront client. |
-| **3. Booking services** | `booking-services/backend` and `storefront`; Revision 14 adds the booking-only shop and kinds B–H (P3-19 to P3-30) | L | 1 | First scenario that hooks into core cart flows; hold and expiry logic must be solid. |
+| **3. Booking services** | `booking-services/backend` and `storefront`; Revision 14 adds the booking-only shop and kinds B–H (P3-19 to P3-30); Revision 15 adds providers and `provider-portal` (P3-31 to P3-33, after P3-19) | L | 1 | First scenario that hooks into core cart flows; hold and expiry logic must be solid. |
 | **4. Wholesale** | `wholesale/backend` and `storefront` | M | 1 | Mostly core price lists, the starter's modules and checkout validation hooks. |
 | **5. Reseller** | `reseller/backend`, `storefront` (multi-tenant), `seller-portal` | M–L | 1 | First partner portal and money owed to partners; reuses the cashier actor pattern. |
 | **6. Marketplace** | `marketplace/backend`, `storefront`, `vendor-portal` | L | 1, 5 | Hardest: vendor actor, order splitting, payouts, moderation. Built last, so the actor, portal and commission patterns are proven in 5. |
@@ -775,6 +789,7 @@ A throwaway prototype on Medusa 2.21.1 and pnpm 12.6.0 tested this plan before P
 | D8 | "App down" alerts | **Open, needed before production:** which uptime monitor runs outside the Dokploy server (recommended: a hosted monitor alerting the staff Telegram) | — |
 | D9 | Wholesale payment for prepaid companies | **ABA PayWay** (KHQR, cards); net terms stay on `pp_system_default` (P4-12) | 2026-11-11 |
 | D10 | Wholesale invoice language | **Khmer and English**, with an embedded Khmer font (P4-13) | 2026-11-11 |
+| D13 | Booking providers | **Both:** staff logins (invite-only) and an open marketplace (partners sign up, admin approves, commission and manual payouts), with `booking-services/provider-portal` | 2026-11-14 |
 | D12 | Booking trip pricing (kind C) | **All three modes:** vehicle size + hours, zones, and distance through a maps provider (the owner's account and key; optional) | 2026-11-14 |
 | D11 | Reseller commission base and payouts | **Items only** (after discounts, no tax or shipping; P5-12); **payouts stay manual** | 2026-11-11 |
 
@@ -805,6 +820,7 @@ Also decided for Ecommerce:
 
 | Rev | Date | What changed |
 |---|---|---|
+| 15 | 2026-11-14 | Booking providers: staff logins and an open marketplace (actor `provider`, approval, public provider pages, per-kind self-service, commission and payouts), new deployable `booking-services/provider-portal`, §2, §6.3, §7; D13. TASKS F-088, P3-31 to P3-33. |
 | 14 | 2026-11-14 | Booking services become a booking-only shop with kinds A–H (appointment, visit at your place, trip A → B incl. moving, scheduled departure, rental by dates incl. costumes, event ticket, table reservation, event package incl. weddings) and shared features (extras, deposit, quote first, assignment, reschedule, recurring, passes, waitlist, reviews), §6.3; build order and status §7; D12 trip pricing. TASKS F-087, P3-19 to P3-30. |
 | 13 | 2026-11-13 | POS admin pages Cashiers and Registers (§6.2), so staging Step 7.B needs no `curl`. TASKS F-085. |
 | 12 | 2026-11-12 | Marketplace as built (P6-01 to P6-15): full Ecommerce copy, `vendor_commission`, statuses and uniqueness, vendor email from the auth identity, product statuses, child orders via the Order Module with moved reservations, split per order (also from `order.placed`), shipping split across vendors, refunds held and flagged, vendor stock locations. Status line. TASKS F-072 to F-080. |
