@@ -2,14 +2,14 @@
 
 Standalone [Medusa](https://medusajs.com) backends, one per commerce scenario, each deployable on its own with Dokploy.
 
-> **Status (2026-11-12):** Phase 1 (Ecommerce) built and on staging; production (P1-08) is next. Phases 2 to 6 (POS, Booking services, Wholesale, Reseller, Marketplace) have their code done; their staging runs and exit checklists (P2-14, P3-18, P4-11, P5-11, P6-13) wait for the owner. Details: [`docs/TASKS.md`](./docs/TASKS.md) → *Session handoff*.
+> **Status (2026-11-14):** Phase 1 (Ecommerce) built and on staging; production (P1-08) is next. Phase 2 (POS) passed its staging run and exit (P2-14) on 2026-11-14. Phases 3 to 6 (Booking services, Wholesale, Reseller, Marketplace) have their code done; their staging runs and exit checklists (P3-18, P4-11, P5-11, P6-13) wait for the owner. Details: [`docs/TASKS.md`](./docs/TASKS.md) → *Session handoff*.
 
 Each folder is **one business project** (one Dokploy project). Inside it, every deployable has its own `Dockerfile` and `.env.example` and deploys independently.
 
 | Folder | Scenario | Deployables (Dokploy Build Path) | Status |
 |---|---|---|---|
 | [`ecommerce/`](./ecommerce) | Direct-to-consumer online store | `/ecommerce/backend`, `/ecommerce/storefront` | Built, on staging — Phase 1 (production pending) |
-| [`pos/`](./pos) | Physical shop checkout | `/pos/backend`, `/pos/storefront`, `/pos/pos-app` | Built — Phase 2 (staging and exit P2-14 wait for the owner) |
+| [`pos/`](./pos) | Physical shop checkout | `/pos/backend`, `/pos/storefront`, `/pos/pos-app` | Built, on staging — Phase 2 done (exit P2-14 passed 2026-11-14) |
 | [`booking-services/`](./booking-services) | Appointments, classes, tickets, rentals | `/booking-services/backend`, `/booking-services/storefront` | Built — Phase 3 (copy of Ecommerce; exit P3-18 pending) |
 | [`wholesale/`](./wholesale) | Sellers buy your products in bulk | `/wholesale/backend`, `/wholesale/storefront` | Built — Phase 4 (exit P4-11 waits for the owner) |
 | [`reseller/`](./reseller) | Sellers sell your products, you ship | `/reseller/backend`, `/reseller/storefront`, `/reseller/seller-portal` | Built — Phase 5 (exit P5-11 waits for the owner) |

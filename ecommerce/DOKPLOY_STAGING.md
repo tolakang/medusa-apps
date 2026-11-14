@@ -158,6 +158,7 @@ Both paths are relative to the repo root (verified on staging 2026-09-25, F-011)
    SHOPPER_IP_SECRET=<openssl rand -hex 32, same on the storefront>   # shoppers' IPs for the limits
    UNVERIFIED_ACCOUNT_RETENTION_DAYS=   # worker: delete never-verified sign-ups after N days (default 28)
    # Staff Telegram alerts (P1-04)
+   # Bot token and chat ID: see "Telegram bot and chat ID, step by step" (alerts section)
    TELEGRAM_BOT_TOKEN=<staff bot token>
    TELEGRAM_CHAT_ID=<staff group id, negative>
    # Customer Telegram updates (P1-17): a separate bot
@@ -688,12 +689,41 @@ For releases that matter (phase exit, production), record the result in `docs/TA
 ### 9.5 Alerts (pre-deploy audit E-A3)
 Dokploy can message you when something goes wrong, so you hear about it before a customer does. Checked against Dokploy **v0.31.0** source (`handle-notifications.tsx`).
 
-1. Dokploy → **Settings → Notifications** → add a **Telegram** notification. Use the staff group: bot token and chat ID as in `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID`, or a separate alerts bot. (Slack, Discord, email, Gotify, ntfy and Lark also work.)
+1. Dokploy → **Settings → Notifications** → add a **Telegram** notification. Use the staff group: bot token and chat ID as in `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID`, or a separate alerts bot. How to create the bot and find the chat ID: *Telegram bot and chat ID, step by step* below. (Slack, Discord, email, Gotify, ntfy and Lark also work.)
 2. Turn on **App Build Error**, **App Deploy**, **Database Backup**, **Dokploy Restart** (and **Volume Backup** if you use volume backups).
 3. **Check:** the next deploy posts a message to the group, and so does the next database backup (02:00 Cambodia).
 4. **App down:** Dokploy has no "app is down" notification. A health check that fails during a deploy rolls back (`FailureAction: rollback`), but a container that dies later only restarts. For an alert, an outside uptime check must call `https://<api host>/health` and the shop every 1–5 minutes. That is a new service: the owner decides and it is recorded in `docs/TASKS.md` (pre-deploy audit E-A3).
 
 **Reply with** "alerts on" and which events you turned on.
+
+#### Telegram bot and chat ID, step by step
+You need two values: a **bot token** (the bot's password) and the **chat ID** of the group the bot writes to. The same pair goes into the backend's `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` and into Dokploy's alert. Skip A and B if the staff bot and group already exist.
+
+**A. Create the bot (about 2 minutes)**
+1. In Telegram, search **@BotFather** (blue tick) → **Start**.
+2. Send `/newbot`.
+3. Name: anything, e.g. `My Shop Staff`.
+4. Username: must end in `bot` and be free, e.g. `myshop_staff_bot`.
+5. BotFather answers with a **token** like `123456789:AAH…`. That's `TELEGRAM_BOT_TOKEN`. Keep it secret: never paste it in a chat or a screenshot. If it leaks, send BotFather `/revoke`, pick the bot, and update the backend env and the Dokploy alert with the new token.
+
+**B. Create the staff group and add the bot**
+1. Telegram → **New Group** → add yourself and the staff → name it, e.g. `My Shop Staff`.
+2. Group → **Add members** → search the bot's username → add it.
+
+**C. Find the chat ID**
+1. In the group, send `/start@<bot username>`, e.g. `/start@myshop_staff_bot`. By default a bot in a group only sees commands, so a plain "hello" isn't enough.
+2. On your computer, open this address in a browser, with your token in place of `<token>`:
+   `https://api.telegram.org/bot<token>/getUpdates`
+3. Look for `"chat":{"id":-…` with your group's `"title"`. That number, **minus sign included**, is `TELEGRAM_CHAT_ID`. Normal groups look like `-4123456789`; bigger groups (supergroups) like `-1001234567890`.
+4. If you see `"result":[]`, send the `/start@…` message again and reload the page.
+5. If you see `409` / `Conflict`, the bot has a webhook. Use the staff bot here, never the customer bot (`TELEGRAM_CUSTOMER_BOT_TOKEN`), which uses one.
+6. If you see `"migrate_to_chat_id"`, the group became a supergroup: use that new number instead.
+7. Close the browser tab: the address contains your token.
+
+**D. Add the alert in Dokploy**
+1. Dokploy → **Settings → Notifications** → **Add Notification** → choose **Telegram**.
+2. **Name**: e.g. `Staff alerts`. **Bot Token**: the token from A. **Chat ID**: the number from C. **Message Thread ID**: leave empty (only for groups with Topics).
+3. Click **Test Notification**. A test message must appear in the group. Then click **Create**.
 
 ---
 
